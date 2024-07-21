@@ -21,7 +21,7 @@ specified resources directory and logs request processing events.
 
 ### Prerequisites
 
-- Java 11 or higher
+- Java 17 or higher
 - Maven (for dependency management and building the project)
 
 ### Build
