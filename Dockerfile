@@ -15,9 +15,10 @@ COPY --from=build /app/target/jaws-*.jar /app/jaws.jar
 EXPOSE 15000
 
 LABEL maintainer="Rui Teixeira <rui.teixeira@minderacodeacademy.com>" \
-      version="0.1" \
+      version="0.1.2-alpha" \
       description="Just Another Web Server"
 
+ENV WWWPATH=/app/www
 
 # Run the application
 CMD ["java", "-jar", "/app/jaws.jar"]
