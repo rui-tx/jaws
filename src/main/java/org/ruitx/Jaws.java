@@ -5,7 +5,6 @@ import org.ruitx.server.components.Heimdall;
 import org.ruitx.server.configs.Constants;
 import org.ruitx.server.configs.ProjectSystemSettings;
 
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -27,12 +26,9 @@ public class Jaws {
                 ? System.getenv("WWWPATH")
                 : Constants.DEFAULT_RESOURCES_PATH;
 
+        // TODO: Handle exceptions
         Thread serverThread = new Thread(() -> {
-            try {
-                new Yggdrasill(port, wwwPath).start();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            new Yggdrasill(port, wwwPath).start();
         });
 
         Thread heimdallThread = new Thread(() -> {

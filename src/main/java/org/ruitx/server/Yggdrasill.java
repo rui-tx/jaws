@@ -3,6 +3,7 @@ package org.ruitx.server;
 import org.ruitx.server.components.Hephaestus;
 import org.ruitx.server.components.Hermes;
 import org.ruitx.server.configs.Constants;
+import org.ruitx.server.exceptions.ConnectionException;
 import org.ruitx.server.strings.Messages;
 import org.ruitx.server.strings.RequestType;
 import org.ruitx.server.strings.ResponseCode;
@@ -13,7 +14,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
+import java.nio.channels.IllegalBlockingModeException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +31,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class Yggdrasill {
 
     public static Integer currentConnections = 0;
+    public static int currentPort;
+    public static String currentResourcesPath;
 
     private final int port;
     private final String resourcesPath;
@@ -35,25 +40,34 @@ public class Yggdrasill {
     public Yggdrasill(int port, String resourcesPath) {
         this.port = port;
         this.resourcesPath = resourcesPath;
+        currentPort = port;
+        currentResourcesPath = resourcesPath;
     }
 
-    public void start() throws IOException {
+    public void start() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             ExecutorService threadPool = Executors.newCachedThreadPool();
             acceptConnections(serverSocket, threadPool);
+        } catch (IOException | ConnectionException e) {
+            System.out.printf("Yggdrasill encountered an error: %s\n", e.getMessage());
         }
     }
 
-    private void acceptConnections(ServerSocket serverSocket, ExecutorService threadPool) {
+    private void acceptConnections(ServerSocket serverSocket, ExecutorService threadPool) throws ConnectionException {
         while (true) {
             try {
                 Socket clientSocket = serverSocket.accept();
-
                 threadPool.submit(new RequestHandler(clientSocket, resourcesPath));
                 ThreadPoolExecutor executor = (ThreadPoolExecutor) threadPool;
                 currentConnections = executor.getActiveCount();
+            } catch (SocketTimeoutException e) {
+                throw new ConnectionException("Socket timeout while waiting for connection", e);
+            } catch (IllegalBlockingModeException e) {
+                throw new ConnectionException("Illegal blocking mode: " + e.getMessage(), e);
+            } catch (SecurityException e) {
+                throw new ConnectionException("Security exception: " + e.getMessage(), e);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new ConnectionException("Error accepting connection: " + e.getMessage(), e);
             }
         }
     }
@@ -77,10 +91,9 @@ public class Yggdrasill {
         public void run() {
             try {
                 processRequest();
-
             } catch (IOException e) {
                 currentConnections--;
-                logError(Messages.INTERNAL_SERVER_ERROR);
+                //logError(Messages.INTERNAL_SERVER_ERROR);
             }
         }
 
@@ -228,6 +241,7 @@ public class Yggdrasill {
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
+
                         return;
                     }
                     try {
@@ -245,7 +259,7 @@ public class Yggdrasill {
                     Instant.now().getEpochSecond(),
                     socket.getInetAddress().getHostAddress(),
                     socket.getPort(),
-                    Messages.CLIENT_TIMEOUT + " [" + totalRequestTime + " ms]");
+                    Messages.CLIENT_TIMEOUT + " [" + totalRequestTime + " ms]\n");
         }
 
         private void logError(String message) {
