@@ -1,6 +1,7 @@
 package org.ruitx.server.components;
 
-import org.ruitx.server.configs.Constants;
+import org.ruitx.server.commands.Command;
+import org.ruitx.server.commands.CommandList;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,70 +22,28 @@ public final class Hermes {
      * @return the parsed HTML
      * @throws IOException
      */
-
     public static String parseHTML(File htmlPage) throws IOException {
-
         String html = new String(Files.readAllBytes(Path.of(htmlPage.getPath())));
+        return parseHTMLString(html);
+    }
 
-        String regex = "\\{\\{([^}]*)}}";
+    public static String parseHTML(String htmlPage) throws IOException {
+        return parseHTMLString(htmlPage);
+    }
+
+    private static String parseHTMLString(String html) {
+        String regex = "\\{\\{([^}]*)}}"; // gets what is inside the double curly braces
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(html);
         StringBuilder result = new StringBuilder();
 
         while (matcher.find()) {
             String command = matcher.group(1).trim();
-            if (command.startsWith("pathFor")) {
-                String file = command.replace("pathFor", "").trim();
+            String commandName = command.split("\\s*\\(")[0]; // gets what is before the parentheses
 
-                String cmdRegex = "\\(\"([^\"]+)\"\\)";
-                Matcher cmdMatcher = Pattern.compile(cmdRegex).matcher(file);
-                while (cmdMatcher.find()) {
-                    file = cmdMatcher.group(1);
-                }
-                matcher.appendReplacement(result, Constants.URL + file);
-            }
-
-            if (command.startsWith("getServerPort()")) {
-                String file = command.replace("getServerPort()", "").trim();
-                matcher.appendReplacement(result, "Server port is: " + Constants.DEFAULT_PORT);
-            }
-        }
-
-        matcher.appendTail(result);
-        return result.toString();
-    }
-
-    /**
-     * Parse the HTML file and replace the placeholders with the actual values
-     * The HTML file is passed as a string.
-     *
-     * @param htmlPage
-     * @return the parsed HTML
-     * @throws IOException
-     */
-    public static String parseHTML(String htmlPage) throws IOException {
-
-        String regex = "\\{\\{([^}]*)}}";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(htmlPage);
-        StringBuilder result = new StringBuilder();
-
-        while (matcher.find()) {
-            String command = matcher.group(1).trim();
-            if (command.startsWith("pathFor")) {
-                String file = command.replace("pathFor", "").trim();
-
-                String cmdRegex = "\\(\"([^\"]+)\"\\)";
-                Matcher cmdMatcher = Pattern.compile(cmdRegex).matcher(file);
-                while (cmdMatcher.find()) {
-                    file = cmdMatcher.group(1);
-                }
-                matcher.appendReplacement(result, Constants.URL + file);
-            }
-
-            if (command.startsWith("getServerPort()")) {
-                String file = command.replace("getServerPort()", "").trim();
-                matcher.appendReplacement(result, "Server port is: " + Constants.DEFAULT_PORT);
+            Command commandExecutor = CommandList.LIST.get(commandName);
+            if (commandExecutor != null) {
+                matcher.appendReplacement(result, commandExecutor.execute(command));
             }
         }
 
