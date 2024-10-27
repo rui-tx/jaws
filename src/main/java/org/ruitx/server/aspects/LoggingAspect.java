@@ -5,7 +5,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.ruitx.server.Yggdrasill;
 import org.ruitx.server.strings.Messages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,11 +18,12 @@ public class LoggingAspect {
     public void serverStart(JoinPoint joinPoint) {
         logger.info("{} at port {} with www path: {}",
                 Messages.SERVER_STARTED,
-                Yggdrasill.getPort(),
-                Yggdrasill.getResourcesPath());
+                "Yggdrasill.getPort()",
+                "Yggdrasill.getResourcesPath()");
     }
 
-    @Around("execution(* org.ruitx.server.Yggdrasill.RequestHandler.dealWithRequest(..))")
+
+    @Around("execution(* org.ruitx.server.Yggdrasill$RequestHandler.processRequest(..))")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         long start = System.currentTimeMillis();
         Object test = joinPoint.getArgs();

@@ -10,5 +10,30 @@
 <p>You can change this page by modifying the <code>index.html</code> file in the <code>resources</code> folder.</p>
 <p>If you want to select a directory to serve, use the Environment Variable <code>WWWPATH</code> with the path to the
     directory.</p>
+
+<h2>Placeholders</h2>
+<p>You can use placeholders in the HTML file to display dynamic information.</p>
+<p>Placeholders are enclosed in double curly braces, and they are replaced with the actual value when the HTML file is
+    parsed.</p>
+<p>For example, you can use the placeholder <code>{ { getServerPort } }</code> (without the spaces) to display the
+    server port.</p>
+
+<div>
+    <h3>Placeholders List</h3>
+    <ul>
+        <li><strong><code>getPathFor("file.txt")</code></strong>: display the path for a file.</li>
+        <li><strong><code>getServerPort</code></strong>: display the server port.</li>
+        <li><strong><code>getCurrentConnections</code></strong>: display the current number of connections.</li>
+    </ul>
+</div>
+
+<h2>Test Area</h2>
+<p>This is a test area for testing the placeholders.</p>
+<p>You can use the placeholders in the following ways:s</p>
+<ul>
+    <li><code>{{getPathFor("file.txt")}}</code>: display the path for a file.</li>
+    <li><code>{{getServerPort}}</code>: display the server port.</li>
+    <li><code>{{getCurrentConnections}}</code>: display the current number of connections.</li>
+</ul>
 </body>
 </html>

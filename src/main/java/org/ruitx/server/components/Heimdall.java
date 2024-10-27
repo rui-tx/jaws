@@ -12,11 +12,6 @@ import java.time.Instant;
 public class Heimdall implements Runnable {
     private final Path path;
 
-    /**
-     * Constructor for Heimdall.
-     *
-     * @param path the path to watch for changes
-     */
     public Heimdall(Path path) {
         this.path = path;
     }
@@ -36,14 +31,14 @@ public class Heimdall implements Runnable {
                 for (WatchEvent<?> event : key.pollEvents()) {
                     System.out.printf(Messages.SERVER_LOG,
                             Instant.now().getEpochSecond(),
-                            "Detected file change: " + event.context());
+                            "Detected file change: " + event.context() + "\n");
                 }
                 key.reset();
             }
         } catch (IOException | InterruptedException e) {
             System.out.printf(Messages.SERVER_LOG,
                     Instant.now().getEpochSecond(),
-                    "Heimdall encountered an error: " + e.getMessage());
+                    "Heimdall encountered an error: " + e.getMessage() + "\n");
         }
     }
 }
