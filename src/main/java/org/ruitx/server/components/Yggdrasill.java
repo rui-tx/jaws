@@ -236,8 +236,10 @@ public class Yggdrasill {
         }
 
         private void processPOST(String endPoint, String body) throws IOException {
-            formData = parseFormData(body);
-            // Endpoint.getEndpoint(endPoint).getHandler().execute(this);
+            byte[] content = parseFormData(body).toString().getBytes();
+            sendResponseHeaders(ResponseCode.OK, "text/plain", content.length);
+            out.write(content);
+            out.flush();
         }
 
         private void processPUT(String endPoint, String body) throws IOException {
