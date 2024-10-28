@@ -47,7 +47,7 @@ public class Yggdrasill {
             ExecutorService threadPool = Executors.newCachedThreadPool();
             acceptConnections(serverSocket, threadPool);
         } catch (IOException | ConnectionException e) {
-            System.out.printf("Yggdrasill encountered an error: %s\n", e.getMessage());
+            Logger.error("Yggdrasill encountered an error: %s", e.getMessage());
         }
     }
 
@@ -92,23 +92,15 @@ public class Yggdrasill {
                 processRequest();
             } catch (IOException e) {
                 currentConnections--;
-                //logError(Messages.INTERNAL_SERVER_ERROR);
             }
         }
 
         public void processRequest() throws IOException {
             initializeStreams();
-            long startRequestTime = System.currentTimeMillis();
-            try {
-                readHeaders();
-                readBody();
-
-                checkRequestAndSendResponse();
-            } catch (SocketTimeoutException e) {
-                logTimeout(startRequestTime);
-            } finally {
-                closeSocket();
-            }
+            readHeaders();
+            readBody();
+            checkRequestAndSendResponse();
+            closeSocket();
         }
 
         private void initializeStreams() throws IOException {
@@ -168,6 +160,7 @@ public class Yggdrasill {
             if (Files.exists(path)) {
                 sendFileResponse(path);
             } else {
+                Logger.warn("File not found: " + path);
                 sendNotFoundResponse();
             }
         }
@@ -188,12 +181,33 @@ public class Yggdrasill {
                 sendResponseHeaders(ResponseCode.OK, contentType, content.length);
                 out.write(content);
             }
+            out.flush();
         }
 
         private void sendNotFoundResponse() throws IOException {
-            byte[] content = Files.readAllBytes(Paths.get(resourcesPath + "/404.html"));
+            byte[] content;
+            Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_404);
+            if (Files.exists(path)) {
+                content = Files.readAllBytes(path);
+            } else {
+                Logger.warn("Could not find 404 page, using hard coded default");
+                String notFoundHtml = """
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>404 - Not Found</title>
+                        </head>
+                        <body>
+                            <h1>404 - Not Found</h1>
+                        </body>
+                        </html>
+                        """;
+                content = notFoundHtml.getBytes();
+            }
             sendResponseHeaders(ResponseCode.NOT_FOUND, "text/html", content.length);
             out.write(content);
+            out.flush();
         }
 
         private void sendResponseHeaders(ResponseCode responseCode, String contentType, int contentLength) throws IOException {
@@ -204,6 +218,7 @@ public class Yggdrasill {
                     .endResponse()
                     .build();
             out.write(responseHeader.headerToBytes());
+            out.flush();
         }
 
         private void processPOST(String endPoint, String body) throws IOException {
@@ -233,11 +248,6 @@ public class Yggdrasill {
                 currentConnections--;
             }
             socket.close();
-        }
-
-        private void logTimeout(long startRequestTime) {
-            long totalRequestTime = System.currentTimeMillis() - startRequestTime;
-            Logger.error(Messages.CLIENT_TIMEOUT + " [" + totalRequestTime + " ms]");
         }
     }
 }
