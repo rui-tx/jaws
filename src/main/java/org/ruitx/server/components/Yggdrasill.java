@@ -2,7 +2,6 @@ package org.ruitx.server.components;
 
 import org.ruitx.server.configs.ApplicationConfig;
 import org.ruitx.server.exceptions.ConnectionException;
-import org.ruitx.server.strings.Messages;
 import org.ruitx.server.strings.RequestType;
 import org.ruitx.server.strings.ResponseCode;
 import org.tinylog.Logger;
@@ -125,8 +124,23 @@ public class Yggdrasill {
         private void checkRequestAndSendResponse() throws IOException {
             String requestType = getRequestType();
             if (requestType.equals("INVALID")) {
-                Logger.error(Messages.INVALID_REQUEST);
-                return; // TODO: Handle invalid request
+                Logger.error("Invalid method: " + requestType);
+                byte[] content = """
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>405 - Method Not Allowed</title>
+                        </head>
+                        <body>
+                            <h1>405 - Method not allowed</h1>
+                        </body>
+                        </html>
+                        """.getBytes();
+                sendResponseHeaders(ResponseCode.METHOD_NOT_ALLOWED, "text/html", content.length);
+                out.write(content);
+                out.flush();
+                return;
             }
             sendResponse(requestType, body.toString());
         }
