@@ -1,6 +1,6 @@
 package org.ruitx.server.commands;
 
-import org.ruitx.server.configs.Constants;
+import org.ruitx.server.configs.ApplicationConfig;
 
 public class GetServerPortCommand implements Command {
 
@@ -8,6 +8,6 @@ public class GetServerPortCommand implements Command {
 
     @Override
     public String execute(String command) {
-        return Constants.DEFAULT_PORT + "";
+        return ApplicationConfig.PORT + "";
     }
 }

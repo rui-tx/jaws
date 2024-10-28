@@ -1,10 +1,9 @@
 package org.ruitx.server.components;
 
-import org.ruitx.server.strings.Messages;
+import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.nio.file.*;
-import java.time.Instant;
 
 /**
  * Heimdall is a file watcher that watches for changes in a given path.
@@ -29,16 +28,12 @@ public class Heimdall implements Runnable {
             WatchKey key;
             while ((key = watchService.take()) != null) {
                 for (WatchEvent<?> event : key.pollEvents()) {
-                    System.out.printf(Messages.SERVER_LOG,
-                            Instant.now().getEpochSecond(),
-                            "Detected file change: " + event.context() + "\n");
+                    Logger.info("Heimdall detected a file change: " + event.context());
                 }
                 key.reset();
             }
         } catch (IOException | InterruptedException e) {
-            System.out.printf(Messages.SERVER_LOG,
-                    Instant.now().getEpochSecond(),
-                    "Heimdall encountered an error: " + e.getMessage() + "\n");
+            Logger.error("Heimdall encountered an error: " + e.getMessage());
         }
     }
 }

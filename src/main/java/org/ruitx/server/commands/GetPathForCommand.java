@@ -1,6 +1,6 @@
 package org.ruitx.server.commands;
 
-import org.ruitx.server.configs.Constants;
+import org.ruitx.server.configs.ApplicationConfig;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,6 +17,6 @@ public class GetPathForCommand implements Command {
         while (cmdMatcher.find()) {
             file = cmdMatcher.group(1);
         }
-        return Constants.URL + file;
+        return ApplicationConfig.URL + file;
     }
 }
