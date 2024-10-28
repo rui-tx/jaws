@@ -1,12 +1,11 @@
-package org.ruitx.server;
+package org.ruitx.server.components;
 
-import org.ruitx.server.components.Hephaestus;
-import org.ruitx.server.components.Hermes;
-import org.ruitx.server.configs.Constants;
+import org.ruitx.server.configs.ApplicationConfig;
 import org.ruitx.server.exceptions.ConnectionException;
 import org.ruitx.server.strings.Messages;
 import org.ruitx.server.strings.RequestType;
 import org.ruitx.server.strings.ResponseCode;
+import org.tinylog.Logger;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -21,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -57,6 +55,7 @@ public class Yggdrasill {
         while (true) {
             try {
                 Socket clientSocket = serverSocket.accept();
+                clientSocket.setSoTimeout((int) ApplicationConfig.TIMEOUT);
                 threadPool.submit(new RequestHandler(clientSocket, resourcesPath));
                 ThreadPoolExecutor executor = (ThreadPoolExecutor) threadPool;
                 currentConnections = executor.getActiveCount();
@@ -99,14 +98,17 @@ public class Yggdrasill {
 
         public void processRequest() throws IOException {
             initializeStreams();
-            readHeaders();
-            readBody();
-
             long startRequestTime = System.currentTimeMillis();
-            startTimeoutThread(startRequestTime);
+            try {
+                readHeaders();
+                readBody();
 
-            checkRequestAndSendResponse();
-            closeSocket();
+                checkRequestAndSendResponse();
+            } catch (SocketTimeoutException e) {
+                logTimeout(startRequestTime);
+            } finally {
+                closeSocket();
+            }
         }
 
         private void initializeStreams() throws IOException {
@@ -131,8 +133,8 @@ public class Yggdrasill {
         private void checkRequestAndSendResponse() throws IOException {
             String requestType = getRequestType();
             if (requestType.equals("INVALID")) {
-                logError(Messages.INVALID_REQUEST);
-                return; // Handle invalid request
+                Logger.error(Messages.INVALID_REQUEST);
+                return; // TODO: Handle invalid request
             }
             sendResponse(requestType, body.toString());
         }
@@ -155,9 +157,9 @@ public class Yggdrasill {
                 case GET -> processGET(endPoint);
                 case POST -> processPOST(endPoint, body);
                 case PUT -> processPUT(endPoint, body);
-                case PATCH -> System.out.println("PATCH");
-                case DELETE -> System.out.println("DELETE");
-                default -> System.out.println("INVALID");
+                case PATCH -> Logger.warn("PATCH not implemented, ignored");
+                case DELETE -> Logger.warn("DELETE not implemented, ignored");
+                default -> Logger.error("Request type not recognized [" + requestType + "], ignored");
             }
         }
 
@@ -227,43 +229,15 @@ public class Yggdrasill {
         }
 
         private void closeSocket() throws IOException {
-            currentConnections--;
+            synchronized (Yggdrasill.class) {
+                currentConnections--;
+            }
             socket.close();
-        }
-
-        private void startTimeoutThread(long startRequestTime) {
-            new Thread(() -> {
-                while (!socket.isClosed()) {
-                    if (System.currentTimeMillis() - startRequestTime > Constants.TIMEOUT) {
-                        logTimeout(startRequestTime);
-                        try {
-                            closeSocket();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-
-                        return;
-                    }
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            }).start();
         }
 
         private void logTimeout(long startRequestTime) {
             long totalRequestTime = System.currentTimeMillis() - startRequestTime;
-            System.out.printf(Messages.CLIENT_LOG,
-                    Instant.now().getEpochSecond(),
-                    socket.getInetAddress().getHostAddress(),
-                    socket.getPort(),
-                    Messages.CLIENT_TIMEOUT + " [" + totalRequestTime + " ms]\n");
-        }
-
-        private void logError(String message) {
-            System.out.printf(message, Instant.now().getEpochSecond(), message);
+            Logger.error(Messages.CLIENT_TIMEOUT + " [" + totalRequestTime + " ms]");
         }
     }
 }

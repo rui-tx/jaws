@@ -7,7 +7,7 @@ public class Messages {
     public static final String SERVER_LOG = "[SERVER]" + TerminalColors.ANSI_WHITE + "[%d]" + TerminalColors.ANSI_RESET
             + "-> %s";
 
-    public static final String SERVER_STARTED = TerminalColors.ANSI_GREEN + "Server started" + TerminalColors.ANSI_RESET;
+    public static final String SERVER_STARTED = TerminalColors.ANSI_GREEN + "JAWS started" + TerminalColors.ANSI_RESET;
     public static final String REQUEST_ERROR = "Error: Request not recognized";
     public static final String INVALID_REQUEST = "Error: Invalid request";
     public static final String ENDPOINT_NOT_FOUND = "Endpoint not found";

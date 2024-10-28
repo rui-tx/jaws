@@ -4,29 +4,29 @@ import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.ruitx.server.exceptions.ConnectionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.tinylog.Logger;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 
 @Aspect
 public class ExceptionAspect {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExceptionAspect.class);
-
     // Pointcut to match any method in RequestHandler
-    @Pointcut("execution(* org.ruitx.server.Yggdrasill.RequestHandler.*(..))")
+    @Pointcut("execution(* org.ruitx.server.components.Yggdrasill.RequestHandler.*(..))")
     public void requestHandlerMethods() {
     }
 
     @AfterThrowing(pointcut = "requestHandlerMethods()", throwing = "ex")
     public void handleException(Throwable ex) {
         if (ex instanceof ConnectionException) {
-            logger.error("ConnectionException occurred: {}", ex.getMessage());
+            Logger.error("ConnectionException occurred: {}", ex.getMessage());
+        } else if (ex instanceof SocketTimeoutException) {
+            Logger.error("SocketTimeoutException occurred: {}", ex.getMessage());
         } else if (ex instanceof IOException) {
-            logger.error("IOException occurred: {}", ex.getMessage());
+            Logger.error("IOException occurred: {}", ex.getMessage());
         } else {
-            logger.error("An unexpected exception occurred: {}", ex.getMessage());
+            Logger.error("An unexpected exception occurred: {}", ex.getMessage());
         }
     }
 }

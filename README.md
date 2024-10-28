@@ -56,7 +56,7 @@ curl http://localhost:8080
 
 ## Project Structure
 
-- `org.ruitx.server.Yggdrasill`: Main server class that handles incoming HTTP requests.
+- `org.ruitx.server.components.Yggdrasill`: Main server class that handles incoming HTTP requests.
     - `Yggdrasill.RequestHandler`: Inner class that processes different types of HTTP requests.
 - `org.ruitx.server.components.Heimdall`: A file watcher that monitors changes in the specified directory.
 - `org.ruitx.server.components.Hephaestus`: Represents an HTTP response header.
