@@ -158,9 +158,15 @@ public class Yggdrasill {
 
         private void sendResponse(String requestType, String body) throws IOException {
             String endPoint = headers.get(requestType).split(" ")[0];
+            Map<String, String> queryParams = extractQueryParameters(endPoint);
+
+            int questionMarkIndex = endPoint.indexOf('?');
+            if (questionMarkIndex != -1) {
+                endPoint = endPoint.substring(0, questionMarkIndex);
+            }
 
             switch (RequestType.fromString(requestType)) {
-                case GET -> processGET(endPoint);
+                case GET -> processGET(endPoint, queryParams);
                 case POST -> processPOST(endPoint, body);
                 case PUT -> processPUT(endPoint, body);
                 case PATCH -> Logger.warn("PATCH not implemented, ignored");
@@ -169,14 +175,40 @@ public class Yggdrasill {
             }
         }
 
-        private void processGET(String endPoint) throws IOException {
+        private Map<String, String> extractQueryParameters(String endPoint) {
+            int questionMarkIndex = endPoint.indexOf('?');
+            if (questionMarkIndex == -1) {
+                return null;
+            }
+
+            Map<String, String> queryParams = new LinkedHashMap<>();
+            String queryString = endPoint.substring(questionMarkIndex + 1);
+            String[] pairs = queryString.split("&");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=");
+                String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8);
+                String value = keyValue.length > 1 ? URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8) : "";
+                queryParams.put(key, value);
+            }
+            return queryParams;
+        }
+
+        private void processGET(String endPoint, Map<String, String> queryParams) throws IOException {
             Path path = getResourcePath(endPoint);
-            if (Files.exists(path)) {
-                sendFileResponse(path);
-            } else {
+
+            if (!Files.exists(path)) {
                 Logger.warn("File not found: " + path);
                 sendNotFoundResponse();
+                return;
             }
+
+            if (queryParams == null) {
+                sendFileResponse(path);
+                return;
+            }
+
+            //TODO: change this to sendFileResponse(path, queryParams);
+            sendFileResponse(path, queryParams, queryParams);
         }
 
         private Path getResourcePath(String endPoint) {
@@ -189,6 +221,21 @@ public class Yggdrasill {
 
             if (contentType.equals("text/html")) {
                 String parsedHTML = Hermes.parseHTML(new String(content));
+                sendResponseHeaders(ResponseCode.OK, contentType, parsedHTML.length());
+                out.write(parsedHTML.getBytes());
+            } else {
+                sendResponseHeaders(ResponseCode.OK, contentType, content.length);
+                out.write(content);
+            }
+            out.flush();
+        }
+
+        private void sendFileResponse(Path path, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
+            byte[] content = Files.readAllBytes(path);
+            String contentType = Files.probeContentType(path);
+
+            if (contentType.equals("text/html")) {
+                String parsedHTML = Hermes.parseHTML(new String(content), queryParams, bodyParams);
                 sendResponseHeaders(ResponseCode.OK, contentType, parsedHTML.length());
                 out.write(parsedHTML.getBytes());
             } else {
