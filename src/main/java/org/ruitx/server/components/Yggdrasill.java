@@ -326,12 +326,13 @@ public class Yggdrasill {
         }
 
         private boolean findDynamicRouteFor(String endPoint, String method) throws IOException {
-
             Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
             if (routeMethod != null) {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
                 try {
+                    // TODO: This is not ideal, fin a better way to do this.
+                    // Synchronize the controller instance to prevent concurrent access. Works but is not ideal, as it can be a bottleneck.
                     synchronized (controllerInstance) {
                         //Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
                         routeMethod.invoke(controllerInstance, this); // Invoke the method on the instance
@@ -342,7 +343,6 @@ public class Yggdrasill {
                     closeSocket();
                 }
             }
-
 
             return false;
         }
