@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -76,6 +77,8 @@ public class Yggdrasill {
         private final String resourcesPath;
         private final Map<String, String> headers = new LinkedHashMap<>();
         private final StringBuilder body = new StringBuilder();
+        private Map<String, String> queryParams = new LinkedHashMap<>();
+        private Map<String, String> bodyParams = new LinkedHashMap<>();
         private Map<String, String> formData = new LinkedHashMap<>();
         private BufferedReader in;
         private DataOutputStream out;
@@ -90,6 +93,11 @@ public class Yggdrasill {
             try {
                 processRequest();
             } catch (IOException e) {
+                try {
+                    closeSocket();
+                } catch (IOException ex) {
+                    Logger.error("Request failed.");
+                }
                 currentConnections--;
             }
         }
@@ -158,7 +166,7 @@ public class Yggdrasill {
 
         private void sendResponse(String requestType, String body) throws IOException {
             String endPoint = headers.get(requestType).split(" ")[0];
-            Map<String, String> queryParams = extractQueryParameters(endPoint);
+            queryParams = extractQueryParameters(endPoint);
 
             int questionMarkIndex = endPoint.indexOf('?');
             if (questionMarkIndex != -1) {
@@ -166,7 +174,7 @@ public class Yggdrasill {
             }
 
             switch (RequestType.fromString(requestType)) {
-                case GET -> processGET(endPoint, queryParams);
+                case GET -> processGET(endPoint);
                 case POST -> processPOST(endPoint, body);
                 case PUT -> processPUT(endPoint, body);
                 case PATCH -> Logger.warn("PATCH not implemented, ignored");
@@ -175,40 +183,33 @@ public class Yggdrasill {
             }
         }
 
-        private Map<String, String> extractQueryParameters(String endPoint) {
-            int questionMarkIndex = endPoint.indexOf('?');
-            if (questionMarkIndex == -1) {
-                return null;
+        private void processGET(String endPoint) throws IOException {
+            Path path = getResourcePath(endPoint);
+            if (Files.exists(path)) {
+                if (queryParams == null) {
+                    sendFileResponse(path);
+                    return;
+                }
+                //TODO: change this to sendFileResponse(path, queryParams);
+                sendFileResponse(path, queryParams, queryParams);
+                return;
             }
 
-            Map<String, String> queryParams = new LinkedHashMap<>();
-            String queryString = endPoint.substring(questionMarkIndex + 1);
-            String[] pairs = queryString.split("&");
-            for (String pair : pairs) {
-                String[] keyValue = pair.split("=");
-                String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8);
-                String value = keyValue.length > 1 ? URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8) : "";
-                queryParams.put(key, value);
+            Logger.warn("File not found: " + path + ". Trying to find a dynamic route...");
+            if (!findDynamicRouteFor(endPoint, "GET")) {
+                Logger.info("No dynamic route found for GET request.");
+                sendNotFoundResponse();
             }
-            return queryParams;
         }
 
-        private void processGET(String endPoint, Map<String, String> queryParams) throws IOException {
-            Path path = getResourcePath(endPoint);
+        public void sendHTMLResponse(ResponseCode responseCode, String body) throws IOException {
+            byte[] content = body.getBytes();
+            String contentType = "text/html";
 
-            if (!Files.exists(path)) {
-                Logger.warn("File not found: " + path);
-                sendNotFoundResponse();
-                return;
-            }
-
-            if (queryParams == null) {
-                sendFileResponse(path);
-                return;
-            }
-
-            //TODO: change this to sendFileResponse(path, queryParams);
-            sendFileResponse(path, queryParams, queryParams);
+            String parsedHTML = Hermes.parseHTML(new String(content));
+            sendResponseHeaders(responseCode, contentType, parsedHTML.length());
+            out.write(parsedHTML.getBytes());
+            out.flush();
         }
 
         private Path getResourcePath(String endPoint) {
@@ -306,11 +307,51 @@ public class Yggdrasill {
             return parsedData;
         }
 
+        private Map<String, String> extractQueryParameters(String endPoint) {
+            int questionMarkIndex = endPoint.indexOf('?');
+            if (questionMarkIndex == -1) {
+                return null;
+            }
+
+            Map<String, String> queryParams = new LinkedHashMap<>();
+            String queryString = endPoint.substring(questionMarkIndex + 1);
+            String[] pairs = queryString.split("&");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=");
+                String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8);
+                String value = keyValue.length > 1 ? URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8) : "";
+                queryParams.put(key, value);
+            }
+            return queryParams;
+        }
+
+        private boolean findDynamicRouteFor(String endPoint, String method) throws IOException {
+            Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
+            if (routeMethod != null) {
+                String controllerName = routeMethod.getDeclaringClass().getSimpleName();
+                Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
+                try {
+                    Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
+                    routeMethod.invoke(controllerInstance, this); // Invoke the method on the instance
+                    return true;
+                } catch (Exception e) {
+                    Logger.error("Failed to invoke method: ", e);
+                    closeSocket();
+                }
+            }
+
+            return false;
+        }
+
         private void closeSocket() throws IOException {
             synchronized (Yggdrasill.class) {
                 currentConnections--;
             }
             socket.close();
+        }
+
+        public Map<String, String> getQueryParams() {
+            return queryParams;
         }
     }
 }
