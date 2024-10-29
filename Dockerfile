@@ -14,8 +14,8 @@ COPY --from=build /app/target/jaws-*.jar /app/jaws.jar
 
 EXPOSE 15000
 
-LABEL maintainer="Rui Teixeira <rui.teixeira@minderacodeacademy.com>" \
-      version="0.1.2-alpha" \
+LABEL maintainer="Rui Teixeira <ruiteixeira@mailbox.org>" \
+      version="0.1-alpha" \
       description="Just Another Web Server"
 
 ENV WWWPATH=/app/www
