@@ -4,7 +4,7 @@ import org.ruitx.server.components.Heimdall;
 import org.ruitx.server.components.Njord;
 import org.ruitx.server.components.Yggdrasill;
 import org.ruitx.server.configs.ApplicationConfig;
-import org.ruitx.server.controllers.Test;
+import org.ruitx.server.controllers.Todo;
 import org.tinylog.Logger;
 
 import java.nio.file.Paths;
@@ -22,7 +22,7 @@ public class Jaws {
 
         Njord njord = Njord.getInstance();
         List<Object> routes = List.of(
-                new Test()
+                new Todo()
         );
         routes.forEach(njord::registerRoutes);
 

@@ -195,9 +195,9 @@ public class Yggdrasill {
                 return;
             }
 
-            Logger.warn("File not found: " + path + ". Trying to find a dynamic route...");
+            //Logger.warn("File not found: " + path + ". Trying to find a dynamic route...");
             if (!findDynamicRouteFor(endPoint, "GET")) {
-                Logger.info("No dynamic route found for GET request.");
+                //Logger.info("No dynamic route found for GET request.");
                 sendNotFoundResponse();
             }
         }
@@ -331,7 +331,7 @@ public class Yggdrasill {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
                 try {
-                    Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
+                    //Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
                     routeMethod.invoke(controllerInstance, this); // Invoke the method on the instance
                     return true;
                 } catch (Exception e) {
