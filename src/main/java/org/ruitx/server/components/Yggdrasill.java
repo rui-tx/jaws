@@ -332,7 +332,10 @@ public class Yggdrasill {
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
                 try {
                     //Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
-                    routeMethod.invoke(controllerInstance, this); // Invoke the method on the instance
+                    synchronized (this) {
+                        routeMethod.invoke(controllerInstance, this); // Invoke the method on the instance
+                    }
+                    
                     return true;
                 } catch (Exception e) {
                     Logger.error("Failed to invoke method: ", e);
