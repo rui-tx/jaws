@@ -326,20 +326,19 @@ public class Yggdrasill {
         }
 
         private boolean findDynamicRouteFor(String endPoint, String method) throws IOException {
-            Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
-            if (routeMethod != null) {
-                String controllerName = routeMethod.getDeclaringClass().getSimpleName();
-                Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
-                try {
-                    //Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
-                    synchronized (this) {
+            synchronized (this) {
+                Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
+                if (routeMethod != null) {
+                    String controllerName = routeMethod.getDeclaringClass().getSimpleName();
+                    Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
+                    try {
+                        //Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
                         routeMethod.invoke(controllerInstance, this); // Invoke the method on the instance
+                        return true;
+                    } catch (Exception e) {
+                        Logger.error("Failed to invoke method: ", e);
+                        closeSocket();
                     }
-                    
-                    return true;
-                } catch (Exception e) {
-                    Logger.error("Failed to invoke method: ", e);
-                    closeSocket();
                 }
             }
 
