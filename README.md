@@ -1,15 +1,24 @@
-# JAWS Server
-
-JAWS (Just Another Web Server) is a lightweight web server implemented in Java. It can serve static files and process
-basic HTTP requests such as GET, POST, PUT, PATCH, and DELETE. It also includes a file watcher component to monitor
-changes in the specified resources directory and logs request processing events.
+# JAWS
+<div align="center">
+<a href="https://github.com/rui-tx/jaws">
+    <img src="https://openmoji.org/data/color/svg/1F988.svg" alt="Logo" width="128" height="128">
+</a>
+</div>
+  
+JAWS (Just Another Web Server) is a web server implemented in Java. It can serve static files, process
+basic HTTP requests and comes with:
+- A file watcher component to monitor changes in the specified resources directory
+- A way to have variables in the HTML and change them on-the-fly, like a mini template engine
+- Dynamic routing, so it's easier to create new endpoints
 
 ## Features
 
 - **Serve Static Files**: Serves HTML, CSS, JS, and other static files from a specified directory.
 - **HTTP Request Handling**: Supports basic HTTP methods including GET, POST, PUT, PATCH, and DELETE.
+- **Dynamic Routing**: Create dynamic routes using annotations for flexible request handling.
+- **HTML Parsing**: Create more dynamic HTML with custom variables that are changed when it is rendered
 - **File Watching**: Monitors a specified directory for file changes and logs these changes.
-- **Aspect-Oriented Logging**: Uses AspectJ to log different stages of request processing.
+- **Aspect-Oriented Capable**: Uses AspectJ to log different stages of request processing and deal with exceptions.
 
 ## Setup
 
@@ -60,7 +69,10 @@ curl http://localhost:8080
     - `Yggdrasill.RequestHandler`: Inner class that processes different types of HTTP requests.
 - `org.ruitx.server.components.Heimdall`: A file watcher that monitors changes in the specified directory.
 - `org.ruitx.server.components.Hephaestus`: Represents an HTTP response header.
+- `org.ruitx.server.components.Hermes`: HTML parser.
+- `org.ruitx.server.components.Njord`: Dynamic router that routes requests to controllers
 - `org.ruitx.server.aspects.LoggingAspect`: AspectJ-based logging aspect to log request processing events.
+- `org.ruitx.server.aspects.ExceptionAspect`: AspectJ-based exception handler.
 
 ### Yggdrasill
 
@@ -78,10 +90,22 @@ detected in the console.
 Hephaestus is a class that represents an HTTP response header. It includes functionality to build and convert response
 headers to byte arrays or strings.
 
+### Hermes
+
+Hermes is a utility class that contains methods for parsing HTML files.
+
+### Njord
+
+Njord is a dynamic router class that routes requests to controllers. It currently only works for GET commands.
+
 ### LoggingAspect
 
 LoggingAspect uses AspectJ for logging different stages of request processing. It logs before the request is processed,
 after the request is successfully processed, and if an exception occurs during the request processing.
+
+### ExceptionAspect
+
+ExceptionAspect uses AspectJ for dealing with exceptions during runtime.
 
 ## License
 
