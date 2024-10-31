@@ -34,6 +34,14 @@ public final class Hermes {
     }
 
     public static String parseHTML(String htmlPage, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
+        if (queryParams == null) {
+            queryParams = new LinkedHashMap<>();
+        }
+
+        if (bodyParams == null) {
+            bodyParams = new LinkedHashMap<>();
+        }
+
         return parseHTMLString(htmlPage, queryParams, bodyParams);
     }
 
@@ -63,10 +71,8 @@ public final class Hermes {
         Matcher matcher = pattern.matcher(html);
         StringBuilder result = new StringBuilder();
 
-        Map<String, String> allParams = new LinkedHashMap<>(queryParams);
-        if (bodyParams != null) {
-            allParams.putAll(bodyParams);
-        }
+        Map<String, String> requestParams = new LinkedHashMap<>(queryParams);
+        requestParams.putAll(bodyParams);
 
         while (matcher.find()) {
             String command = matcher.group(1).trim();
@@ -76,7 +82,7 @@ public final class Hermes {
             if (commandExecutor != null) {
                 matcher.appendReplacement(result, commandExecutor.execute(command));
             } else {
-                String paramValue = allParams.get(command);
+                String paramValue = requestParams.get(command);
                 if (paramValue != null) {
                     matcher.appendReplacement(result, paramValue);
                 } else {

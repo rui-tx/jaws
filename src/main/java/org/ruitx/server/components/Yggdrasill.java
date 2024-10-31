@@ -146,8 +146,7 @@ public class Yggdrasill {
                         </html>
                         """.getBytes();
                 sendResponseHeaders(ResponseCode.METHOD_NOT_ALLOWED, "text/html", content.length);
-                out.write(content);
-                out.flush();
+                sendResponseBody(content);
                 return;
             }
             sendResponse(requestType, body.toString());
@@ -186,18 +185,12 @@ public class Yggdrasill {
         private void processGET(String endPoint) throws IOException {
             Path path = getResourcePath(endPoint);
             if (Files.exists(path)) {
-                if (queryParams == null) {
-                    sendFileResponse(path);
-                    return;
-                }
-                //TODO: change this to sendFileResponse(path, queryParams);
-                sendFileResponse(path, queryParams, queryParams);
+                sendFileResponse(path);
                 return;
             }
 
-            //Logger.warn("File not found: " + path + ". Trying to find a dynamic route...");
+            // check for dynamic routes
             if (!findDynamicRouteFor(endPoint, "GET")) {
-                //Logger.info("No dynamic route found for GET request.");
                 sendNotFoundResponse();
             }
         }
@@ -208,8 +201,7 @@ public class Yggdrasill {
 
             String parsedHTML = Hermes.parseHTML(new String(content));
             sendResponseHeaders(responseCode, contentType, parsedHTML.length());
-            out.write(parsedHTML.getBytes());
-            out.flush();
+            sendResponseBody(parsedHTML.getBytes());
         }
 
         private Path getResourcePath(String endPoint) {
@@ -217,21 +209,6 @@ public class Yggdrasill {
         }
 
         private void sendFileResponse(Path path) throws IOException {
-            byte[] content = Files.readAllBytes(path);
-            String contentType = Files.probeContentType(path);
-
-            if (contentType.equals("text/html")) {
-                String parsedHTML = Hermes.parseHTML(new String(content));
-                sendResponseHeaders(ResponseCode.OK, contentType, parsedHTML.length());
-                out.write(parsedHTML.getBytes());
-            } else {
-                sendResponseHeaders(ResponseCode.OK, contentType, content.length);
-                out.write(content);
-            }
-            out.flush();
-        }
-
-        private void sendFileResponse(Path path, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
             byte[] content = Files.readAllBytes(path);
             String contentType = Files.probeContentType(path);
 
@@ -268,8 +245,7 @@ public class Yggdrasill {
                 content = notFoundHtml.getBytes();
             }
             sendResponseHeaders(ResponseCode.NOT_FOUND, "text/html", content.length);
-            out.write(content);
-            out.flush();
+            sendResponseBody(content);
         }
 
         private void sendResponseHeaders(ResponseCode responseCode, String contentType, int contentLength) throws IOException {
@@ -283,11 +259,15 @@ public class Yggdrasill {
             out.flush();
         }
 
+        private void sendResponseBody(byte[] body) throws IOException {
+            out.write(body);
+            out.flush();
+        }
+
         private void processPOST(String endPoint, String body) throws IOException {
             byte[] content = parseFormData(body).toString().getBytes();
             sendResponseHeaders(ResponseCode.OK, "text/plain", content.length);
-            out.write(content);
-            out.flush();
+            sendResponseBody(content);
         }
 
         private void processPUT(String endPoint, String body) throws IOException {
@@ -331,7 +311,7 @@ public class Yggdrasill {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
                 try {
-                    // TODO: This is not ideal, fin a better way to do this.
+                    // TODO: This is not ideal, find a better way to do this.
                     // Synchronize the controller instance to prevent concurrent access. Works but is not ideal, as it can be a bottleneck.
                     synchronized (controllerInstance) {
                         //Logger.info("Found. Invoking dynamic route: " + routeMethod.getName());
