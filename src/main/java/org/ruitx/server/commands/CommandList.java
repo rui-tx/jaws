@@ -1,5 +1,7 @@
 package org.ruitx.server.commands;
 
+import org.ruitx.server.interfaces.Command;
+
 import java.util.HashMap;
 import java.util.Map;
 

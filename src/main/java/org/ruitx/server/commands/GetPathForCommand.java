@@ -1,6 +1,7 @@
 package org.ruitx.server.commands;
 
 import org.ruitx.server.configs.ApplicationConfig;
+import org.ruitx.server.interfaces.Command;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

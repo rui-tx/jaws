@@ -1,7 +1,7 @@
 package org.ruitx.server.components;
 
-import org.ruitx.server.commands.Command;
 import org.ruitx.server.commands.CommandList;
+import org.ruitx.server.interfaces.Command;
 
 import java.io.File;
 import java.io.IOException;

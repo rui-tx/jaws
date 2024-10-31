@@ -1,6 +1,7 @@
 package org.ruitx.server.commands;
 
 import org.ruitx.server.components.Yggdrasill;
+import org.ruitx.server.interfaces.Command;
 
 public class GetCurrentConnectionsCommand implements Command {
 
