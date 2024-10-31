@@ -31,9 +31,9 @@ public class Yggdrasill {
     public static Integer currentConnections = 0;
     public static int currentPort;
     public static String currentResourcesPath;
-
     private final int port;
     private final String resourcesPath;
+    private ServerSocket serverSocket;
 
     public Yggdrasill(int port, String resourcesPath) {
         this.port = port;
@@ -43,11 +43,24 @@ public class Yggdrasill {
     }
 
     public void start() {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
+        try {
+            serverSocket = new ServerSocket(port);
             ExecutorService threadPool = Executors.newCachedThreadPool();
             acceptConnections(serverSocket, threadPool);
         } catch (IOException | ConnectionException e) {
             Logger.error("Yggdrasill encountered an error: %s", e.getMessage());
+        }
+    }
+
+    public void shutdown() {
+        Logger.info("Yggdrasill shudown initiated...");
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            try {
+                Logger.info("Shutting down Yggdrasill...");
+                serverSocket.close();
+            } catch (IOException e) {
+                Logger.error("Error closing server socket: %s", e.getMessage());
+            }
         }
     }
 
