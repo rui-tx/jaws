@@ -26,6 +26,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import static org.ruitx.server.strings.RequestType.*;
+import static org.ruitx.server.strings.ResponseCode.*;
+
 public class Yggdrasill {
 
     public static Integer currentConnections = 0;
@@ -92,7 +95,6 @@ public class Yggdrasill {
         private final StringBuilder body = new StringBuilder();
         private Map<String, String> queryParams = new LinkedHashMap<>();
         private Map<String, String> bodyParams = new LinkedHashMap<>();
-        private Map<String, String> formData = new LinkedHashMap<>();
         private BufferedReader in;
         private DataOutputStream out;
 
@@ -115,7 +117,7 @@ public class Yggdrasill {
             }
         }
 
-        public void processRequest() throws IOException {
+        private void processRequest() throws IOException {
             initializeStreams();
             readHeaders();
             readBody();
@@ -158,24 +160,18 @@ public class Yggdrasill {
                         </body>
                         </html>
                         """.getBytes();
-                sendResponseHeaders(ResponseCode.METHOD_NOT_ALLOWED, "text/html", content.length);
+                sendResponseHeaders(METHOD_NOT_ALLOWED, "text/html", content.length);
                 sendResponseBody(content);
                 return;
             }
+
             sendResponse(requestType, body.toString());
         }
 
-        private String getRequestType() {
-            return headers.keySet().stream()
-                    .filter(this::isValidRequestType)
-                    .findFirst()
-                    .orElse("INVALID");
-        }
 
-        private boolean isValidRequestType(String key) {
-            return key.equals("GET") || key.equals("POST") || key.equals("PUT") || key.equals("PATCH") || key.equals("DELETE");
-        }
-
+        // TODO: Refactor this method
+        // what if ? is present but is not a query parameter
+        // if query parameter is not present, then it should ignore extractQueryParameters
         private void sendResponse(String requestType, String body) throws IOException {
             String endPoint = headers.get(requestType).split(" ")[0];
             queryParams = extractQueryParameters(endPoint);
@@ -189,12 +185,15 @@ public class Yggdrasill {
                 case GET -> processGET(endPoint);
                 case POST -> processPOST(endPoint, body);
                 case PUT -> processPUT(endPoint, body);
-                case PATCH -> Logger.warn("PATCH not implemented, ignored");
-                case DELETE -> Logger.warn("DELETE not implemented, ignored");
+                case PATCH -> processPATCH(endPoint, body);
+                case DELETE -> processDELETE(endPoint, body);
                 default -> Logger.error("Request type not recognized [" + requestType + "], ignored");
             }
         }
 
+        // I know there is some code duplication here, but I don't want to overload sendResponse method
+        // I think it's easier to read this way, and in the future, I think adding authentication and authorization
+        // should be easier
         private void processGET(String endPoint) throws IOException {
             Path path = getResourcePath(endPoint);
             if (Files.exists(path)) {
@@ -202,10 +201,46 @@ public class Yggdrasill {
                 return;
             }
 
-            // check for dynamic routes
-            if (!findDynamicRouteFor(endPoint, "GET")) {
-                sendNotFoundResponse();
+            if (findDynamicRouteFor(endPoint, GET)) {
+                return;
             }
+            sendNotFoundResponse();
+        }
+
+        private void processPOST(String endPoint, String body) throws IOException {
+            bodyParams = extractBodyParameters(body);
+
+            if (findDynamicRouteFor(endPoint, POST)) {
+                return;
+            }
+            sendNotFoundResponse();
+        }
+
+        private void processPUT(String endPoint, String body) throws IOException {
+            bodyParams = extractBodyParameters(body);
+
+            if (findDynamicRouteFor(endPoint, PUT)) {
+                return;
+            }
+            sendNotFoundResponse();
+        }
+
+        private void processPATCH(String endPoint, String body) throws IOException {
+            bodyParams = extractBodyParameters(body);
+
+            if (findDynamicRouteFor(endPoint, PATCH)) {
+                return;
+            }
+            sendNotFoundResponse();
+        }
+
+        private void processDELETE(String endPoint, String body) throws IOException {
+            bodyParams = extractBodyParameters(body);
+
+            if (findDynamicRouteFor(endPoint, DELETE)) {
+                return;
+            }
+            sendNotFoundResponse();
         }
 
         public void sendHTMLResponse(ResponseCode responseCode, String body) throws IOException {
@@ -227,10 +262,10 @@ public class Yggdrasill {
 
             if (contentType.equals("text/html")) {
                 String parsedHTML = Hermes.parseHTML(new String(content), queryParams, bodyParams);
-                sendResponseHeaders(ResponseCode.OK, contentType, parsedHTML.length());
+                sendResponseHeaders(OK, contentType, parsedHTML.length());
                 out.write(parsedHTML.getBytes());
             } else {
-                sendResponseHeaders(ResponseCode.OK, contentType, content.length);
+                sendResponseHeaders(OK, contentType, content.length);
                 out.write(content);
             }
             out.flush();
@@ -257,7 +292,7 @@ public class Yggdrasill {
                         """;
                 content = notFoundHtml.getBytes();
             }
-            sendResponseHeaders(ResponseCode.NOT_FOUND, "text/html", content.length);
+            sendResponseHeaders(NOT_FOUND, "text/html", content.length);
             sendResponseBody(content);
         }
 
@@ -277,18 +312,18 @@ public class Yggdrasill {
             out.flush();
         }
 
-        private void processPOST(String endPoint, String body) throws IOException {
-            byte[] content = parseFormData(body).toString().getBytes();
-            sendResponseHeaders(ResponseCode.OK, "text/plain", content.length);
-            sendResponseBody(content);
+        private String getRequestType() {
+            return headers.keySet().stream()
+                    .filter(this::isValidRequestType)
+                    .findFirst()
+                    .orElse("INVALID");
         }
 
-        private void processPUT(String endPoint, String body) throws IOException {
-            formData = parseFormData(body);
-            // Endpoint.getEndpoint(endPoint).getHandler().execute(this);
+        private boolean isValidRequestType(String key) {
+            return key.equals("GET") || key.equals("POST") || key.equals("PUT") || key.equals("PATCH") || key.equals("DELETE");
         }
 
-        private Map<String, String> parseFormData(String data) {
+        private Map<String, String> extractBodyParameters(String data) {
             Map<String, String> parsedData = new LinkedHashMap<>();
             String[] pairs = data.split("&");
             for (String pair : pairs) {
@@ -318,7 +353,7 @@ public class Yggdrasill {
             return queryParams;
         }
 
-        private boolean findDynamicRouteFor(String endPoint, String method) throws IOException {
+        private boolean findDynamicRouteFor(String endPoint, RequestType method) throws IOException {
             Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
             if (routeMethod != null) {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
@@ -350,5 +385,10 @@ public class Yggdrasill {
         public Map<String, String> getQueryParams() {
             return queryParams;
         }
+
+        public Map<String, String> getBodyParams() {
+            return bodyParams;
+        }
+
     }
 }

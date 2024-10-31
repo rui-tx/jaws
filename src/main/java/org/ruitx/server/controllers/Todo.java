@@ -2,21 +2,23 @@ package org.ruitx.server.controllers;
 
 import org.ruitx.server.components.Yggdrasill;
 import org.ruitx.server.interfaces.Route;
-import org.ruitx.server.strings.ResponseCode;
 import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+
+import static org.ruitx.server.strings.RequestType.GET;
+import static org.ruitx.server.strings.RequestType.POST;
+import static org.ruitx.server.strings.ResponseCode.*;
 
 public class Todo {
 
     private static final List<String> listOfTodos = Collections.synchronizedList(new ArrayList<>(List.of("Buy milk", "Buy eggs", "Buy bread")));
 
-    @Route(endpoint = "/todos", method = "GET")
-    public void getTodos(Yggdrasill.RequestHandler requestHandler) throws IOException {
+    @Route(endpoint = "/todos", method = GET)
+    public void getTodos(Yggdrasill.RequestHandler rh) throws IOException {
         StringBuilder body = new StringBuilder();
         body.append("<ul>");
         for (String todo : listOfTodos) {
@@ -24,13 +26,17 @@ public class Todo {
         }
         body.append("</ul>");
 
-        requestHandler.sendHTMLResponse(ResponseCode.OK, body.toString());
+        rh.sendHTMLResponse(OK, body.toString());
     }
 
-    @Route(endpoint = "/new-todo", method = "GET")
-    public void createTodo(Yggdrasill.RequestHandler requestHandler) throws IOException {
-        Map<String, String> queryParams = requestHandler.getQueryParams();
-        String todo = queryParams.get("todo");
+    @Route(endpoint = "/new-todo", method = POST)
+    public void createTodo(Yggdrasill.RequestHandler rh) throws IOException {
+        if (rh.getBodyParams() == null || !rh.getBodyParams().containsKey("todo")) {
+            rh.sendHTMLResponse(BAD_REQUEST, "Missing todo parameter");
+            return;
+        }
+        String todo = rh.getBodyParams().get("todo");
+
         Logger.info("Adding todo: " + todo);
 
         synchronized (listOfTodos) {
@@ -44,6 +50,6 @@ public class Todo {
         }
         body.append("</ul>");
 
-        requestHandler.sendHTMLResponse(ResponseCode.CREATED, body.toString());
+        rh.sendHTMLResponse(CREATED, body.toString());
     }
 }

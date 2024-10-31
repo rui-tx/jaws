@@ -81,7 +81,7 @@
             </div>
 
             <h4>Add a New Todo</h4>
-            <form hx-get="/new-todo" hx-swap="innerHTML" hx-target="#todo-list" id="todo-form">
+            <form hx-post="/new-todo" hx-swap="innerHTML" hx-target="#todo-list" id="todo-form">
                 <input name="todo" placeholder="Enter a new todo" required type="text">
                 <button type="submit">Add Todo</button>
             </form>

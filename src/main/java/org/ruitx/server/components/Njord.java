@@ -1,6 +1,7 @@
 package org.ruitx.server.components;
 
 import org.ruitx.server.interfaces.Route;
+import org.ruitx.server.strings.RequestType;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -8,7 +9,7 @@ import java.util.Map;
 
 public class Njord {
     private static final Njord INSTANCE = new Njord();
-    private final Map<String, Map<String, Method>> routes = new HashMap<>();
+    private final Map<String, Map<RequestType, Method>> routes = new HashMap<>();
     private final Map<String, Object> controllers = new HashMap<>();
 
     private Njord() {
@@ -32,8 +33,8 @@ public class Njord {
         }
     }
 
-    public Method getRoute(String path, String method) {
-        Map<String, Method> methodMap = routes.get(path);
+    public Method getRoute(String path, RequestType method) {
+        Map<RequestType, Method> methodMap = routes.get(path);
         return methodMap != null ? methodMap.get(method) : null;
     }
 
