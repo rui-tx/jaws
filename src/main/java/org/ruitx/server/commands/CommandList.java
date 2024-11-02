@@ -14,5 +14,6 @@ public class CommandList {
         LIST.put("getPathFor", new GetPathForCommand());
         LIST.put("getServerPort", new GetServerPortCommand());
         LIST.put("getCurrentConnections", new GetCurrentConnectionsCommand());
+        LIST.put("renderPartial", new RenderPartialCommand());
     }
 }

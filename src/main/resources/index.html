@@ -16,76 +16,12 @@
 <main>
     <section>
         <h2>Quick Start</h2>
+        <hr/>
+        
+        {{renderPartial("docs/staticfiles.html")}}
+        {{renderPartial("docs/placeholders.html")}}
+        {{renderPartial("docs/dynamicsroutes.html")}}
 
-        <article>
-            <h3>Static Files</h3>
-            <p>If you only need to serve static files, you have two choices:</p>
-            <ul>
-                <li>Use the environment variable <strong><code>WWWPATH</code></strong> to specify the path to the
-                    directory containing the files.
-                </li>
-                <li>Place the files in the <code>resources</code> directory and <strong>JAWS</strong> will serve them.
-                </li>
-            </ul>
-            <aside>If needed, the port can be changed using the environment variable <strong><code>PORT</code></strong>.
-            </aside>
-        </article>
-
-        <article>
-            <h3>Placeholders</h3>
-            <p>You can use placeholders in the HTML file to display dynamic information. Placeholders are enclosed in
-                double curly braces and are replaced with the actual value when the HTML file is parsed.</p>
-            <p>For example, you can use the placeholder <strong><code>{/{ getServerPort }/}</code></strong> (without the
-                bars) to display
-                the server port.</p>
-
-            <h4>Placeholders List</h4>
-            <ul>
-                <li><strong><code>getPathFor("file.txt")</code></strong>: display the path for a file.</li>
-                <li><strong><code>getServerPort</code></strong>: display the server port.</li>
-                <li><strong><code>getCurrentConnections</code></strong>: display the current number of connections.</li>
-            </ul>
-        </article>
-
-        <article>
-            <h3>Dynamic Routes</h3>
-            <p>You can create <strong>dynamic routes</strong> by creating a method with the <strong><code>@Route</code></strong>
-                annotation. The <code>@Route</code>
-                annotation takes two parameters: the <strong>endpoint</strong> and the <strong>method</strong>.</p>
-            <p>The endpoint is the path that the method will respond to. For example, if you want to create a dynamic
-                route for the endpoint <code>/hello</code>, you would create a method with the following signature:</p>
-            <pre><code>@Route(endpoint = "/hello", method = "GET")<br>public void hello(Yggdrasill.RequestHandler requestHandler) {<br>    // Your code here<br>}</code></pre>
-            <p>The method will be invoked when the endpoint is requested. The method takes a single parameter, which is
-                an instance of the <code>Yggdrasill.RequestHandler</code> class. This class provides methods to interact
-                with the request and response.</p>
-            <p>For example, to send a response with the status code <code>200 OK</code>, you would use the following
-                code:</p>
-            <pre><code>requestHandler.sendHTMLResponse(ResponseCode.OK, "Hello, world!");</code></pre>
-            <p>For convenience, there is a folder called <strong><code>controllers</code></strong> in the <code>src/main/java/org/ruitx/server</code>
-                package. This folder contains all the controllers that handle requests. You can create a new controller
-                by creating a new class in this folder and adding the <code>@Route</code> annotation to a method in the
-                class.</p>
-            <p><strong>Important!</strong> Don't forget to add the class to the routes list on the
-                <strong><code>Jaws</code> configs</strong> in the
-                <code>src/main/java/org/ruitx/configs/RoutesConfig</code>.
-        </article>
-
-        <article>
-            <h3>Example for Dynamic Routes</h3>
-            <p>This is a list of todos. You can add new todos by clicking the "Add Todo" button.</p>
-            <div id="todo-list">
-                <!-- This div will be populated with the todo list -->
-                <div hx-get="/todos" hx-target="#todo-list" hx-trigger="load">
-                    Loading todos...
-                </div>
-            </div>
-
-            <h4>Add a New Todo</h4>
-            <form hx-post="/new-todo" hx-swap="innerHTML" hx-target="#todo-list" id="todo-form">
-                <input name="todo" placeholder="Enter a new todo" required type="text">
-                <button type="submit">Add Todo</button>
-            </form>
-        </article>
     </section>
 </main>
 
