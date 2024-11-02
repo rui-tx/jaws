@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 
 public class RenderPartialCommand implements Command {
 
-    private static final String COMMAND = "getServerPort";
+    private static final String COMMAND = "renderPartial";
 
     @Override
     public String execute(String command) {

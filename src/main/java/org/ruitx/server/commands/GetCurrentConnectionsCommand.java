@@ -5,7 +5,7 @@ import org.ruitx.server.interfaces.Command;
 
 public class GetCurrentConnectionsCommand implements Command {
 
-    private static final String COMMAND = "getServerPort";
+    private static final String COMMAND = "getCurrentConnections";
 
     @Override
     public String execute(String command) {
