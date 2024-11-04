@@ -196,7 +196,7 @@ public class Yggdrasill {
         // should be easier
         private void processGET(String endPoint) throws IOException {
             Path path = getResourcePath(endPoint);
-            if (Files.exists(path)) {
+            if (Files.exists(path) && !Files.isDirectory(path)) {
                 sendFileResponse(path);
                 return;
             }
