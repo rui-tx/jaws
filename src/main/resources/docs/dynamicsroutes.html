@@ -29,7 +29,7 @@
         <div id="todo-list">
             <!-- This div will be populated with the todo list -->
             <div hx-get="/todos" hx-target="#todo-list" hx-trigger="load">
-                Loading todos...
+                <img alt="Loading..." class="htmx-indicator" src="/img/loading.svg" width="100"/>
             </div>
         </div>
 
