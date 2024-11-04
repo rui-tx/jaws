@@ -8,18 +8,25 @@ public class ApplicationConfig {
     public static final String DEFAULT_WWW_PATH = "src/main/resources/www/";
     public static final long TIMEOUT = 1000L * 10L; // 10 seconds
     public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = DEFAULT_WWW_PATH + "/404.html";
+    public static final String DEFAULT_DATABASE_PATH = "src/main/resources/db.db";
+    public static final String DEFAULT_DATABASE_SCHEMA_PATH = "src/main/resources/sql/create_schema_v1.sql";
 
     // Static fields for configuration
     public static final String URL;
     public static final int PORT;
     public static final String WWW_PATH;
     public static final String CUSTOM_PAGE_PATH_404;
+    public static final String DATABASE_PATH;
+    public static final String DATABASE_SCHEMA_PATH;
 
     static {
         URL = getUrl();
         PORT = getPort();
         WWW_PATH = getWwwPath();
         CUSTOM_PAGE_PATH_404 = getCustomPagePath404();
+        DATABASE_PATH = getDatabasePath();
+        DATABASE_SCHEMA_PATH = getDatabaseSchemaPath();
+
     }
 
     private static int getPort() {
@@ -47,5 +54,15 @@ public class ApplicationConfig {
     private static String getCustomPagePath404() {
         String customPagePath404Env = System.getenv("CUSTOM_PAGE_PATH_404");
         return customPagePath404Env != null ? customPagePath404Env : DEFAULT_CUSTOM_PAGE_PATH_404;
+    }
+
+    private static String getDatabasePath() {
+        String databasePathEnv = System.getenv("DBPATH");
+        return databasePathEnv != null ? databasePathEnv : DEFAULT_DATABASE_PATH;
+    }
+
+    private static String getDatabaseSchemaPath() {
+        String databaseSchemaPathEnv = System.getenv("DBSCHEMAPATH");
+        return databaseSchemaPathEnv != null ? databaseSchemaPathEnv : DEFAULT_DATABASE_SCHEMA_PATH;
     }
 }

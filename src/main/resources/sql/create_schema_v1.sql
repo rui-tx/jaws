@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS USER;
+
+CREATE TABLE IF NOT EXISTS USER (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE
+);
+
+INSERT OR IGNORE INTO USER (name, email) VALUES ('Administrator', 'admin@example.com');

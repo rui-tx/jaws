@@ -30,6 +30,7 @@ public final class Odin {
     private static void startComponents() {
         ExecutorService executor = Executors.newCachedThreadPool();
 
+        createMimir();
         createNjord();
         List<Thread> threads = Arrays.asList(
                 createYggdrasill(),
@@ -42,6 +43,12 @@ public final class Odin {
         createHel(executor);
     }
 
+    // Mimir is a utility class that initializes the database
+    private static void createMimir() {
+        Mimir mimir = new Mimir();
+        mimir.initializeDatabase();
+    }
+    
     // Njord is a dynamic router that routes requests to controllers
     private static void createNjord() {
         Njord njord = Njord.getInstance();
@@ -69,4 +76,5 @@ public final class Odin {
             executor.shutdown();
         }));
     }
+
 }
