@@ -5,9 +5,9 @@ import org.tinylog.Logger;
 public class ApplicationConfig {
     public static final int DEFAULT_PORT = 15000;
     public static final String DEFAULT_URL = "http://localhost:" + DEFAULT_PORT + "/";
-    public static final String DEFAULT_WWW_PATH = "src/main/resources/";
+    public static final String DEFAULT_WWW_PATH = "src/main/resources/www/";
     public static final long TIMEOUT = 1000L * 10L; // 10 seconds
-    public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = "src/main/resources/404.html";
+    public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = DEFAULT_WWW_PATH + "/404.html";
 
     // Static fields for configuration
     public static final String URL;

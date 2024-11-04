@@ -27,7 +27,7 @@ public class RenderPartialCommand implements Command {
 
         Path path = Paths.get(ApplicationConfig.WWW_PATH + file);
         if (!Files.exists(path)) {
-            Logger.error("Could not find partial file: " + file);
+            Logger.error("Could not find partial file: " + ApplicationConfig.WWW_PATH + file);
             return "";
         }
 
