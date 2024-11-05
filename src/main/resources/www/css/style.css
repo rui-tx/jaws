@@ -29,10 +29,10 @@ body {
     border-bottom: 0;
 }
 
-code {
+pre code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
-    background: white;
+    background: var(--background);
 }
 
 

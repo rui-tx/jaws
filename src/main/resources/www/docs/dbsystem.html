@@ -1,0 +1,97 @@
+<div id="database-system">
+    <article>
+        <h3>Database System</h3>
+        <p>Jaws includes a simple embedded SQLite database for storing and managing data. Here are some key
+            features:</p>
+
+        <h4>1. Database Initialization</h4>
+        <p>The system automatically initializes the database if it does not already exist. The database is created in
+            the path specified by the <code><strong>DATABASE_PATH</strong></code> environment variable. The database
+            schema is loaded from a specified SQL file at <code><strong>DATABASE_SCHEMA_PATH</strong></code>.</p>
+        <pre><code>new Mimir().initializeDatabase();</code></pre>
+
+        <p>Check the <code>Mimir</code> class for more information.</p>
+
+        <h4>2. Executing SQL Queries</h4>
+        <p>You can execute SQL queries using the <code>executeQuery()</code> method. Here's an example of how to
+            retrieve all records from the <code>TODO</code> table:</p>
+        <pre><code>
+            List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+        </code></pre>
+        <p>The result will be a list of maps, where each map represents a row in the result set.</p>
+
+        <h4>3. Creating a New Todo</h4>
+        <p>To insert a new record into the <code>TODO</code> table, use the <code>executedSql()</code> method:</p>
+        <pre><code>
+            int affectedRows = db.executedSql("INSERT INTO TODO (todo) VALUES (?)", todo);
+        </code></pre>
+        <p>If the insertion is successful, the affected rows count will be returned. If there are any issues, you can
+            check the error code and message.</p>
+
+        <h4>4. Example Routes Using the Database</h4>
+        <p>Below are example routes that demonstrate how to interact with the database:</p>
+
+        <h5>Get Todos (GET /todos)</h5>
+        <p>This route retrieves all TODO items from the database:</p>
+        <pre><code>
+            @Route(endpoint = "/todos", method = GET)
+            public void getTodos(Yggdrasill.RequestHandler rh) throws IOException {
+                Mimir db = new Mimir();
+                StringBuilder body = new StringBuilder();
+
+                List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+                body.append("&lt;ul&gt;");
+                for (Row r : todos) {
+                    body.append("&lt;li&gt;").append(r.get("todo")).append("&lt;/li&gt;");
+                }
+                body.append("&lt;/ul&gt;");
+
+                rh.sendHTMLResponse(OK, body.toString());
+            }
+        </code></pre>
+
+        <h5>Create Todo (POST /new-todo)</h5>
+        <p>This route creates a new TODO item in the database:</p>
+        <pre><code>
+            @Route(endpoint = "/new-todo", method = POST)
+            public void createTodo(Yggdrasill.RequestHandler rh) throws IOException {
+                if (rh.getBodyParams() == null || !rh.getBodyParams().containsKey("todo")) {
+                    rh.sendHTMLResponse(BAD_REQUEST, "Missing todo parameter");
+                    return;
+                }
+                Mimir db = new Mimir();
+                String todo = rh.getBodyParams().get("todo");
+
+                int affectedRows = db.executedSql("INSERT INTO TODO (todo) VALUES (?)", todo);
+                if (affectedRows == 0) {
+                    rh.sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error adding todo");
+                    return;
+                }
+
+                StringBuilder body = new StringBuilder();
+                List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+                body.append("&lt;ul&gt;");
+                for (Row r : todos) {
+                    body.append("&lt;li&gt;").append(r.get("todo")).append("&lt;/li&gt;");
+                }
+                body.append("&lt;/ul&gt;");
+
+                rh.sendHTMLResponse(CREATED, body.toString());
+            }
+        </code></pre>
+
+        <h4>5. Database Configuration</h4>
+        <p>The database file is controlled by the following environment variables:</p>
+        <ul>
+            <li><strong><code>DATABASE_PATH</code></strong> - Specifies the path to the SQLite database file.</li>
+            <li><strong><code>DATABASE_SCHEMA_PATH</code></strong> - Specifies the path to the SQL schema file that sets
+                up the database structure.
+            </li>
+        </ul>
+
+        <aside>Ensure that your schema file contains the necessary SQL statements to create tables and initialize your
+            database before use.
+        </aside>
+
+    </article>
+</div>
