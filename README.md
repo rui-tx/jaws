@@ -7,17 +7,19 @@
   
 JAWS (Just Another Web Server) is a web server implemented in Java. It can serve static files, process
 basic HTTP requests and comes with:
-- A file watcher component to monitor changes in the specified resources directory
 - A way to have variables in the HTML and change them on-the-fly, like a mini template engine
-- Dynamic routing, so it's easier to create new endpoints
+- Dynamic routing, so it's easier to create new endpoints like /user/:id
+- A database system
+- A file watcher component to monitor changes in the specified resources directory
 
 ## Features
 
 - **Serve Static Files**: Serves HTML, CSS, JS, and other static files from a specified directory.
 - **HTTP Request Handling**: Supports basic HTTP methods including GET, POST, PUT, PATCH, and DELETE.
 - **Dynamic Routing**: Create dynamic routes using annotations for flexible request handling.
-- **HTML Parsing**: Create more dynamic HTML with custom variables that are changed when it is rendered
+- **HTML Parsing**: Create more dynamic HTML with custom variables that are changed when it is rendered.
 - **File Watching**: Monitors a specified directory for file changes and logs these changes.
+- **Database System**: A simple database system is present using SQLite.
 - **Aspect-Oriented Capable**: Uses AspectJ to log different stages of request processing and deal with exceptions.
 
 ## Setup
@@ -70,7 +72,8 @@ curl http://localhost:8080
 - `org.ruitx.server.components.Heimdall`: A file watcher that monitors changes in the specified directory.
 - `org.ruitx.server.components.Hephaestus`: Represents an HTTP response header.
 - `org.ruitx.server.components.Hermes`: HTML parser.
-- `org.ruitx.server.components.Njord`: Dynamic router that routes requests to controllers
+- `org.ruitx.server.components.Njord`: Dynamic router that routes requests to controllers.
+- `org.ruitx.server.components.Mimir`: Database connector with a couple of functions to improve QoL and DX.
 - `org.ruitx.server.aspects.LoggingAspect`: AspectJ-based logging aspect to log request processing events.
 - `org.ruitx.server.aspects.ExceptionAspect`: AspectJ-based exception handler.
 
@@ -96,7 +99,11 @@ Hermes is a utility class that contains methods for parsing HTML files.
 
 ### Njord
 
-Njord is a dynamic router class that routes requests to controllers. It currently only works for GET commands.
+Njord is a dynamic router class that routes requests to controllers. Dynamic endpoints like /todos/:id is possible.
+
+### Mimir
+
+Mimir is responsible for the database connection and have a couple of methods to help handle ```SQL``` commands.
 
 ### LoggingAspect
 
@@ -110,3 +117,7 @@ ExceptionAspect uses AspectJ for dealing with exceptions during runtime.
 ## License
 
 This project is licensed under the MIT License.
+
+## Why Norse Mythology?
+
+I say to that: Why not have fun while learning and not taking everything so serious? 😁
