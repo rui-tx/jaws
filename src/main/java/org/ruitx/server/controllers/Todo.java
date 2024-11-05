@@ -20,7 +20,7 @@ public class Todo {
         Mimir db = new Mimir();
         StringBuilder body = new StringBuilder();
 
-        List<Row> todos = db.executeQuery("SELECT * FROM TODO", db::list);
+        List<Row> todos = db.getRows("SELECT * FROM TODO");
         body.append("<ul>");
         for (Row r : todos) {
             body.append("<li>").append(r.getString("todo")).append("</li>");
@@ -37,6 +37,7 @@ public class Todo {
             return;
         }
         Mimir db = new Mimir();
+
         String todo = rh.getBodyParams().get("todo");
 
         int affectedRows = db.executeSql("INSERT INTO TODO (todo) VALUES (?)", todo);
@@ -47,7 +48,7 @@ public class Todo {
 
         StringBuilder body = new StringBuilder();
 
-        List<Row> todos = db.executeQuery("SELECT * FROM TODO", db::list);
+        List<Row> todos = db.getRows("SELECT * FROM TODO");
         body.append("<ul>");
         for (Row r : todos) {
             body.append("<li>").append(r.getString("todo")).append("</li>");
