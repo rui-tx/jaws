@@ -1,7 +1,7 @@
 <div id="database-system">
     <article>
         <h3>Database System</h3>
-        <p>Jaws includes a simple embedded SQLite database for storing and managing data. Here are some key
+        <p>Jaws includes a simple embedded SQLite database for storing and managing data. Below are the key
             features:</p>
 
         <h4>1. Database Initialization</h4>
@@ -10,20 +10,23 @@
             schema is loaded from a specified SQL file at <code><strong>DATABASE_SCHEMA_PATH</strong></code>.</p>
         <pre><code>new Mimir().initializeDatabase();</code></pre>
 
-        <p>Check the <code>Mimir</code> class for more information.</p>
+        <p>Check the <code>Mimir</code> class for more details on initialization and setup.</p>
 
         <h4>2. Executing SQL Queries</h4>
-        <p>You can execute SQL queries using the <code>executeQuery()</code> method. Here's an example of how to
-            retrieve all records from the <code>TODO</code> table:</p>
+        <p>You can execute SQL queries using the <code>getRows()</code> method to retrieve multiple rows or the <code>getRow()</code>
+            method to retrieve a single row. Here's an example of how to retrieve all records from the <code>TODO</code>
+            table:</p>
         <pre><code>
-            List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+            List&lt;Row&gt; todos = db.getRows("SELECT * FROM TODO");
         </code></pre>
-        <p>The result will be a list of maps, where each map represents a row in the result set.</p>
+        <p>The result will be a list of <code>Row</code> objects, where each <code>Row</code> represents a row in the
+            result set.</p>
 
         <h4>3. Creating a New Todo</h4>
-        <p>To insert a new record into the <code>TODO</code> table, use the <code>executedSql()</code> method:</p>
+        <p>To insert a new record into the <code>TODO</code> table, use the <code>executeSql()</code> method. Here's an
+            example:</p>
         <pre><code>
-            int affectedRows = db.executedSql("INSERT INTO TODO (todo) VALUES (?)", todo);
+            int affectedRows = db.executeSql("INSERT INTO TODO (todo) VALUES (?)", todo);
         </code></pre>
         <p>If the insertion is successful, the affected rows count will be returned. If there are any issues, you can
             check the error code and message.</p>
@@ -39,7 +42,7 @@
                 Mimir db = new Mimir();
                 StringBuilder body = new StringBuilder();
 
-                List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+                List&lt;Row&gt; todos = db.getRows("SELECT * FROM TODO");
                 body.append("&lt;ul&gt;");
                 for (Row r : todos) {
                     body.append("&lt;li&gt;").append(r.get("todo")).append("&lt;/li&gt;");
@@ -62,14 +65,14 @@
                 Mimir db = new Mimir();
                 String todo = rh.getBodyParams().get("todo");
 
-                int affectedRows = db.executedSql("INSERT INTO TODO (todo) VALUES (?)", todo);
+                int affectedRows = db.executeSql("INSERT INTO TODO (todo) VALUES (?)", todo);
                 if (affectedRows == 0) {
                     rh.sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error adding todo");
                     return;
                 }
 
                 StringBuilder body = new StringBuilder();
-                List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+                List&lt;Row&gt; todos = db.getRows("SELECT * FROM TODO");
                 body.append("&lt;ul&gt;");
                 for (Row r : todos) {
                     body.append("&lt;li&gt;").append(r.get("todo")).append("&lt;/li&gt;");
