@@ -1,31 +1,50 @@
 <div id="dynamic-routes">
     <article>
         <h3>Dynamic Routes</h3>
-        <p>You can create <strong>dynamic routes</strong> by creating a method with the
-            <strong><code>@Route</code></strong>
-            annotation. The <code>@Route</code>
-            annotation takes two parameters: the <strong>endpoint</strong> and the <strong>method</strong>.</p>
-        <p>The endpoint is the path that the method will respond to. For example, if you want to create a dynamic
-            route for the endpoint <code>/hello</code>, you would create a method with the following signature:</p>
-        <pre><code>@Route(endpoint = "/hello", method = "GET")<br>public void hello(Yggdrasill.RequestHandler requestHandler) {<br>    // Your code here<br>}</code></pre>
-        <p>The method will be invoked when the endpoint is requested. The method takes a single parameter, which is
+        <p>You can create <strong>dynamic routes</strong> by annotating a method with the
+            <strong><code>@Route</code></strong> annotation. This annotation takes two parameters: the
+            <strong>endpoint</strong> and the <strong>method</strong>.</p>
+        <p>The <strong>endpoint</strong> represents the path that the method will respond to. For instance, if you want
+            to create a dynamic route for the endpoint <code>/todos/:id</code> where <code>:id</code> is a dynamic
+            parameter, you would create a method with the following signature:</p>
+        <pre><code>@Route(endpoint = "/todos/:id", method = "GET")<br>public void getTodoById(Yggdrasill.RequestHandler requestHandler) {<br>    // Your code here<br>}</code></pre>
+        <p>The method will be triggered when the endpoint is requested, and the method should take a single parameter,
             an instance of the <code>Yggdrasill.RequestHandler</code> class. This class provides methods to interact
-            with the request and response.</p>
-        <p>For example, to send a response with the status code <code>200 OK</code>, you would use the following
-            code:</p>
-        <pre><code>requestHandler.sendHTMLResponse(ResponseCode.OK, "Hello, world!");</code></pre>
-        <p>For convenience, there is a folder called <strong><code>controllers</code></strong> in the <code>src/main/java/org/ruitx/server</code>
-            package. This folder contains all the controllers that handle requests. You can create a new controller
-            by creating a new class in this folder and adding the <code>@Route</code> annotation to a method in the
-            class.</p>
-        <p><strong>Important!</strong> Don't forget to add the class to the routes list on the
-            <strong><code>Jaws</code> configs</strong> in the
-            <code>src/main/java/org/ruitx/configs/RoutesConfig</code>.
+            with both the request and the response.</p>
+
+        <p>For example, to send a response with the status code <code>200 OK</code>, you would use the following code
+            inside your method:</p>
+        <pre><code>requestHandler.sendHTMLResponse(OK, "Todo item retrieved!");</code></pre>
+
+        <p>In the case of dynamic routes, the <code>:id</code> parameter in the endpoint will be automatically extracted
+            and passed as a part of the <code>pathParams</code> in the request handler. For example, for the endpoint
+            <code>/todos/25</code>, the parameter <code>id</code> will have the value <code>25</code>.</p>
+
+        <p><strong>Note:</strong> The dynamic route also requires the HTTP method (like <code>GET</code>,
+            <code>POST</code>, <code>DELETE</code>, etc.) to be specified. This ensures that the route is triggered only
+            for the correct type of request. Here's an example with a <code>DELETE</code> request to delete a todo:</p>
+        <pre><code>@Route(endpoint = "/todos/:id", method = "DELETE")<br>public void getTodoById(Yggdrasill.RequestHandler requestHandler) {<br>    // Retrieve and respond with the todo<br>}</code></pre>
+
+        <p>The <code>@Route</code> annotation can be used to map methods to specific HTTP methods like <code>GET</code>,
+            <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, or <code>DELETE</code>, allowing you to define
+            actions for different request types on the same endpoint.</p>
+
+        <p>For convenience, there is a folder called <strong><code>controllers</code></strong> inside the <code>src/main/java/org/ruitx/server</code>
+            package. This folder contains all the controllers that handle requests. You can create a new controller by
+            creating a new class in this folder and adding the <code>@Route</code> annotation to its methods.</p>
+
+        <p><strong>Important!</strong> Don't forget to add your new controller class to the list of routes in the
+            <strong><code>RoutesConfig</code></strong> configuration file located in <code>src/main/java/org/ruitx/configs/RoutesConfig</code>.
+            This ensures that your dynamic routes are registered and available to the server.</p>
     </article>
 
     <article>
-        <h3>Example for Dynamic Routes</h3>
-        <p>This is a list of todos. You can add new todos by clicking the "Add Todo" button.</p>
+        <h3>Example of Dynamic Routes</h3>
+        <p>Here’s a simple example of how dynamic routes can be used in an application.</p>
+
+        <p>This example allows you to interact with a list of todos. You can retrieve the list, add a new todo, or
+            delete existing todos using dynamic routes.</p>
+
         <div id="todo-list">
             <!-- This div will be populated with the todo list -->
             <div hx-get="/todos" hx-target="#todo-list" hx-trigger="load">
@@ -33,10 +52,29 @@
             </div>
         </div>
 
-        <h4>Add a New Todo</h4>
-        <form hx-post="/new-todo" hx-swap="innerHTML" hx-target="#todo-list" id="todo-form">
+        <form hx-post="/todos" hx-swap="outerHTML" hx-target="#todo-list" id="todo-form">
             <input name="todo" placeholder="Enter a new todo" required type="text">
             <button type="submit">Add Todo</button>
         </form>
+        <button hx-delete="/todos" hx-swap="outerHTML" hx-target="#todo-list">Delete All Todos</button>
+
+        <p>In this example:</p>
+        <ul>
+            <li><code>GET /todos</code> fetches the list of todos.</li>
+            <li><code>POST /todos</code> creates a new todo.</li>
+            <li><code>DELETE /todos</code> deletes all todos.</li>
+        </ul>
+
+        <p>If you want to retrieve or manipulate a specific todo, you would use a dynamic route like
+            <code>/todos/:id</code>. For example:</p>
+        <ul>
+            <li><code>GET /todos/25</code> retrieves the todo with ID 25.</li>
+            <li><code>DELETE /todos/25</code> deletes the todo with ID 25.</li>
+        </ul>
+
+        <p>The <code>:id</code> part of the URL is a dynamic parameter, and its value will be automatically extracted
+            and passed to the handler method. You can access this parameter inside the method via the
+            <code>pathParams</code> in the <code>Yggdrasill.RequestHandler</code> instance, like this:</p>
+        <pre><code>String todoId = requestHandler.getPathParams().get("id");</code></pre>
     </article>
 </div>

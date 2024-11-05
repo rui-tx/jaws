@@ -4,7 +4,9 @@ import org.ruitx.server.interfaces.Route;
 import org.ruitx.server.strings.RequestType;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Njord {
@@ -33,11 +35,39 @@ public class Njord {
         }
     }
 
+    /**
+     * Retrieves a method associated with a specific path and HTTP method type.
+     *
+     * @param path   the URL path of the route
+     * @param method the HTTP method (GET, POST, etc.)
+     * @return the method corresponding to the path and HTTP method, or null if not found
+     */
     public Method getRoute(String path, RequestType method) {
         Map<RequestType, Method> methodMap = routes.get(path);
         return methodMap != null ? methodMap.get(method) : null;
     }
 
+    /**
+     * Retrieves all registered routes (methods) across all controllers.
+     *
+     * @return a list of all registered route handler methods
+     */
+    public List<Method> getAllRoutes() {
+        List<Method> allRoutes = new ArrayList<>();
+
+        for (Map<RequestType, Method> methodMap : routes.values()) {
+            allRoutes.addAll(methodMap.values());
+        }
+
+        return allRoutes;
+    }
+
+    /**
+     * Retrieves the controller instance by its name.
+     *
+     * @param controllerName the name of the controller
+     * @return the instance of the controller or null if not found
+     */
     public Object getControllerInstance(String controllerName) {
         return controllers.get(controllerName);
     }
