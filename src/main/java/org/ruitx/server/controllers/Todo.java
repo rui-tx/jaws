@@ -3,10 +3,10 @@ package org.ruitx.server.controllers;
 import org.ruitx.server.components.Mimir;
 import org.ruitx.server.components.Yggdrasill;
 import org.ruitx.server.interfaces.Route;
+import org.ruitx.server.utils.Row;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import static org.ruitx.server.strings.RequestType.GET;
 import static org.ruitx.server.strings.RequestType.POST;
@@ -20,10 +20,10 @@ public class Todo {
         Mimir db = new Mimir();
         StringBuilder body = new StringBuilder();
 
-        List<Map<String, Object>> todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+        List<Row> todos = db.executeQuery("SELECT * FROM TODO", db::list);
         body.append("<ul>");
-        for (Map<String, Object> todo : todos) {
-            body.append("<li>").append(todo.get("todo")).append("</li>");
+        for (Row r : todos) {
+            body.append("<li>").append(r.getString("todo")).append("</li>");
         }
         body.append("</ul>");
 
@@ -39,7 +39,7 @@ public class Todo {
         Mimir db = new Mimir();
         String todo = rh.getBodyParams().get("todo");
 
-        int affectedRows = new Mimir().executedSql("INSERT INTO TODO (todo) VALUES (?)", todo);
+        int affectedRows = db.executeSql("INSERT INTO TODO (todo) VALUES (?)", todo);
         if (affectedRows == 0) {
             rh.sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error adding todo");
             return;
@@ -47,10 +47,10 @@ public class Todo {
 
         StringBuilder body = new StringBuilder();
 
-        List<Map<String, Object>> todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+        List<Row> todos = db.executeQuery("SELECT * FROM TODO", db::list);
         body.append("<ul>");
-        for (Map<String, Object> t : todos) {
-            body.append("<li>").append(t.get("todo")).append("</li>");
+        for (Row r : todos) {
+            body.append("<li>").append(r.getString("todo")).append("</li>");
         }
         body.append("</ul>");
 

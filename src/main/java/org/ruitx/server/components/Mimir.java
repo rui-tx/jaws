@@ -1,6 +1,7 @@
 package org.ruitx.server.components;
 
 import org.ruitx.server.interfaces.SqlFunction;
+import org.ruitx.server.utils.Row;
 import org.tinylog.Logger;
 
 import java.io.File;
@@ -67,7 +68,7 @@ public class Mimir {
         return result;
     }
 
-    public int executedSql(String sql, Object... params) {
+    public int executeSql(String sql, Object... params) {
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -106,7 +107,7 @@ public class Mimir {
     }
 
     // not tested
-    public <T> T executedQuery(String sql, SqlFunction<T> action, Object... params) {
+    public <T> T executeQuery(String sql, SqlFunction<T> action, Object... params) {
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -123,7 +124,12 @@ public class Mimir {
         }
     }
 
-    public List<Map<String, Object>> toList(ResultSet resultSet) throws SQLException {
+    public List<Row> list(ResultSet resultSet) throws SQLException {
+        List<Map<String, Object>> result = listHelper(resultSet);
+        return result.stream().map(Row::new).toList();
+    }
+
+    private List<Map<String, Object>> listHelper(ResultSet resultSet) throws SQLException {
         List<Map<String, Object>> resultList = new ArrayList<>();
         int columnCount = resultSet.getMetaData().getColumnCount();
 
