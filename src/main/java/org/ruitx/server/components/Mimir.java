@@ -67,6 +67,21 @@ public class Mimir {
         return result;
     }
 
+    public int executedSql(String sql, Object... params) {
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < params.length; i++) {
+                stmt.setObject(i + 1, params[i]);
+            }
+
+            return stmt.executeUpdate(); // affected rows
+        } catch (SQLException e) {
+            Logger.error("Error executing prepared update: " + e.getMessage());
+            return 0;
+        }
+    }
+
     public void executeSqlStatements(Connection conn, String sql) throws SQLException {
         for (String statement : sql.split(";")) {
             executeStatement(conn, statement.trim());
@@ -86,6 +101,24 @@ public class Mimir {
             return action.apply(rs);
         } catch (SQLException e) {
             Logger.error("Error executing SQL: " + e.getMessage());
+            return null;
+        }
+    }
+
+    // not tested
+    public <T> T executedQuery(String sql, SqlFunction<T> action, Object... params) {
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < params.length; i++) {
+                stmt.setObject(i + 1, params[i]);
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return action.apply(rs);
+            }
+        } catch (SQLException e) {
+            Logger.error("Error executing prepared query: " + e.getMessage());
             return null;
         }
     }
