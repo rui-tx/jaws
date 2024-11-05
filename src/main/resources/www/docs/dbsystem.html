@@ -16,7 +16,7 @@
         <p>You can execute SQL queries using the <code>executeQuery()</code> method. Here's an example of how to
             retrieve all records from the <code>TODO</code> table:</p>
         <pre><code>
-            List&lt;Map&lt;String, Object&gt;&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+            List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
         </code></pre>
         <p>The result will be a list of maps, where each map represents a row in the result set.</p>
 
@@ -39,10 +39,10 @@
                 Mimir db = new Mimir();
                 StringBuilder body = new StringBuilder();
 
-                List&lt;Map&lt;String, Object&gt;&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+                List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
                 body.append("&lt;ul&gt;");
-                for (Map&lt;String, Object&gt; todo : todos) {
-                    body.append("&lt;li&gt;").append(todo.get("todo")).append("&lt;/li&gt;");
+                for (Row r : todos) {
+                    body.append("&lt;li&gt;").append(r.get("todo")).append("&lt;/li&gt;");
                 }
                 body.append("&lt;/ul&gt;");
 
@@ -69,10 +69,10 @@
                 }
 
                 StringBuilder body = new StringBuilder();
-                List&lt;Map&lt;String, Object&gt;&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
+                List&lt;Row&gt; todos = db.executeQuery("SELECT * FROM TODO", db::toList);
                 body.append("&lt;ul&gt;");
-                for (Map&lt;String, Object&gt; t : todos) {
-                    body.append("&lt;li&gt;").append(t.get("todo")).append("&lt;/li&gt;");
+                for (Row r : todos) {
+                    body.append("&lt;li&gt;").append(r.get("todo")).append("&lt;/li&gt;");
                 }
                 body.append("&lt;/ul&gt;");
 
