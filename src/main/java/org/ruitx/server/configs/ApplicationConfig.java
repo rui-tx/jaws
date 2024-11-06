@@ -1,8 +1,10 @@
 package org.ruitx.server.configs;
 
+import org.ruitx.server.components.Tyr;
 import org.tinylog.Logger;
 
 public class ApplicationConfig {
+    public static final String APPLICATION_NAME = "JAWS";
     public static final int DEFAULT_PORT = 15000;
     public static final String DEFAULT_URL = "http://localhost:" + DEFAULT_PORT + "/";
     public static final String DEFAULT_WWW_PATH = "src/main/resources/www/";
@@ -10,6 +12,7 @@ public class ApplicationConfig {
     public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = DEFAULT_WWW_PATH + "/404.html";
     public static final String DEFAULT_DATABASE_PATH = "src/main/resources/db.db";
     public static final String DEFAULT_DATABASE_SCHEMA_PATH = "src/main/resources/sql/create_schema_v1.sql";
+    public static final String DEFAULT_JWT_SECRET = "";
 
     // Static fields for configuration
     public static final String URL;
@@ -18,6 +21,7 @@ public class ApplicationConfig {
     public static final String CUSTOM_PAGE_PATH_404;
     public static final String DATABASE_PATH;
     public static final String DATABASE_SCHEMA_PATH;
+    public static final String JWT_SECRET;
 
     static {
         URL = getUrl();
@@ -26,7 +30,7 @@ public class ApplicationConfig {
         CUSTOM_PAGE_PATH_404 = getCustomPagePath404();
         DATABASE_PATH = getDatabasePath();
         DATABASE_SCHEMA_PATH = getDatabaseSchemaPath();
-
+        JWT_SECRET = getJWTSecret();
     }
 
     private static int getPort() {
@@ -64,5 +68,18 @@ public class ApplicationConfig {
     private static String getDatabaseSchemaPath() {
         String databaseSchemaPathEnv = System.getenv("DBSCHEMAPATH");
         return databaseSchemaPathEnv != null ? databaseSchemaPathEnv : DEFAULT_DATABASE_SCHEMA_PATH;
+    }
+
+    private static String getJWTSecret() {
+        String jwtTokenEnv = System.getenv("JWTTOKEN");
+        if (jwtTokenEnv == null) {
+            Logger.warn("JWT Token not found, generating a new one");
+            String jwtToken = Tyr.createSecreteKey();
+            Logger.info("JWT Token: " + jwtToken);
+            Logger.warn("Please save this token in a safe place, it will not be shown again");
+            return jwtToken;
+
+        }
+        return jwtTokenEnv;
     }
 }
