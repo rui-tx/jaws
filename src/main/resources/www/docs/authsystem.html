@@ -1,0 +1,62 @@
+<div id="authentication-system">
+    <article>
+        <h3>Authentication System</h3>
+        <p>JAWS authentication system uses JWT (JSON Web Tokens) for secure user authentication and authorization. Right
+            now the system is composed of two main operations: token creation
+            and token validation.</p>
+
+        <h4>1. Token Creation</h4>
+        <p>JAWS allows clients to generate a JWT token by sending a POST request with a username and password.
+            Upon successful authentication, a JWT token is generated and returned to the client. This token can be used
+            to authenticate further API requests.</p>
+
+        <p>Token generation is handled by the <code><strong>Auth</strong></code> controller. The endpoint for generating
+            the token is:</p>
+
+        <pre><code>POST /auth/token/create</code></pre>
+
+        <h5>Example Request</h5>
+        <p>To generate a token, send a POST request with the following parameters in the body:</p>
+        <ul>
+            <li><code>user</code>: The username (e.g., email).</li>
+            <li><code>password</code>: The user's password.</li>
+        </ul>
+        <pre><code>curl -X POST http://localhost:15000/auth/token/create \
+    -d "user=user@example.com&password=yourpassword" \
+    -H "Content-Type: application/x-www-form-urlencoded"</code></pre>
+
+        <h5>Example Response</h5>
+        <p>If the credentials are valid, the response will contain the generated token:</p>
+        <pre><code>{"token": "your_generated_token"}</code></pre>
+
+        <h4>2. Token Validation</h4>
+        <p>Once you have obtained the token, you can verify its validity using the <code><strong>Auth</strong></code>
+            controller's token verification endpoint. This checks whether the provided token is still valid.</p>
+
+        <p>Token validation is handled by the following endpoint:</p>
+
+        <pre><code>POST /auth/token/verify</code></pre>
+
+        <h5>Example Request</h5>
+        <p>To verify a token, send a POST request with the following parameter in the body:</p>
+        <ul>
+            <li><code>token</code>: The JWT token to verify.</li>
+        </ul>
+        <pre><code>curl -X POST http://localhost:15000/auth/token/verify \
+    -d "token=your_generated_token" \
+    -H "Content-Type: application/x-www-form-urlencoded"</code></pre>
+
+        <h5>Example Response</h5>
+        <pre><code>{"valid": true}</code></pre>
+
+        <h4>4. Environment Configuration</h4>
+        <p>Ensure the following environment variables are set for the system to work properly:</p>
+        <ul>
+            <li><code><strong>JWT_SECRET</strong></code>: The secret key used to sign and verify JWT tokens.</li>
+            <li><code><strong>APPLICATION_NAME</strong></code>: The name of the application used in the token's issuer
+                field.
+            </li>
+        </ul>
+
+    </article>
+</div>

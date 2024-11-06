@@ -375,6 +375,21 @@ public class Yggdrasill {
         }
 
         /**
+         * Sends a JSON response with the specified response code and body content.
+         *
+         * @param responseCode the HTTP response code.
+         * @param body         the body content of the response.
+         * @throws IOException if an error occurs while sending the response.
+         */
+        public void sendJSONResponse(ResponseCode responseCode, String body) throws IOException {
+            byte[] content = body.getBytes();
+            String contentType = "application/json";
+
+            sendResponseHeaders(responseCode, contentType, content.length);
+            sendResponseBody(content);
+        }
+
+        /**
          * Returns the path for the static resource corresponding to the endpoint.
          *
          * @param endPoint the endpoint of the request.
