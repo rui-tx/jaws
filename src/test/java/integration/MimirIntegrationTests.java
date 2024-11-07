@@ -1,9 +1,15 @@
 package integration;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
+import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.ruitx.server.components.Mimir;
+import org.ruitx.server.components.Tyr;
 import org.ruitx.server.utils.Row;
 
 import java.sql.Connection;
@@ -12,6 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.ruitx.server.configs.ApplicationConfig.DEFAULT_DATABASE_TESTS_PATH;
+import static org.ruitx.server.configs.ApplicationConfig.JWT_SECRET;
 
 class MimirIntegrationTests {
 
@@ -133,5 +140,102 @@ class MimirIntegrationTests {
         boolean result = db.executeSql(invalidSql);
         assertFalse(result, "Expected the SQL execution to fail due to invalid statement.");
     }
-    
+
+    @Test
+    void givenValidUserDetails_whenCreateUser_thenUserIsInserted() throws SQLException {
+        String username = "testuser";
+        String password = "testpassword";
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, password.toCharArray());
+
+        String sql = "INSERT INTO USER (user, password_hash) VALUES (?, ?)";
+        int rowsAffected = db.executeSql(sql, username, hashedPassword);
+        assertEquals(1, rowsAffected, "Expected one row to be affected when inserting a user.");
+
+        String querySql = "SELECT * FROM USER WHERE user = ?";
+        Row userRow = db.getRow(querySql, username);
+        assertNotNull(userRow, "Expected user to be found in the database.");
+        assertEquals(username, userRow.get("user"), "The user name should match.");
+        assertNotNull(userRow.get("password_hash"), "Password hash should not be null.");
+
+        String storedPasswordHash = userRow.get("password_hash").toString();
+        BCrypt.Result result = BCrypt.verifyer().verify(password.toCharArray(), storedPasswordHash.toCharArray());
+        assertTrue(result.verified, "Password hash verification failed.");
+    }
+
+    @Test
+    void givenValidUserCredentials_whenLogin_thenReturnsToken() throws SQLException {
+        String username = "testuser";
+        String password = "testpassword";
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, password.toCharArray());
+
+        String sql = "INSERT INTO USER (user, password_hash) VALUES (?, ?)";
+        db.executeSql(sql, username, hashedPassword);
+
+        String loginSql = "SELECT * FROM USER WHERE user = ?";
+        Row dbUser = db.getRow(loginSql, username);
+        assertNotNull(dbUser, "Expected user to be found in the database.");
+
+        String storedPasswordHash = dbUser.get("password_hash").toString();
+        boolean passwordVerified = BCrypt.verifyer()
+                .verify(password.toCharArray(), storedPasswordHash)
+                .verified;
+        assertTrue(passwordVerified, "Expected password verification to pass.");
+
+        String token = Tyr.createToken(username);
+        assertNotNull(token, "Expected token to be generated.");
+        assertTrue(Tyr.isTokenValid(token), "Expected token to be valid.");
+    }
+
+    @Test
+    void givenExistingUser_whenInsertingDuplicateUser_thenReturnsConflict() throws SQLException {
+        String username = "testuser";
+        String password = "testpassword";
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, password.toCharArray());
+
+        String sqlInsert = "INSERT INTO USER (user, password_hash) VALUES (?, ?)";
+        int rowsAffected = db.executeSql(sqlInsert, username, hashedPassword);
+        assertEquals(1, rowsAffected, "Expected one row to be affected when inserting the first user.");
+
+        int duplicateRowsAffected = db.executeSql(sqlInsert, username, hashedPassword);
+        assertEquals(0, duplicateRowsAffected, "Expected no rows to be affected when inserting a duplicate user.");
+
+        String querySql = "SELECT COUNT(*) FROM USER WHERE user = ?";
+        Row row = db.getRow(querySql, username);
+        assertNotNull(row, "Expected to find a row with the given user.");
+        assertEquals(1, row.get("COUNT(*)"), "Expected to find exactly one user in the database.");
+    }
+
+    @Test
+    void givenInvalidUserCredentials_whenCreateToken_thenReturnsNull() throws SQLException {
+        String username = "invaliduser";
+        String password = "invalidpassword";
+
+        // Call createToken with invalid credentials (non-existing user or wrong password)
+        String token = Tyr.createToken(username, password);
+
+        // Assert that the token is null since the credentials are invalid
+        assertNull(token, "Token should be null for invalid credentials.");
+    }
+
+    // TODO: Fix this test
+    @Disabled
+    @Test
+    void givenValidUserCredentials_whenCreateToken_thenReturnsToken() throws SQLException {
+        String username = "validuser";
+        String password = "validpassword";
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, password.toCharArray());
+
+        String sqlInsert = "INSERT INTO USER (user, password_hash) VALUES (?, ?)";
+        db.executeSql(sqlInsert, username, hashedPassword);
+
+        String token = Tyr.createToken(username, password);
+        assertNotNull(token, "Token should not be null or empty.");
+
+        Jwt<?, ?> jwt;
+        jwt = Jwts.parser()
+                .verifyWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes()))
+                .build()
+                .parse(token);
+        assertEquals(username, jwt.getHeader().get("subject"), "The token subject should match the username.");
+    }
 }

@@ -4,6 +4,7 @@ import io.jsonwebtoken.Jwt;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.ruitx.server.utils.Row;
 import org.tinylog.Logger;
 
 import javax.crypto.SecretKey;
@@ -18,6 +19,7 @@ public class Tyr {
 
     /**
      * Create a JWT token with claims (e.g., user ID, roles, etc.).
+     * This method WILL check if the user exists in the database.
      *
      * @param userId   the user ID.
      * @param password the password.
@@ -26,8 +28,31 @@ public class Tyr {
     public static String createToken(String userId, String password) {
         Key key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
 
-        // TODO: check if credentials are valid
-        
+        Mimir db = new Mimir();
+        Row user = db.getRow("SELECT * FROM USER WHERE user = ? AND password_hash = ?",
+                userId, password);
+        if (user == null || user.get("user").toString().isEmpty()) {
+            return null;
+        }
+
+        return Jwts.builder()
+                .issuer(APPLICATION_NAME)
+                .subject(userId)
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * Create a JWT token with claims (e.g., user ID, roles, etc.).
+     * This method WILL NOT check if the user exists in the database.
+     * It is intended for use cases where the user is already known.
+     *
+     * @param userId the user ID.
+     * @return the JWT token.
+     */
+    public static String createToken(String userId) {
+        Key key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
+
         return Jwts.builder()
                 .issuer(APPLICATION_NAME)
                 .subject(userId)

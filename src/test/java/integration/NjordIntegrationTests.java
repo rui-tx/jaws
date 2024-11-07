@@ -40,5 +40,15 @@ public class NjordIntegrationTests {
                 .then()
                 .statusCode(ResponseCode.OK.getCode());
     }
-    
+
+    @Test
+    void givenDynamicEndpoint_whenRequested_thenReturns404() {
+        given()
+                .port(ApplicationConfig.PORT)
+                .when()
+                .get("/notfound")
+                .then()
+                .statusCode(ResponseCode.NOT_FOUND.getCode());
+    }
+
 }
