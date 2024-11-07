@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static org.ruitx.server.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.server.configs.RoutesConfig.ROUTES;
 
 /**
@@ -46,9 +47,9 @@ public final class Odin {
     // Mimir is a utility class that initializes the database
     private static void createMimir() {
         Mimir mimir = new Mimir();
-        mimir.initializeDatabase();
+        mimir.initializeDatabase(DATABASE_PATH);
     }
-    
+
     // Njord is a dynamic router that routes requests to controllers
     private static void createNjord() {
         Njord njord = Njord.getInstance();

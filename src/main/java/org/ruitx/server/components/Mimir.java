@@ -18,13 +18,17 @@ import static org.ruitx.server.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.server.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 
 public class Mimir {
-    private final File db;
+    private File db;
 
     public Mimir() {
         this.db = new File(DATABASE_PATH);
     }
 
-    public void initializeDatabase() {
+    public void initializeDatabase(String databasePath) {
+        if (databasePath != null && !databasePath.isEmpty()) {
+            this.db = new File(databasePath); // database for tests
+        }
+
         createDatabaseFile();
         Logger.info("Database is ready.");
     }
@@ -76,6 +80,17 @@ public class Mimir {
      */
     public List<Row> getRows(String sql) {
         return executeQuery(sql, this::list);
+    }
+
+    /**
+     * Execute a SQL query and return a list of rows.
+     *
+     * @param sql    SQL query string
+     * @param params Parameters for the prepared statement
+     * @return List of Row objects
+     */
+    public List<Row> getRows(String sql, Object... params) {
+        return executeQuery(sql, this::list, params);
     }
 
     /**
@@ -195,6 +210,17 @@ public class Mimir {
         if (!statement.isEmpty()) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(statement);
+            }
+        }
+    }
+
+    public void deleteDatabase() {
+        if (db.exists()) {
+            boolean deleted = db.delete();
+            if (deleted) {
+                Logger.info("Test database deleted: " + db.getAbsolutePath());
+            } else {
+                Logger.error("Failed to delete test database: " + db.getAbsolutePath());
             }
         }
     }

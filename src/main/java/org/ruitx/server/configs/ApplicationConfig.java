@@ -11,6 +11,7 @@ public class ApplicationConfig {
     public static final long TIMEOUT = 1000L * 10L; // 10 seconds
     public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = DEFAULT_WWW_PATH + "/404.html";
     public static final String DEFAULT_DATABASE_PATH = "src/main/resources/db.db";
+    public static final String DEFAULT_DATABASE_TESTS_PATH = "src/main/resources/db_tests.db";
     public static final String DEFAULT_DATABASE_SCHEMA_PATH = "src/main/resources/sql/create_schema_v1.sql";
     public static final String DEFAULT_JWT_SECRET = "";
 
