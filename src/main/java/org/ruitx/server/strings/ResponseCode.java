@@ -37,6 +37,24 @@ public enum ResponseCode {
         this.message = message;
     }
 
+    public static ResponseCode fromCode(int code) {
+        for (ResponseCode responseCode : values()) {
+            if (responseCode.getCode() == code) {
+                return responseCode;
+            }
+        }
+        return null;
+    }
+
+    public static ResponseCode fromString(String message) {
+        for (ResponseCode responseCode : values()) {
+            if (responseCode.getMessage().equalsIgnoreCase(message)) {
+                return responseCode;
+            }
+        }
+        return null;
+    }
+
     public int getCode() {
         return code;
     }

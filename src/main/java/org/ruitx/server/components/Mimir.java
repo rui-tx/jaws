@@ -73,6 +73,18 @@ public class Mimir {
     }
 
     /**
+     * Execute a SQL query and return the first row.
+     *
+     * @param sql    SQL query string
+     * @param params Parameters for the prepared statement
+     * @return First row result or null if no rows
+     */
+    public Row getRow(String sql, Object... params) {
+        List<Row> rows = getRows(sql, params);
+        return (rows != null && !rows.isEmpty()) ? rows.get(0) : null;
+    }
+
+    /**
      * Execute a SQL query and return a list of rows.
      *
      * @param sql SQL query string
