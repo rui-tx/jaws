@@ -463,7 +463,6 @@ public class Yggdrasill {
                     .responseType(responseCode.toString())
                     .contentType(contentType)
                     .contentLength(String.valueOf(contentLength))
-                    .endResponse()
                     .build();
             out.write(responseHeader.headerToBytes());
             out.flush();
