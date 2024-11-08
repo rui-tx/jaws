@@ -20,19 +20,35 @@ public final class Hermes {
     /**
      * Parse the HTML file and replace the placeholders with the actual values
      *
-     * @param htmlPage
+     * @param htmlPage The HTML file to parse
      * @return the parsed HTML
-     * @throws IOException
+     * @throws IOException if there's an error reading the HTML file
      */
     public static String parseHTML(File htmlPage) throws IOException {
         String html = new String(Files.readAllBytes(Path.of(htmlPage.getPath())));
         return parseHTMLString(html);
     }
 
+    /**
+     * Parse the HTML string and replace the placeholders with the actual values
+     *
+     * @param htmlPage The HTML string to parse
+     * @return the parsed HTML
+     * @throws IOException if there's an error reading the HTML file
+     */
     public static String parseHTML(String htmlPage) throws IOException {
         return parseHTMLString(htmlPage);
     }
 
+    /**
+     * Parse the HTML string and replace the placeholders with the actual values, using the provided request parameters.
+     *
+     * @param htmlPage    The HTML string to parse
+     * @param queryParams The query parameters map
+     * @param bodyParams  The body parameters map
+     * @return the parsed HTML
+     * @throws IOException if there's an error reading the HTML file
+     */
     public static String parseHTML(String htmlPage, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
         if (queryParams == null) {
             queryParams = new LinkedHashMap<>();
@@ -42,57 +58,72 @@ public final class Hermes {
             bodyParams = new LinkedHashMap<>();
         }
 
-        return parseHTMLString(htmlPage, queryParams, bodyParams);
+        return parseHTMLStringWithParams(htmlPage, queryParams, bodyParams);
     }
 
     private static String parseHTMLString(String html) {
-        String regex = "\\{\\{([^}]*)}}"; // gets what is inside the double curly braces
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(html);
-        StringBuilder result = new StringBuilder();
-
-        while (matcher.find()) {
-            String command = matcher.group(1).trim();
-            String commandName = command.split("\\s*\\(")[0]; // gets what is before the parentheses
-
-            Command commandExecutor = CommandList.LIST.get(commandName);
-            if (commandExecutor != null) {
-                matcher.appendReplacement(result, commandExecutor.execute(command));
-            }
-        }
-
-        matcher.appendTail(result);
-        return result.toString();
+        return parseHTMLStringWithParams(html, new LinkedHashMap<>(), new LinkedHashMap<>());
     }
 
-    private static String parseHTMLString(String html, Map<String, String> queryParams, Map<String, String> bodyParams) {
-        String regex = "\\{\\{([^}]*)}}"; // gets what is inside the double curly braces
+    // needs more testing
+    private static String parseHTMLStringWithParams(String html, Map<String, String> queryParams, Map<String, String> bodyParams) {
+        // Regex to match placeholders like {{test}} (e.g., {{test}})
+        String regex = "\\{\\{([^}]*)}}";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(html);
         StringBuilder result = new StringBuilder();
 
+        // Combine queryParams and bodyParams into one map
         Map<String, String> requestParams = new LinkedHashMap<>(queryParams);
         requestParams.putAll(bodyParams);
 
+        // Loop through the HTML and match each placeholder
         while (matcher.find()) {
-            String command = matcher.group(1).trim();
-            String commandName = command.split("\\s*\\(")[0]; // gets what is before the parentheses
+            String placeholderContent = matcher.group(1).trim(); // Get the content inside {{...}}
 
+            // Temporarily escape $ signs for regex matching (to avoid conflicts with regex special chars)
+            String escapedContent = escapeDollarSigns(placeholderContent);
+
+            // Now we need to check if it's a command or parameter
+            String commandName = escapedContent.split("\\s*\\(")[0]; // Get the command name (before any parentheses)
             Command commandExecutor = CommandList.LIST.get(commandName);
+
             if (commandExecutor != null) {
-                matcher.appendReplacement(result, commandExecutor.execute(command));
+                // If it's a command, execute it and append the result
+                String commandResult = commandExecutor.execute(escapedContent);
+                matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(commandResult)));
             } else {
-                String paramValue = requestParams.get(command);
+                // If it's a parameter, check if it's present in queryParams or bodyParams
+                String paramValue = requestParams.get(escapedContent);
                 if (paramValue != null) {
-                    matcher.appendReplacement(result, paramValue);
+                    // Directly use the parameter value without escaping the $ sign
+                    matcher.appendReplacement(result, Matcher.quoteReplacement(paramValue));
                 } else {
-                    matcher.appendReplacement(result, "{{" + command + "}}"); // Leave the placeholder if not found
+                    // If no match is found, leave the placeholder as it is
+                    matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
                 }
             }
         }
 
+        // Append the rest of the HTML after the last match
         matcher.appendTail(result);
+
+        // Return the processed HTML
         return result.toString();
+    }
+
+    /**
+     * Escape all $ signs in the input string by adding a backslash before them.
+     */
+    private static String escapeDollarSigns(String html) {
+        return html.replaceAll("\\$", "\\\\\\$"); // Escape the dollar sign
+    }
+
+    /**
+     * Restore all escaped $ signs in the output string.
+     */
+    private static String restoreDollarSigns(String html) {
+        return html.replaceAll("\\\\\\$", "\\$"); // Restore the escaped dollar sign
     }
 }
 
