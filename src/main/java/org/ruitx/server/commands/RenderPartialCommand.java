@@ -19,10 +19,11 @@ public class RenderPartialCommand implements Command {
     @Override
     public String execute(String command) {
         String file = command.replace(COMMAND, "").trim();
-        String cmdRegex = "\\(\"([^\"]+)\"\\)"; // gets what is inside the parentheses
+        String cmdRegex = "\\(\"([^\"]+)\"\\)"; // Extracts the file name inside the parentheses
         Matcher cmdMatcher = Pattern.compile(cmdRegex).matcher(file);
+
         while (cmdMatcher.find()) {
-            file = cmdMatcher.group(1);
+            file = cmdMatcher.group(1); // Get the actual file name
         }
 
         Path path = Paths.get(ApplicationConfig.WWW_PATH + file);
@@ -33,12 +34,34 @@ public class RenderPartialCommand implements Command {
 
         String parsedHTML;
         try {
-            parsedHTML = Hermes.parseHTML(path.toFile());
+            String rawHTML = new String(Files.readAllBytes(path));
+            rawHTML = escapeDollarSigns(rawHTML); // Escape $ signs in the partial HTML content to avoid regex issues
+            parsedHTML = Hermes.parseHTML(rawHTML);
+            parsedHTML = restoreDollarSigns(parsedHTML);
+
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error reading partial file: " + file, e);
         }
 
         return parsedHTML;
     }
 
+    /**
+     * Escape all $ signs in the input string by adding a backslash before them.
+     */
+    private String escapeDollarSigns(String html) {
+        return html.replaceAll("\\$", "\\\\\\$"); // Escape the dollar sign
+    }
+
+    /**
+     * Restore all escaped $ signs in the output string.
+     */
+    private String restoreDollarSigns(String html) {
+        return html.replaceAll("\\\\\\$", "\\$"); // Restore the escaped dollar sign
+    }
 }
+
+
+
+
+
