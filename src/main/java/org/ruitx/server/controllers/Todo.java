@@ -1,13 +1,20 @@
 package org.ruitx.server.controllers;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
+import org.ruitx.server.components.Hermes;
 import org.ruitx.server.components.Mimir;
+import org.ruitx.server.components.Tyr;
 import org.ruitx.server.components.Yggdrasill;
 import org.ruitx.server.interfaces.Route;
 import org.ruitx.server.utils.Row;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 
+import static org.ruitx.server.configs.ApplicationConfig.WWW_PATH;
 import static org.ruitx.server.strings.RequestType.*;
 import static org.ruitx.server.strings.ResponseCode.*;
 
@@ -132,5 +139,57 @@ public class Todo {
                 " <button hx-delete='/todos/" + todoId + "' " +
                 "hx-target='#todo-list' hx-swap='outerHTML'>X</button>" +
                 "</li>";
+    }
+
+    @Route(endpoint = "/todo/login-page", method = GET)
+    public void loginPage(Yggdrasill.RequestHandler rh) throws IOException {
+        if (rh.isHTMX()) {
+            rh.sendHTMLResponse(OK, "{{renderPartial(\"todo/partials/login.html\")}}");
+        } else {
+            HashMap<String, String> params = new HashMap<>();
+            params.put("_BODY_CONTENT_", "{{renderPartial(\"todo/partials/login.html\")}}");
+            String processedBody = Hermes.parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + "todo/index.html"))), params, null);
+            rh.sendHTMLResponse(OK, processedBody);
+        }
+    }
+
+    @Route(endpoint = "/todo/login", method = POST)
+    public void loginUser(Yggdrasill.RequestHandler rh) throws IOException {
+        if (rh.getBodyParams() == null
+                || !rh.getBodyParams().containsKey("user")
+                || !rh.getBodyParams().containsKey("password")) {
+            rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"error\">User / password is missing</div>");
+            return;
+        }
+
+        Mimir db = new Mimir();
+        Row dbUser = db.getRow("SELECT * FROM USER WHERE user = ?",
+                rh.getBodyParams().get("user"));
+
+        if (dbUser == null || dbUser.get("user").toString().isEmpty()) {
+            // user does not exist
+            rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"error\">Credentials are invalid</div> ");
+            return;
+        }
+
+        String storedPasswordHash = dbUser.get("password_hash").toString();
+        if (!BCrypt.verifyer()
+                .verify(rh.getBodyParams().get("password").toCharArray(), storedPasswordHash)
+                .verified) {
+            // password does not match
+            rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"error\">Credentials are invalid</div>");
+            return;
+        }
+
+        String token = Tyr.createToken(dbUser.get("user").toString());
+        if (token == null) {
+            rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"error\">Token creation failed</div>");
+            return;
+        }
+
+        // send token to client via cookie or authorization header
+
+        // Return a success message in HTML format
+        rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"success\">Login successful! Redirecting...</div>");
     }
 }

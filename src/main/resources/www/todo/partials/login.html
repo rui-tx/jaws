@@ -1,0 +1,32 @@
+<div class="block block-embossed">
+    <div class="login">
+        <p>Login Form</p>
+
+        <!-- Login Form -->
+        <form hx-post="/todo/login" hx-swap="outerHTML"
+              hx-target="#login-message" id="login-form">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input id="username" name="user" placeholder="Enter your username" required type="text">
+            </div>
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input id="password" name="password" placeholder="Enter your password" required type="password">
+            </div>
+            <button type="submit">Login</button>
+        </form>
+
+        <!-- Message container for login result -->
+        <div id="login-message"></div>
+    </div>
+    <script>
+        function handleLoginError(event) {
+          const response = event.detail.xhr;
+          const status = response.status;
+          const errorMessage = `<div class="error-message">Login failed with status: ${status}</div>`;
+
+          // Insert error message in the target element
+          document.getElementById('login-message').innerHTML = errorMessage;
+        }
+    </script>
+</div>

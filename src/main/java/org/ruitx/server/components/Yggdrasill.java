@@ -670,6 +670,15 @@ public class Yggdrasill {
         }
 
         /**
+         * Check if the current request is made by HTMX.
+         *
+         * @return true if the request is made by HTMX, false otherwise.
+         */
+        public boolean isHTMX() {
+            return headers.containsKey("HX-Request");
+        }
+
+        /**
          * Closes the socket connection.
          *
          * @throws IOException if an error occurs while closing the socket.

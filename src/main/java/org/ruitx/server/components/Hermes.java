@@ -2,6 +2,7 @@ package org.ruitx.server.components;
 
 import org.ruitx.server.commands.CommandList;
 import org.ruitx.server.interfaces.Command;
+import org.tinylog.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.ruitx.server.configs.ApplicationConfig.WWW_PATH;
 
 /**
  * Hermes is a utility class that contains methods for parsing HTML files.
@@ -93,14 +96,33 @@ public final class Hermes {
                 String commandResult = commandExecutor.execute(escapedContent);
                 matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(commandResult)));
             } else {
+
+
                 // If it's a parameter, check if it's present in queryParams or bodyParams
                 String paramValue = requestParams.get(escapedContent);
                 if (paramValue != null) {
                     // Directly use the parameter value without escaping the $ sign
                     matcher.appendReplacement(result, Matcher.quoteReplacement(paramValue));
                 } else {
+
+                    // TODO: Refactor this logic
+                    // if param is bodyContent and is empty, then render default bodyContent
+                    // which is the partials/_body.html
+                    if (escapedContent.equals("_BODY_CONTENT_")) {
+                        try {
+                            paramValue = new String(Files.readAllBytes(Path.of(WWW_PATH + "todo/partials/_body.html")));
+                        } catch (IOException e) {
+                            Logger.error("Error reading default body content: " + e.getMessage());
+                            matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
+                        }
+                        matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(paramValue)));
+                    } else {
+                        // If no match is found, leave the placeholder as it is
+                        matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
+                    }
+
                     // If no match is found, leave the placeholder as it is
-                    matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
+                    //matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
                 }
             }
         }
