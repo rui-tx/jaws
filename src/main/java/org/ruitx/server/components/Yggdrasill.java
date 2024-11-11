@@ -283,8 +283,11 @@ public class Yggdrasill {
          */
         private void processGET(String endPoint) throws IOException {
             Path path = getResourcePath(endPoint);
-            if (Files.exists(path) && !Files.isDirectory(path)) {
-                sendFileResponse(path);
+
+            // Try to get the file or index.html if it's a directory
+            Path fileToServe = getFileToServe(path);
+            if (fileToServe != null) {
+                sendFileResponse(fileToServe);
                 return;
             }
 
@@ -639,6 +642,31 @@ public class Yggdrasill {
 
             // Return the map of parameters (if any)
             return params;
+        }
+
+        /**
+         * Gets the file to serve based on the path.
+         * If the path is a directory, it will check for an index.html file.
+         *
+         * @param path the path to the file
+         * @return the file to serve, or null if no valid file is found
+         */
+        private Path getFileToServe(Path path) {
+            // If the path exists and is a file, return it
+            if (Files.exists(path) && !Files.isDirectory(path)) {
+                return path;
+            }
+
+            // If the path is a directory, check for index.html
+            if (Files.isDirectory(path)) {
+                Path indexPath = path.resolve("index.html");
+                if (Files.exists(indexPath) && !Files.isDirectory(indexPath)) {
+                    return indexPath;
+                }
+            }
+
+            // Return null if no valid file is found
+            return null;
         }
 
         /**
