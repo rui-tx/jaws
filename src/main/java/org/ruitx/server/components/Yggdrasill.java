@@ -675,7 +675,7 @@ public class Yggdrasill {
          * @return true if the request is made by HTMX, false otherwise.
          */
         public boolean isHTMX() {
-            return headers.containsKey("HX-Request");
+            return headers.containsKey("HX-Request") || headers.containsKey("hx-request");
         }
 
         /**
