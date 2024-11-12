@@ -523,3 +523,63 @@ button[type="submit"]:hover {
     margin-top: 1rem;
 }
 
+/* Pagination Controls */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Pagination Button Base Style */
+.pagination a,
+.pagination span {
+  display: inline-block;
+  background-color: var(--default-button-bg-color);
+  color: var(--default-button-font-color);
+  padding: 0.6rem 1rem;
+  border-radius: var(--default-button-border-radius);
+  border: 1px solid var(--default-border-color);
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s, color 0.3s, transform 0.3s;
+}
+
+/* Hover Effect for Pagination Buttons */
+.pagination a:hover {
+  background-color: var(--accent);
+  color: var(--background);
+  transform: scale(1.1);
+}
+
+/* Disabled State for Pagination Buttons (when there is no previous/next page) */
+.pagination span.disabled {
+  background-color: var(--default-block-bg-color);
+  color: var(--default-font-color);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pagination a.prev {
+  /* Styling for the "Previous" button */
+  border-radius: var(--default-button-border-radius) var(--default-button-border-radius) 0 0;
+}
+
+.pagination a.next {
+  /* Styling for the "Next" button */
+  border-radius: 0 0 var(--default-button-border-radius) var(--default-button-border-radius);
+}
+
+/* Optional: Add a subtle shadow to make the buttons "pop" */
+.pagination a,
+.pagination span {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.pagination a:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+

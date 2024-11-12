@@ -20,14 +20,29 @@ import static org.ruitx.server.strings.ResponseCode.*;
 
 public class Todo {
 
+    private static final int DEFAULT_PAGE = 1;
+    private static final int DEFAULT_PAGE_SIZE = 5;
+
+    private int page = DEFAULT_PAGE;
+    private int pageSize = DEFAULT_PAGE_SIZE;
 
     @Route(endpoint = "/todos", method = GET)
     public void getTodos(Yggdrasill.RequestHandler rh) throws IOException {
         Mimir db = new Mimir();
         StringBuilder body = new StringBuilder();
+        extractPaginationParams(rh);
 
-        List<Row> todos = db.getRows("SELECT * FROM TODO");
-        body.append(generateTodoList(todos));
+        int offset = (page - 1) * pageSize;
+        List<Row> todos = db.getRows("SELECT * FROM TODO ORDER BY id DESC LIMIT ? OFFSET ?", pageSize, offset);
+
+        // Make pagination controls
+        int totalTodos = db.getRow("SELECT COUNT(*) FROM TODO").getInt("COUNT(*)");
+        int totalPages = (int) Math.ceil(totalTodos / (double) pageSize);
+
+        body.append("<div id=\"todo-list\">")
+                .append(generateTodoList(todos))
+                .append(generateTodoListPagination(page, pageSize, totalPages))
+                .append("</div>");
 
         rh.sendHTMLResponse(OK, body.toString());
     }
@@ -39,7 +54,7 @@ public class Todo {
             return;
         }
         Mimir db = new Mimir();
-
+        StringBuilder body = new StringBuilder();
         String todo = rh.getBodyParams().get("todo");
 
         int affectedRows = db.executeSql("INSERT INTO TODO (todo) VALUES (?)", todo);
@@ -48,12 +63,21 @@ public class Todo {
             return;
         }
 
-        StringBuilder body = new StringBuilder();
-        List<Row> todos = db.getRows("SELECT * FROM TODO");
-        body.append("<div id=\"todo-list\">").append(generateTodoList(todos)).append("</div>");
+        extractPaginationParams(rh);
+        int totalTodos = db.getRow("SELECT COUNT(*) FROM TODO").getInt("COUNT(*)");
+        int totalPages = (int) Math.ceil((double) totalTodos / pageSize);
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        int offset = (page - 1) * pageSize;
+        List<Row> todos = db.getRows("SELECT * FROM TODO ORDER BY id DESC LIMIT ? OFFSET ?", pageSize, offset);
 
-        // Send the updated list as the response
-        rh.sendHTMLResponse(CREATED, body.toString());
+        body.append("<div id=\"todo-list\">")
+                .append(generateTodoList(todos))
+                .append(generateTodoListPagination(page, pageSize, totalPages))
+                .append("</div>");
+
+        rh.sendHTMLResponse(OK, body.toString());
     }
 
     // TOD: Refactor this method
@@ -77,7 +101,6 @@ public class Todo {
             return;
         }
 
-
         rh.sendHTMLResponse(OK, body.toString());
     }
 
@@ -85,6 +108,7 @@ public class Todo {
     public void deleteTodo(Yggdrasill.RequestHandler rh) throws IOException {
         Mimir db = new Mimir();
         String todoId = rh.getPathParams().get("id");
+        StringBuilder body = new StringBuilder();
 
         int affectedRows = db.executeSql("DELETE FROM TODO WHERE id = ?", todoId);
         if (affectedRows == 0) {
@@ -92,53 +116,35 @@ public class Todo {
             return;
         }
 
-        StringBuilder body = new StringBuilder();
-        List<Row> todos = db.getRows("SELECT * FROM TODO");
-        body.append("<div id=\"todo-list\">").append(generateTodoList(todos)).append("</div>");
+        extractPaginationParams(rh);
+        int offset = (page - 1) * pageSize;
+        List<Row> todos = db.getRows("SELECT * FROM TODO ORDER BY id DESC LIMIT ? OFFSET ?", pageSize, offset);
+
+        // Make pagination controls
+        int totalTodos = db.getRow("SELECT COUNT(*) FROM TODO").getInt("COUNT(*)");
+        int totalPages = (int) Math.ceil(totalTodos / (double) pageSize);
+
+        body.append("<div id=\"todo-list\">")
+                .append(generateTodoList(todos))
+                .append(generateTodoListPagination(page, pageSize, totalPages))
+                .append("</div>");
 
         rh.sendHTMLResponse(OK, body.toString());
     }
+
 
     @Route(endpoint = "/todos/", method = DELETE)
     public void deleteAllTodos(Yggdrasill.RequestHandler rh) throws IOException {
         Mimir db = new Mimir();
+        StringBuilder body = new StringBuilder();
 
         boolean affectedRows = db.executeSql("DELETE FROM TODO");
-
-        StringBuilder body = new StringBuilder();
         List<Row> todos = db.getRows("SELECT * FROM TODO");
-        body.append("<div id=\"todo-list\">").append(generateTodoList(todos)).append("</div>");
+        body.append("<div id=\"todo-list\">")
+                .append(generateTodoList(todos))
+                .append("</div>");
 
         rh.sendHTMLResponse(OK, body.toString());
-    }
-
-    private String generateTodoList(List<Row> todos) {
-        StringBuilder ulBody = new StringBuilder();
-        ulBody.append("<ul>");
-
-        if (todos.isEmpty()) {
-            ulBody.append("<li>No todos found</li>");
-            ulBody.append("</ul>");
-            return ulBody.toString();
-        }
-
-        for (Row r : todos) {
-            ulBody.append(generateTodoItem(r));
-        }
-
-        ulBody.append("</ul>");
-        return ulBody.toString();
-    }
-
-    private String generateTodoItem(Row todoRow) {
-        String todoId = todoRow.get("id").toString();
-        String todoText = todoRow.getString("todo");
-
-        return "<li id=\"todo-" + todoId + "\">" +
-                todoText +
-                " <button hx-delete='/todos/" + todoId + "' " +
-                "hx-target='#todo-list' hx-swap='outerHTML'>X</button>" +
-                "</li>";
     }
 
     @Route(endpoint = "/todo/login-page", method = GET)
@@ -191,5 +197,80 @@ public class Todo {
 
         // Return a success message in HTML format
         rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"success\">Login successful! Redirecting...</div>");
+    }
+
+    private String generateTodoList(List<Row> todos) {
+        StringBuilder ulBody = new StringBuilder();
+        ulBody.append("<ul>");
+
+        if (todos.isEmpty()) {
+            ulBody.append("<li>No todos found</li>");
+            ulBody.append("</ul>");
+            return ulBody.toString();
+        }
+
+        for (Row r : todos) {
+            ulBody.append(generateTodoItem(r));
+        }
+
+        ulBody.append("</ul>");
+        return ulBody.toString();
+    }
+
+    private String generateTodoItem(Row todoRow) {
+        String todoId = todoRow.get("id").toString();
+        String todoText = todoRow.getString("todo");
+
+        return "<li id=\"todo-" + todoId + "\">" +
+                todoText +
+                " <button hx-delete='/todos/" + todoId + "' " +
+                "hx-target='#todo-list' hx-swap='outerHTML'>X</button>" +
+                "</li>";
+    }
+
+    private void extractPaginationParams(Yggdrasill.RequestHandler rh) {
+        if (rh.getQueryParams() != null) {
+            if (rh.getQueryParams().containsKey("page")) {
+                page = Integer.parseInt(rh.getQueryParams().get("page"));
+            }
+            if (rh.getQueryParams().containsKey("pageSize")) {
+                pageSize = Integer.parseInt(rh.getQueryParams().get("pageSize"));
+            }
+        }
+    }
+
+    private StringBuilder generateTodoListPagination(int page, int pageSize, int totalPages) {
+        StringBuilder body = new StringBuilder();
+        // Generate pagination controls
+        body.append("<div class='pagination'>");
+
+        // Previous page button
+        if (page > 1) {
+            body.append("<a href='#' hx-get='/todos?page=")
+                    .append(page - 1)
+                    .append("&pageSize=")
+                    .append(pageSize)
+                    .append("' hx-target='#todo-list' class='prev'><</a>");
+        } else {
+            body.append("<span class='disabled'><</span>");
+        }
+
+        // Page info (e.g., "Page 2 of 5")
+        body.append("<span class='page-info'>Page ").append(page).append(" of ").append(totalPages).append("</span>");
+
+        // Next page button
+        if (page < totalPages) {
+            body.append("<a href='#' hx-get='/todos?page=")
+                    .append(page + 1)
+                    .append("&pageSize=")
+                    .append(pageSize)
+                    .append("' hx-target='#todo-list' class='next'>></a>");
+        } else {
+            body.append("<span class='disabled'>></span>");
+        }
+
+        body.append("</div>");
+
+        return body;
     }
 }
