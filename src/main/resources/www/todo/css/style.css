@@ -266,6 +266,7 @@ a {
   font-size: --var(--default-font-size);
 }
 
+/* Menu Overlay */
 .menu-overlay {
   position: fixed;
   top: 0;
@@ -273,13 +274,12 @@ a {
   right: 0;
   bottom: 0;
   background-color: var(--default-navbar-hamburger-overlay-color);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   opacity: 0;
   visibility: hidden;
-  transition: background-color 0.25s ease, backdrop-filter 0.25s ease,
-    opacity 0.25s ease, visibility 0.25s ease;
   z-index: 998;
+  transition: opacity 0.3s ease;
 }
 
 .block-embossed.menu-open .menu-overlay {
@@ -290,8 +290,10 @@ a {
   visibility: visible;
 }
 
+/* When the menu is open, show the overlay */
 body.menu-open .menu-overlay {
-  display: block;
+  opacity: 1;
+  visibility: visible;
 }
 
 .breadcrumbs a {

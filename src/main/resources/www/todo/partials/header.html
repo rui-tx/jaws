@@ -1,4 +1,5 @@
 <div class="block block-embossed">
+    <div class="menu-overlay" onclick="closeMenu()"></div>
     <header class="header">
         <div class="logo">
             <a class="no-link" href="/todo/">🔖 Todos</a>
@@ -19,13 +20,33 @@
         </nav>
     </header>
 </div>
-<script>
-    function toggleMenu() {
-        const hamburger = document.querySelector('.hamburger');
-        const navLinks = document.getElementById('navLinks');
 
-        // Toggle the "open" class on the hamburger and the navigation menu
-        hamburger.classList.toggle('open');
-        navLinks.classList.toggle('open');
+
+<script>
+    let menuOpen = false;
+
+    // Toggle menu visibility
+    function toggleMenu() {
+      // Check if the hamburger is visible, then toggle the menu
+      if (window.innerWidth <= 767) { // Ensure this only works on small screens
+        menuOpen = !menuOpen;
+        document.body.classList.toggle("menu-open", menuOpen);
+        const navLinks = document.querySelector(".nav-links");
+        navLinks.classList.toggle("open", menuOpen);
+        const hamburger = document.querySelector(".hamburger");
+        hamburger.classList.toggle("open", menuOpen);
+      }
+    }
+
+    // Close the menu (used when overlay is clicked)
+    function closeMenu() {
+      if (window.innerWidth <= 767) { // Ensure this only works on small screens
+        menuOpen = false;
+        document.body.classList.remove("menu-open");
+        const navLinks = document.querySelector(".nav-links");
+        navLinks.classList.remove("open");
+        const hamburger = document.querySelector(".hamburger");
+        hamburger.classList.remove("open");
+      }
     }
 </script>
