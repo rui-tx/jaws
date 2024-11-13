@@ -2,15 +2,15 @@
   --background: #f9f9f9;
   --default-font-color: #4a4a4a;
   --default-font-shadow: #ffffff;
-  --default-border-color: #ff9494;
+  --default-border-color: #272936;
   --default-border-radius: 0.5rem;
-  --accent: #ff9494;
-  --accent-fade: #ff949425;
+  --accent: #272936;
+  --accent-fade: #27293625;
   --accent-shadow: #00008042;
   --hover-shadow: #00800050;
 
-  --success: #4f9f9f9;
-  --cancel: #f44336;
+  --success: #50FA7B;
+  --cancel: #FF5555;
 
   /* Block */
   --default-block-padding: 0.7rem;
@@ -21,7 +21,7 @@
 
   /* Button */
   --default-button-font-color: #ffffff;
-  --default-button-bg-color: #ff9494;
+  --default-button-bg-color: #272936;
   --default-button-bg-disabled-color: #4a4a4a;
 
   --default-button-bg-color-hover: #ff9494;
@@ -61,6 +61,10 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+a {
+    cursor: pointer;
 }
 
 .images-wrapper {
@@ -234,6 +238,7 @@ code {
   border: 1px solid var(--default-navbar-button-border-color);
   border-radius: var(--default-navbar-border-radius);
   color: var(--accent);
+  cursor: pointer;
   font-weight: bold;
   padding: 0.5rem 1rem;
   text-decoration: none;

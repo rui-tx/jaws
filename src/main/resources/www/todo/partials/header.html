@@ -1,15 +1,31 @@
 <div class="block block-embossed">
-    <div class="logo">
-        <a class="no-link" href="/todo/">🔖 Todos</a>
-    </div>
-    {{if(isLoggedIn)
-    <div class="button">
-        <a hx-get="/todo/logout" hx-push-url="true" hx-target="#main">Logout</a>
-    </div>
-    else
-    <div class="button">
-        <a hx-get="/todo/login-page" hx-push-url="true" hx-target="#main">Login</a>
-        <a hx-get="/todo/create-account-page" hx-push-url="true" hx-target="#main">Create Account</a>
-    </div>
-    }}
+    <header class="header">
+        <div class="logo">
+            <a class="no-link" href="/todo/">🔖 Todos</a>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+        </div>
+        <nav class="nav-links" id="navLinks">
+            {{if(isLoggedIn)
+            <a class="nav-item" hx-get="/todo/logout" hx-push-url="true" hx-target="#main"
+               onclick="toggleMenu()">Logout</a>
+            else
+            <a class="nav-item" hx-get="/todo/login-page" hx-push-url="true" hx-target="#main"
+               onclick="toggleMenu()">Login</a>
+            }}
+        </nav>
+    </header>
 </div>
+<script>
+    function toggleMenu() {
+        const hamburger = document.querySelector('.hamburger');
+        const navLinks = document.getElementById('navLinks');
+
+        // Toggle the "open" class on the hamburger and the navigation menu
+        hamburger.classList.toggle('open');
+        navLinks.classList.toggle('open');
+    }
+</script>
