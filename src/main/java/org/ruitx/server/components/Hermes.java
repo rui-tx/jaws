@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -68,6 +69,7 @@ public final class Hermes {
         return parseHTMLStringWithParams(html, new LinkedHashMap<>(), new LinkedHashMap<>());
     }
 
+    // TODO: Refactor this method, has hardcoded value for _BODY_CONTENT_
     // needs more testing
     private static String parseHTMLStringWithParams(String html, Map<String, String> queryParams, Map<String, String> bodyParams) {
         // Regex to match placeholders like {{test}} (e.g., {{test}})
@@ -132,6 +134,31 @@ public final class Hermes {
 
         // Return the processed HTML
         return result.toString();
+    }
+
+    /**
+     * Make a full HTML page by parsing the base HTML file and rendering the specified partial.
+     *
+     * @param basePath    the path to the base HTML file.
+     * @param partialPath the path to the partial HTML file.
+     * @return the full HTML page.
+     * @throws IOException if an error occurs while reading the base HTML file or the partial HTML file.
+     */
+    public static String makeFullPage(String basePath, String partialPath) throws IOException {
+        HashMap<String, String> params = new HashMap<>();
+        params.put("_BODY_CONTENT_", "{{renderPartial(\"" + partialPath + "\")}}");
+        return parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + basePath))), params, null);
+    }
+
+    /**
+     * Make a partial HTML page by parsing the specified partial HTML file.
+     *
+     * @param partialPath the path to the partial HTML file.
+     * @return the partial HTML page.
+     * @throws IOException if an error occurs while reading the partial HTML file.
+     */
+    public static String makePartialPage(String partialPath) throws IOException {
+        return "{{renderPartial(\"" + partialPath + "\")}}";
     }
 
     /**

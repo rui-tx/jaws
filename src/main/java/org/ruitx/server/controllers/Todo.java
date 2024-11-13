@@ -9,17 +9,14 @@ import org.ruitx.server.interfaces.Route;
 import org.ruitx.server.utils.Row;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
 
-import static org.ruitx.server.configs.ApplicationConfig.WWW_PATH;
 import static org.ruitx.server.strings.RequestType.*;
 import static org.ruitx.server.strings.ResponseCode.*;
 
 public class Todo {
 
+    private static final String BASE_HTML_PATH = "todo/index.html";
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_PAGE_SIZE = 5;
 
@@ -132,7 +129,6 @@ public class Todo {
         rh.sendHTMLResponse(OK, body.toString());
     }
 
-
     @Route(endpoint = "/todos/", method = DELETE)
     public void deleteAllTodos(Yggdrasill.RequestHandler rh) throws IOException {
         Mimir db = new Mimir();
@@ -149,14 +145,13 @@ public class Todo {
 
     @Route(endpoint = "/todo/login-page", method = GET)
     public void loginPage(Yggdrasill.RequestHandler rh) throws IOException {
+        String partialPath = "todo/partials/login.html";
         if (rh.isHTMX()) {
-            rh.sendHTMLResponse(OK, "{{renderPartial(\"todo/partials/login.html\")}}");
-        } else {
-            HashMap<String, String> params = new HashMap<>();
-            params.put("_BODY_CONTENT_", "{{renderPartial(\"todo/partials/login.html\")}}");
-            String processedBody = Hermes.parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + "todo/index.html"))), params, null);
-            rh.sendHTMLResponse(OK, processedBody);
+            rh.sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
+            return;
         }
+
+        rh.sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, partialPath));
     }
 
     @Route(endpoint = "/todo/login", method = POST)
@@ -194,9 +189,66 @@ public class Todo {
         }
 
         // send token to client via cookie or authorization header
+        rh.addCustomHeader("Set-Cookie", "token=" + token + "; Max-Age=3600; Path=/; HttpOnly; Secure");
+        //rh.addCustomHeader("Authorization", "Bearer " + token);
+        rh.addCustomHeader("HX-Location", "/todo/");
 
         // Return a success message in HTML format
         rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"success\">Login successful! Redirecting...</div>");
+    }
+
+    @Route(endpoint = "/todo/logout", method = GET)
+    public void logoutUser(Yggdrasill.RequestHandler rh) throws IOException {
+        rh.addCustomHeader("Set-Cookie", "token=; Max-Age=0; Path=/; HttpOnly; Secure");
+        rh.addCustomHeader("HX-Location", "/todo/");
+        rh.sendHTMLResponse(OK, "<div id=\"login-message\" class=\"success\">Logout successful! Redirecting...</div>");
+    }
+
+    @Route(endpoint = "/todo/create-account-page", method = GET)
+    public void createAccountPage(Yggdrasill.RequestHandler rh) throws IOException {
+        String partialPath = "todo/partials/create-account.html";
+        if (rh.isHTMX()) {
+            rh.sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
+            return;
+        }
+
+        rh.sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, partialPath));
+    }
+
+    @Route(endpoint = "/todo/create-account", method = POST)
+    public void createUser(Yggdrasill.RequestHandler rh) throws IOException {
+        if (rh.getBodyParams() == null
+                || !rh.getBodyParams().containsKey("user")
+                || !rh.getBodyParams().containsKey("password")) {
+            rh.sendHTMLResponse(OK, "<div id=\"register-message\" class=\"error\">User / password is missing</div>");
+            return;
+        }
+
+        String user = rh.getBodyParams().get("user");
+        String hashedPassword = BCrypt.withDefaults()
+                .hashToString(12, rh.getBodyParams().get("password").toCharArray());
+        Mimir db = new Mimir();
+        int affectedRows = db.executeSql("INSERT INTO USER (user, password_hash) VALUES (?, ?)",
+                user, hashedPassword);
+
+        if (affectedRows == 0) {
+            rh.sendHTMLResponse(OK, "<div id=\"register-message\" class=\"error\">User already exists</div>");
+            return;
+        }
+
+        String token = Tyr.createToken(user);
+        if (token == null) {
+            rh.sendHTMLResponse(OK, "<div id=\"register-message\" class=\"error\">Token creation failed</div>");
+            return;
+        }
+
+        // send token to client via cookie or authorization header
+        rh.addCustomHeader("Set-Cookie", "token=" + token + "; Max-Age=3600; Path=/; HttpOnly; Secure");
+        //rh.addCustomHeader("Authorization", "Bearer " + token);
+        rh.addCustomHeader("HX-Location", "/todo/");
+
+        // Return a success message in HTML format
+        rh.sendHTMLResponse(OK, "<div id=\"register-message\" class=\"success\">User created successfully! You will be redirected...</div>");
     }
 
     private String generateTodoList(List<Row> todos) {

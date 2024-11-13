@@ -2,7 +2,14 @@
     <div class="logo">
         <a class="no-link" href="/todo/">🔖 Todos</a>
     </div>
+    {{if(isLoggedIn)
+    <div class="button">
+        <a hx-get="/todo/logout" hx-push-url="true" hx-target="#main">Logout</a>
+    </div>
+    else
     <div class="button">
         <a hx-get="/todo/login-page" hx-push-url="true" hx-target="#main">Login</a>
+        <a hx-get="/todo/create-account-page" hx-push-url="true" hx-target="#main">Create Account</a>
     </div>
+    }}
 </div>

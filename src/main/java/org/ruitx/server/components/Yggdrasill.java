@@ -130,9 +130,12 @@ public class Yggdrasill {
      */
     public static class RequestHandler implements Runnable {
 
+        private static final ThreadLocal<String> currentToken = new ThreadLocal<>();
+
         private final Socket socket;
         private final String resourcesPath;
         private final Map<String, String> headers = new LinkedHashMap<>();
+        private final Map<String, String> customResponseHeaders = new LinkedHashMap<>();
         private final StringBuilder body = new StringBuilder();
         private Map<String, String> queryParams = new LinkedHashMap<>();
         private Map<String, String> bodyParams = new LinkedHashMap<>();
@@ -149,6 +152,38 @@ public class Yggdrasill {
         public RequestHandler(Socket socket, String resourcesPath) {
             this.socket = socket;
             this.resourcesPath = resourcesPath;
+        }
+
+        /**
+         * Retrieves the current token from the request headers.
+         *
+         * @return the current token, or null if no token is found.
+         */
+        public static String getCurrentToken() {
+            return currentToken.get();
+        }
+
+        /**
+         * Extracts the current token from the request headers and stores it in a thread-local variable.
+         *
+         * @param headers the request headers.
+         */
+        private static void extractAndStoreToken(Map<String, String> headers) {
+            // tries to extract the token from the Authorization header
+            if (headers != null && headers.containsKey("Authorization")) {
+                String authHeader = headers.get("Authorization");
+                String token = authHeader.substring(7);
+                currentToken.set(token);
+                return;
+            }
+
+            // TODO: Refactor this if statement, it shouldn't be just "Cookie", but "Cookie token=" or something
+            // tries to extract the token from the Cookie header
+            if (headers != null && headers.containsKey("Cookie")) {
+                String cookieHeader = headers.get("Cookie");
+                String token = cookieHeader.split(";")[0].split("=")[1];
+                currentToken.set(token);
+            }
         }
 
         /**
@@ -203,6 +238,7 @@ public class Yggdrasill {
                 String[] parts = headerLine.split(" ", 2);
                 headers.put(parts[0].replace(":", ""), parts[1]);
             }
+            extractAndStoreToken(headers);
         }
 
         /**
@@ -462,11 +498,19 @@ public class Yggdrasill {
          * @throws IOException if an error occurs while sending the headers.
          */
         private void sendResponseHeaders(ResponseCode responseCode, String contentType, int contentLength) throws IOException {
-            Hephaestus responseHeader = new Hephaestus.Builder()
+            Hephaestus.Builder builder = new Hephaestus.Builder()
                     .responseType(responseCode.toString())
                     .contentType(contentType)
-                    .contentLength(String.valueOf(contentLength))
-                    .build();
+                    .contentLength(String.valueOf(contentLength));
+
+            if (!customResponseHeaders.isEmpty()) {
+                for (Map.Entry<String, String> entry : customResponseHeaders.entrySet()) {
+                    builder.addCustomHeader(entry.getKey(), entry.getValue());
+                }
+            }
+            builder.build();
+
+            Hephaestus responseHeader = builder.build();
             out.write(responseHeader.headerToBytes());
             out.flush();
         }
@@ -687,6 +731,7 @@ public class Yggdrasill {
             synchronized (Yggdrasill.class) {
                 currentConnections--;
             }
+            currentToken.remove();
             socket.close();
         }
 
@@ -715,6 +760,16 @@ public class Yggdrasill {
          */
         public Map<String, String> getPathParams() {
             return pathParams;
+        }
+
+        /**
+         * Add a custom response header to the response.
+         *
+         * @param name  the name of the header.
+         * @param value the value of the header.
+         */
+        public void addCustomHeader(String name, String value) {
+            customResponseHeaders.put(name, value);
         }
     }
 }

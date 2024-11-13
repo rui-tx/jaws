@@ -1,0 +1,33 @@
+<div class="block block-embossed">
+    <div class="register">
+        <p>Register Form</p>
+
+        <!-- Register Form -->
+        <form hx-post="/todo/create-account" hx-swap="outerHTML"
+              hx-target="#register-message" id="register-form">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input id="username" name="user" placeholder="Enter your username" required type="text">
+            </div>
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input id="password" name="password" placeholder="Enter your password" required type="password">
+            </div>
+            <button type="submit">Register</button>
+        </form>
+
+        <!-- Message container for registration result -->
+        <div id="register-message"></div>
+    </div>
+    <script>
+        // Handle registration errors (e.g., passwords don't match, user already exists, etc.)
+        function handleRegisterError(event) {
+            const response = event.detail.xhr;
+            const status = response.status;
+            const errorMessage = `<div class="error-message">Registration failed with status: ${status}</div>`;
+
+            // Insert error message in the target element
+            document.getElementById('register-message').innerHTML = errorMessage;
+        }
+    </script>
+</div>

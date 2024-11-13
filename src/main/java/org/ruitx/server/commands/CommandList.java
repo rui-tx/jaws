@@ -15,5 +15,6 @@ public class CommandList {
         LIST.put("getServerPort", new GetServerPortCommand());
         LIST.put("getCurrentConnections", new GetCurrentConnectionsCommand());
         LIST.put("renderPartial", new RenderPartialCommand());
+        LIST.put("if", new IfCommand());
     }
 }
