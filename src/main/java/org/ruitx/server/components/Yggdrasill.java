@@ -2,6 +2,7 @@ package org.ruitx.server.components;
 
 import org.ruitx.server.configs.ApplicationConfig;
 import org.ruitx.server.exceptions.ConnectionException;
+import org.ruitx.server.interfaces.AccessControl;
 import org.ruitx.server.interfaces.Route;
 import org.ruitx.server.strings.RequestType;
 import org.ruitx.server.strings.ResponseCode;
@@ -492,6 +493,44 @@ public class Yggdrasill {
         }
 
         /**
+         * Sends a 401 Not Found response.
+         *
+         * @throws IOException if an error occurs while sending the response.
+         */
+        private void sendUnauthorizedResponse() throws IOException {
+            byte[] content;
+//            Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_404);
+//            if (Files.exists(path)) {
+//                content = Files.readAllBytes(path);
+//            } else {
+            Logger.warn("Could not find 401 page, using hard coded default");
+            if (isHTMX()) {
+                String notFoundHtml = """
+                            <h1>401 - Unauthorized</h1>
+                        """;
+                sendResponseHeaders(OK, "text/html", notFoundHtml.getBytes().length);
+                sendResponseBody(notFoundHtml.getBytes());
+                return;
+            }
+            String notFoundHtml = """
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>401 - Unauthorized</title>
+                    </head>
+                    <body>
+                        <h1>401 - Unauthorized</h1>
+                    </body>
+                    </html>
+                    """;
+            content = notFoundHtml.getBytes();
+//            }
+            sendResponseHeaders(UNAUTHORIZED, "text/html", content.length);
+            sendResponseBody(content);
+        }
+
+        /**
          * Sends response headers to the client.
          *
          * @param responseCode  the HTTP response code.
@@ -608,7 +647,13 @@ public class Yggdrasill {
             // Check if we have a static route match first
             Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
             if (routeMethod != null) {
-                return invokeRouteMethod(routeMethod);
+                // Check if the route requires authorization
+                if (isAuthorized(routeMethod)) {
+                    return invokeRouteMethod(routeMethod);
+                } else {
+                    sendUnauthorizedResponse();
+                    return false;
+                }
             }
 
             // If no direct match, search through all routes for dynamic matches
@@ -619,12 +664,45 @@ public class Yggdrasill {
                     // Check if the route pattern matches the endpoint, allowing dynamic parameters
                     pathParams = matchRoutePattern(routePattern, endPoint);
                     if (pathParams != null && routeAnnotation.method() == method) {
-                        return invokeRouteMethod(route);
+                        // Check if the route requires authorization
+                        if (isAuthorized(route)) {
+                            return invokeRouteMethod(route);
+                        } else {
+                            sendUnauthorizedResponse();
+                            return false;
+                        }
                     }
                 }
             }
 
             return false;
+        }
+
+        /**
+         * Checks if the current user is authorized and has the required role to access the route.
+         *
+         * @param routeMethod the route method to check.
+         * @return true if the user is authorized, false otherwise.
+         * @throws IOException if an error occurs while checking the authorization.
+         */
+        private boolean isAuthorized(Method routeMethod) throws IOException {
+            if (routeMethod.isAnnotationPresent(AccessControl.class)) {
+                AccessControl auth = routeMethod.getAnnotation(AccessControl.class);
+                if (auth.login()) {
+                    if (currentToken.get() == null || !Tyr.isTokenValid(currentToken.get())) {
+                        return false;
+                    }
+                    String userId = Tyr.getUserIdFromJWT(currentToken.get());
+                    String userRole = Tyr.getUserRoleFromJWT(currentToken.get());
+
+                    // Check if the user's role is sufficient for this endpoint
+                    // Roles does nothing at the moment
+                    // Logger.info("User ID: " + userId);
+                    // Logger.info("User Role: " + userRole);
+                }
+            }
+
+            return true; // Authorized if no issues
         }
 
         /**

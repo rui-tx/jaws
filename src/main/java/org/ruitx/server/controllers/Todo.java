@@ -5,6 +5,7 @@ import org.ruitx.server.components.Hermes;
 import org.ruitx.server.components.Mimir;
 import org.ruitx.server.components.Tyr;
 import org.ruitx.server.components.Yggdrasill;
+import org.ruitx.server.interfaces.AccessControl;
 import org.ruitx.server.interfaces.Route;
 import org.ruitx.server.utils.Row;
 
@@ -34,6 +35,16 @@ public class Todo {
     public void getTodos(Yggdrasill.RequestHandler rh) throws IOException {
         Mimir db = new Mimir();
         StringBuilder body = new StringBuilder();
+
+        if (Yggdrasill.RequestHandler.getCurrentToken() == null ||
+                !Tyr.isTokenValid(Yggdrasill.RequestHandler.getCurrentToken())) {
+            body.append("<div id=\"todo-list\">")
+                    .append("<li>No todos found</li>")
+                    .append("</div>");
+            rh.sendHTMLResponse(OK, body.toString());
+            return;
+        }
+
         extractPaginationParams(rh);
 
         int offset = (page - 1) * pageSize;
@@ -48,9 +59,12 @@ public class Todo {
                 .append(generateTodoListPagination(page, pageSize, totalPages))
                 .append("</div>");
 
+
         rh.sendHTMLResponse(OK, body.toString());
+
     }
 
+    @AccessControl(login = true)
     @Route(endpoint = "/todos", method = POST)
     public void createTodo(Yggdrasill.RequestHandler rh) throws IOException {
         if (rh.getBodyParams() == null || !rh.getBodyParams().containsKey("todo")) {
@@ -61,7 +75,10 @@ public class Todo {
         StringBuilder body = new StringBuilder();
         String todo = rh.getBodyParams().get("todo");
 
-        int affectedRows = db.executeSql("INSERT INTO TODO (todo) VALUES (?)", todo);
+        String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
+        int dbUserId = db.getRow("SELECT id FROM USER WHERE user = ?", tokenUserId).getInt("id");
+
+        int affectedRows = db.executeSql("INSERT INTO TODO (todo, user_id) VALUES (?, ?)", todo, dbUserId);
         if (affectedRows == 0) {
             rh.sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error adding todo");
             return;
@@ -85,6 +102,7 @@ public class Todo {
     }
 
     // TOD: Refactor this method
+    @AccessControl(login = true)
     @Route(endpoint = "/todos/:id", method = GET)
     public void getTodoById(Yggdrasill.RequestHandler rh) throws IOException {
         Mimir db = new Mimir();
@@ -108,15 +126,21 @@ public class Todo {
         rh.sendHTMLResponse(OK, body.toString());
     }
 
+    @AccessControl(login = true)
     @Route(endpoint = "/todos/:id", method = DELETE)
     public void deleteTodo(Yggdrasill.RequestHandler rh) throws IOException {
         Mimir db = new Mimir();
         String todoId = rh.getPathParams().get("id");
         StringBuilder body = new StringBuilder();
 
-        int affectedRows = db.executeSql("DELETE FROM TODO WHERE id = ?", todoId);
+        // gets user id from user name
+        // checks if user id matches user id in db
+        String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
+        int dbUserId = db.getRow("SELECT id FROM USER WHERE user = ?", tokenUserId).getInt("id");
+
+        int affectedRows = db.executeSql("DELETE FROM TODO WHERE id = ? AND user_id = ?", todoId, dbUserId);
         if (affectedRows == 0) {
-            rh.sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error deleting todo");
+            rh.sendHTMLResponse(INTERNAL_SERVER_ERROR, "<p> You are not authorized to perform this action!</p>");
             return;
         }
 
@@ -136,8 +160,17 @@ public class Todo {
         rh.sendHTMLResponse(OK, body.toString());
     }
 
+    @AccessControl(login = true, role = "ADMIN")
     @Route(endpoint = "/todos/", method = DELETE)
     public void deleteAllTodos(Yggdrasill.RequestHandler rh) throws IOException {
+
+        if (Yggdrasill.RequestHandler.getCurrentToken() == null ||
+                !Tyr.isTokenValid(Yggdrasill.RequestHandler.getCurrentToken()) ||
+                !Tyr.getUserRoleFromJWT(Yggdrasill.RequestHandler.getCurrentToken()).equals("ADMIN")) {
+            rh.sendHTMLResponse(OK, "<p> You are not authorized to perform this action!</p>");
+            return;
+        }
+
         Mimir db = new Mimir();
         StringBuilder body = new StringBuilder();
 
@@ -280,11 +313,28 @@ public class Todo {
         String todoId = todoRow.get("id").toString();
         String todoText = todoRow.getString("todo");
 
-        return "<li id=\"todo-" + todoId + "\">" +
-                todoText +
-                " <button hx-delete='/todos/" + todoId + "' " +
-                "hx-target='#todo-list' hx-swap='outerHTML'>X</button>" +
-                "</li>";
+        Mimir db = new Mimir();
+        String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
+
+        Row userRow = db.getRow("SELECT id FROM USER WHERE user = ?", tokenUserId);
+        if (userRow == null) {
+            return "";
+        }
+
+        int dbUserId = userRow.getInt("id");
+        if (todoRow.getInt("user_id") == null) {
+            return "";
+        }
+
+        if (todoRow.getInt("user_id") == dbUserId) {
+            return "<li id=\"todo-" + todoId + "\">" +
+                    todoText +
+                    " <button hx-delete='/todos/" + todoId + "' " +
+                    "hx-target='#todo-list' hx-swap='outerHTML'>X</button>" +
+                    "</li>";
+        }
+
+        return "";
     }
 
     private void extractPaginationParams(Yggdrasill.RequestHandler rh) {

@@ -11,6 +11,7 @@
         </div>
         <nav class="nav-links" id="navLinks">
             {{if(isLoggedIn)
+            <a class="nav-item" href="/todo/" onclick="toggleMenu()">List</a>
             <a class="nav-item" hx-get="/todo/logout" hx-push-url="true" hx-target="#main"
                onclick="toggleMenu()">Logout</a>
             else

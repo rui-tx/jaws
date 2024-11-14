@@ -15,7 +15,3 @@ CREATE TABLE IF NOT EXISTS TODO (
     user_id INTEGER,
     FOREIGN KEY (user_id) REFERENCES USER(id) ON DELETE CASCADE
 );
-
-INSERT INTO TODO (todo) VALUES ('Buy milk');
-INSERT INTO TODO (todo) VALUES ('Buy eggs');
-INSERT INTO TODO (todo) VALUES ('Buy bread');

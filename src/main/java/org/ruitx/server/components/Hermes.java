@@ -142,7 +142,8 @@ public final class Hermes {
                                 if (getBodyPath() == null || getBodyPath().isEmpty()) {
                                     setBodyPath(DEFAULT_BODY_PATH);
                                 }
-                                paramValue = new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath())));
+                                // parses the default body content, replacing placeholders with actual values
+                                paramValue = parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath()))));
                             }
                         } catch (IOException e) {
                             Logger.error("Error reading default body content: " + e.getMessage());
@@ -174,6 +175,12 @@ public final class Hermes {
     public static String makeFullPage(String basePath, String partialPath) throws IOException {
         HashMap<String, String> params = new HashMap<>();
         params.put("_BODY_CONTENT_", "{{renderPartial(\"" + partialPath + "\")}}");
+        return parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + basePath))), params, null);
+    }
+
+    public static String makeFullPageWithHTML(String basePath, String html) throws IOException {
+        HashMap<String, String> params = new HashMap<>();
+        params.put("_BODY_CONTENT_", html);
         return parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + basePath))), params, null);
     }
 

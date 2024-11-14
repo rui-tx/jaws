@@ -95,6 +95,44 @@ public class Tyr {
 
         return Base64.getEncoder().encodeToString(key);
     }
+
+    public static String getUserIdFromJWT(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
+        String userId;
+        try {
+            userId = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload().getSubject();
+
+
+        } catch (JwtException e) {
+            Logger.error("Error validating: " + e);
+            return "";
+        }
+
+        return userId == null ? "" : userId;
+    }
+
+    public static String getUserRoleFromJWT(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
+        Object userRole;
+        try {
+            userRole = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload().get("role");
+
+
+        } catch (JwtException e) {
+            Logger.error("Error validating: " + e);
+            return "";
+        }
+
+        return userRole == null ? "" : userRole.toString();
+    }
 }
 
 
