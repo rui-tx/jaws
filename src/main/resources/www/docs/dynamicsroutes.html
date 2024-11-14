@@ -37,44 +37,4 @@
             <strong><code>RoutesConfig</code></strong> configuration file located in <code>src/main/java/org/ruitx/configs/RoutesConfig</code>.
             This ensures that your dynamic routes are registered and available to the server.</p>
     </article>
-
-    <article>
-        <h3>Example of Dynamic Routes</h3>
-        <p>Here’s a simple example of how dynamic routes can be used in an application.</p>
-
-        <p>This example allows you to interact with a list of todos. You can retrieve the list, add a new todo, or
-            delete existing todos using dynamic routes.</p>
-
-        <div id="todo-list">
-            <!-- This div will be populated with the todo list -->
-            <div hx-get="/todos" hx-target="#todo-list" hx-trigger="load">
-                <img alt="Loading..." class="htmx-indicator" src="/img/loading.svg" width="100"/>
-            </div>
-        </div>
-
-        <form hx-post="/todos" hx-swap="outerHTML" hx-target="#todo-list" id="todo-form">
-            <input name="todo" placeholder="Enter a new todo" required type="text">
-            <button type="submit">Add Todo</button>
-        </form>
-        <button hx-delete="/todos" hx-swap="outerHTML" hx-target="#todo-list">Delete All Todos</button>
-
-        <p>In this example:</p>
-        <ul>
-            <li><code>GET /todos</code> fetches the list of todos.</li>
-            <li><code>POST /todos</code> creates a new todo.</li>
-            <li><code>DELETE /todos</code> deletes all todos.</li>
-        </ul>
-
-        <p>If you want to retrieve or manipulate a specific todo, you would use a dynamic route like
-            <code>/todos/:id</code>. For example:</p>
-        <ul>
-            <li><code>GET /todos/25</code> retrieves the todo with ID 25.</li>
-            <li><code>DELETE /todos/25</code> deletes the todo with ID 25.</li>
-        </ul>
-
-        <p>The <code>:id</code> part of the URL is a dynamic parameter, and its value will be automatically extracted
-            and passed to the handler method. You can access this parameter inside the method via the
-            <code>pathParams</code> in the <code>Yggdrasill.RequestHandler</code> instance, like this:</p>
-        <pre><code>String todoId = requestHandler.getPathParams().get("id");</code></pre>
-    </article>
 </div>

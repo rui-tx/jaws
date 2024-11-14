@@ -5,10 +5,11 @@
             <img alt="Loading..." class="htmx-indicator" src="/img/loading.svg" width="100"/>
         </div>
     </div>
-
+    {{if(isLoggedIn)
     <form hx-post="/todos" hx-swap="outerHTML" hx-target="#todo-list" id="todo-form">
         <input name="todo" placeholder="Enter a new todo" required type="text">
         <button type="submit">Add Todo</button>
     </form>
     <button hx-delete="/todos" hx-swap="outerHTML" hx-target="#todo-list">Delete All Todos</button>
+    }}
 </div>
