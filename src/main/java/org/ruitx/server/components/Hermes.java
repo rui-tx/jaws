@@ -21,6 +21,34 @@ import static org.ruitx.server.configs.ApplicationConfig.WWW_PATH;
  */
 public final class Hermes {
 
+    private static final String DEFAULT_BODY_PATH = "_body.html";
+    private static String BODY_PATH;
+
+    /**
+     * Get the body path for the default body partial.
+     * This method is synchronized to prevent concurrent access.
+     *
+     * @return the path to the default partials.
+     */
+    public static synchronized String getBodyPath() {
+        return BODY_PATH;
+    }
+
+    /**
+     * Set the body path for the default body partial.
+     * This method is synchronized to prevent concurrent access.
+     *
+     * @param path the path to the default partials.
+     */
+    public static synchronized void setBodyPath(String path) {
+        if (path != null && !path.isEmpty()) {
+            BODY_PATH = path;
+            return;
+        }
+
+        BODY_PATH = DEFAULT_BODY_PATH;
+    }
+
     /**
      * Parse the HTML file and replace the placeholders with the actual values
      *
@@ -69,7 +97,7 @@ public final class Hermes {
         return parseHTMLStringWithParams(html, new LinkedHashMap<>(), new LinkedHashMap<>());
     }
 
-    // TODO: Refactor this method, has hardcoded value for _BODY_CONTENT_
+    // TODO: Refactor this method
     // needs more testing
     private static String parseHTMLStringWithParams(String html, Map<String, String> queryParams, Map<String, String> bodyParams) {
         // Regex to match placeholders like {{test}} (e.g., {{test}})
@@ -98,8 +126,6 @@ public final class Hermes {
                 String commandResult = commandExecutor.execute(escapedContent);
                 matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(commandResult)));
             } else {
-
-
                 // If it's a parameter, check if it's present in queryParams or bodyParams
                 String paramValue = requestParams.get(escapedContent);
                 if (paramValue != null) {
@@ -107,12 +133,17 @@ public final class Hermes {
                     matcher.appendReplacement(result, Matcher.quoteReplacement(paramValue));
                 } else {
 
-                    // TODO: Refactor this logic
+                    // TODO: Refactor this logic - not sure of the thread safety here
                     // if param is bodyContent and is empty, then render default bodyContent
-                    // which is the partials/_body.html
+                    // if more variables are needed this will be unmanageable fast
                     if (escapedContent.equals("_BODY_CONTENT_")) {
                         try {
-                            paramValue = new String(Files.readAllBytes(Path.of(WWW_PATH + "todo/partials/_body.html")));
+                            synchronized (Hermes.class) {
+                                if (getBodyPath() == null || getBodyPath().isEmpty()) {
+                                    setBodyPath(DEFAULT_BODY_PATH);
+                                }
+                                paramValue = new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath())));
+                            }
                         } catch (IOException e) {
                             Logger.error("Error reading default body content: " + e.getMessage());
                             matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
@@ -122,9 +153,6 @@ public final class Hermes {
                         // If no match is found, leave the placeholder as it is
                         matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
                     }
-
-                    // If no match is found, leave the placeholder as it is
-                    //matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
                 }
             }
         }
@@ -132,7 +160,6 @@ public final class Hermes {
         // Append the rest of the HTML after the last match
         matcher.appendTail(result);
 
-        // Return the processed HTML
         return result.toString();
     }
 
@@ -175,4 +202,3 @@ public final class Hermes {
         return html.replaceAll("\\\\\\$", "\\$"); // Restore the escaped dollar sign
     }
 }
-

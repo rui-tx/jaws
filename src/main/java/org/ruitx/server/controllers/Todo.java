@@ -17,11 +17,18 @@ import static org.ruitx.server.strings.ResponseCode.*;
 public class Todo {
 
     private static final String BASE_HTML_PATH = "todo/index.html";
+    private static final String DEFAULT_BODY_HTML_PATH = "todo/partials/_body.html";
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_PAGE_SIZE = 5;
 
-    private int page = DEFAULT_PAGE;
-    private int pageSize = DEFAULT_PAGE_SIZE;
+    private int page;
+    private int pageSize;
+
+    public Todo() {
+        Hermes.setBodyPath(DEFAULT_BODY_HTML_PATH);
+        page = DEFAULT_PAGE;
+        pageSize = DEFAULT_PAGE_SIZE;
+    }
 
     @Route(endpoint = "/todos", method = GET)
     public void getTodos(Yggdrasill.RequestHandler rh) throws IOException {
