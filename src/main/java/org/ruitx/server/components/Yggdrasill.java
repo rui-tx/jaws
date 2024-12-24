@@ -319,18 +319,19 @@ public class Yggdrasill {
          * @throws IOException if an error occurs while processing the GET request.
          */
         private void processGET(String endPoint) throws IOException {
-            Path path = getResourcePath(endPoint);
+
+            if (findDynamicRouteFor(endPoint, GET)) {
+                return;
+            }
 
             // Try to get the file or index.html if it's a directory
+            Path path = getResourcePath(endPoint);
             Path fileToServe = getFileToServe(path);
             if (fileToServe != null) {
                 sendFileResponse(fileToServe);
                 return;
             }
 
-            if (findDynamicRouteFor(endPoint, GET)) {
-                return;
-            }
             sendNotFoundResponse();
         }
 

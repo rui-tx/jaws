@@ -2,6 +2,8 @@ package org.ruitx.server.configs;
 
 import org.ruitx.server.controllers.Auth;
 import org.ruitx.server.controllers.Todo;
+import org.ruitx.server.controllers.gallery.Gallery;
+import org.ruitx.server.controllers.gallery.GalleryAPI;
 
 import java.util.List;
 
@@ -12,6 +14,8 @@ public class RoutesConfig {
 
     public static final List<Object> ROUTES = List.of(
             new Todo(),
+            new GalleryAPI(),
+            new Gallery(),
             new Auth()
     );
 }
