@@ -17,8 +17,8 @@ import static org.ruitx.server.strings.ResponseCode.*;
 
 public class Todo {
 
-    private static final String BASE_HTML_PATH = "todo/index.html";
-    private static final String DEFAULT_BODY_HTML_PATH = "todo/partials/_body.html";
+    private static final String BASE_HTML_PATH = "examples/todo/index.html";
+    private static final String BODY_HTML_PATH = "examples/todo/partials/_body.html";
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_PAGE_SIZE = 5;
 
@@ -26,9 +26,14 @@ public class Todo {
     private int pageSize;
 
     public Todo() {
-        Hermes.setBodyPath(DEFAULT_BODY_HTML_PATH);
+        Hermes.setBodyPath(BODY_HTML_PATH);
         page = DEFAULT_PAGE;
         pageSize = DEFAULT_PAGE_SIZE;
+    }
+
+    @Route(endpoint = "/todo", method = GET)
+    public void renderIndex(Yggdrasill.RequestHandler rh) throws IOException {
+        rh.sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 
     @Route(endpoint = "/todos", method = GET)
@@ -185,7 +190,7 @@ public class Todo {
 
     @Route(endpoint = "/todo/login-page", method = GET)
     public void loginPage(Yggdrasill.RequestHandler rh) throws IOException {
-        String partialPath = "todo/partials/login.html";
+        String partialPath = "examples/todo/partials/login.html";
         if (rh.isHTMX()) {
             rh.sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
             return;
@@ -246,7 +251,7 @@ public class Todo {
 
     @Route(endpoint = "/todo/create-account-page", method = GET)
     public void createAccountPage(Yggdrasill.RequestHandler rh) throws IOException {
-        String partialPath = "todo/partials/create-account.html";
+        String partialPath = "examples/todo/partials/create-account.html";
         if (rh.isHTMX()) {
             rh.sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
             return;
