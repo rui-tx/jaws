@@ -1,7 +1,10 @@
 package org.ruitx.server.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -9,25 +12,41 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+/**
+ * APIHandler is a utility class for making API calls and parsing the responses.
+ */
 public class APIHandler {
-
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    public static ObjectMapper getObjectMapper() {
+    /**
+     * Get the ObjectMapper instance.
+     *
+     * @return the ObjectMapper instance.
+     */
+    public static ObjectMapper getMapper() {
         return objectMapper;
     }
 
     /**
-     * Calls the given API endpoint and returns the response parsed into a desired type.
-     * This method can handle any generic type, specified at the point of the API call.
+     * Encode an object to JSON.
      *
-     * @param endpoint      The API URL to make the GET request to.
-     * @param typeReference The TypeReference representing the expected response type (e.g., List of Strings).
-     * @param <T>           The type of the response object.
-     * @return The deserialized response body in the form of type T.
-     * @throws IOException If there is an error with the HTTP request or JSON parsing.
+     * @param obj the object to encode.
+     * @return the encoded JSON string.
+     * @throws JsonProcessingException if an error occurs while encoding the object.
      */
-    public <T> T callAPI(String endpoint, TypeReference<T> typeReference) throws IOException {
+    public static String encode(Object obj) throws JsonProcessingException {
+        return APIHandler.getMapper().writeValueAsString(obj);
+    }
+
+    /**
+     * Call an API endpoint and parse the response.
+     *
+     * @param endpoint     the API endpoint to call.
+     * @param responseType the Java type of the response.
+     * @param <T>          the type of the response.
+     * @return the parsed API response.
+     */
+    public <T> APIResponse<T> callAPI(String endpoint, JavaType responseType) {
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
                 .GET()
@@ -35,26 +54,44 @@ public class APIHandler {
 
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return parseResponse(response.body(), typeReference);
+            if (response.statusCode() != 200 && response.statusCode() != 201) {
+                Logger.error("API request failed with status code: {}", response.statusCode());
+                return new APIResponse<>(false, null, "Server returned error status: " + response.statusCode());
+            }
+
+            String contentType = response.headers().firstValue("content-type").orElse("");
+            if (!contentType.contains("application/json")) {
+                Logger.error("Unexpected content type: {}", contentType);
+                Logger.error("Response body: {}", response.body());
+                return new APIResponse<>(false, null, "Server returned non-JSON response");
+            }
+
+            return parseResponse(response.body(), responseType);
         } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
+            Logger.error("HTTP request failed: {}", e.getMessage());
+            return new APIResponse<>(false, null, "Failed to fetch data from server");
         }
     }
 
     /**
-     * Parses the raw JSON response string into the specified type using Jackson's ObjectMapper.
+     * Parse the response from the API call.
      *
-     * @param response      The raw JSON response body as a String.
-     * @param typeReference The TypeReference representing the target type for deserialization.
-     * @param <T>           The target type of the deserialized object.
-     * @return The deserialized object of type T.
-     * @throws RuntimeException If there is an error during JSON parsing.
+     * @param response     the response from the API call.
+     * @param responseType the Java type of the response.
+     * @param <T>          the type of the response.
+     * @return the parsed API response.
      */
-    private <T> T parseResponse(String response, TypeReference<T> typeReference) {
+    private <T> APIResponse<T> parseResponse(String response, JavaType responseType) {
         try {
-            return objectMapper.readValue(response, typeReference);
+            JavaType fullType = objectMapper.getTypeFactory()
+                    .constructParametricType(APIResponse.class, responseType);
+            return objectMapper.readValue(response, fullType);
+        } catch (JsonParseException e) {
+            Logger.error("Failed to parse JSON (invalid format): {}", e.getMessage());
+            return new APIResponse<>(false, null, "Invalid JSON response from server");
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            Logger.error("Failed to parse JSON response: {}", e.getMessage());
+            return new APIResponse<>(false, null, "Failed to process server response");
         }
     }
 }

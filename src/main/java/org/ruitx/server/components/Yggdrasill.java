@@ -6,6 +6,9 @@ import org.ruitx.server.interfaces.AccessControl;
 import org.ruitx.server.interfaces.Route;
 import org.ruitx.server.strings.RequestType;
 import org.ruitx.server.strings.ResponseCode;
+import org.ruitx.server.strings.ResponseType;
+import org.ruitx.server.utils.APIHandler;
+import org.ruitx.server.utils.APIResponse;
 import org.tinylog.Logger;
 
 import java.io.BufferedReader;
@@ -28,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import static org.ruitx.server.strings.DefaultHTML.*;
 import static org.ruitx.server.strings.RequestType.*;
 import static org.ruitx.server.strings.ResponseCode.*;
 
@@ -170,9 +174,15 @@ public class Yggdrasill {
          * @param headers the request headers.
          */
         private static void extractAndStoreToken(Map<String, String> headers) {
-            // tries to extract the token from the Authorization header
-            if (headers != null && headers.containsKey("Authorization")) {
-                String authHeader = headers.get("Authorization");
+            if (headers == null) return;
+
+            String authHeader = headers.entrySet().stream()
+                    .filter(entry -> "Authorization".equalsIgnoreCase(entry.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(null);
+
+            if (authHeader != null) {
                 String token = authHeader.substring(7);
                 currentToken.set(token);
                 return;
@@ -180,8 +190,13 @@ public class Yggdrasill {
 
             // TODO: Refactor this if statement, it shouldn't be just "Cookie", but "Cookie token=" or something
             // tries to extract the token from the Cookie header
-            if (headers != null && headers.containsKey("Cookie")) {
-                String cookieHeader = headers.get("Cookie");
+            String cookieHeader = headers.entrySet().stream()
+                    .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(null);
+
+            if (cookieHeader != null) {
                 String token = cookieHeader.split(";")[0].split("=")[1];
                 currentToken.set(token);
             }
@@ -196,9 +211,10 @@ public class Yggdrasill {
                 processRequest();
             } catch (IOException e) {
                 try {
+                    Logger.error("Request failed, closing socket: {}", e.getMessage());
                     closeSocket();
                 } catch (IOException ex) {
-                    Logger.error("Request failed.");
+                    Logger.error("Closing socket failed: {}", ex.getMessage());
                 }
                 currentConnections--;
             }
@@ -475,19 +491,7 @@ public class Yggdrasill {
                 content = Files.readAllBytes(path);
             } else {
                 Logger.warn("Could not find 404 page, using hard coded default");
-                String notFoundHtml = """
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <title>404 - Not Found</title>
-                        </head>
-                        <body>
-                            <h1>404 - Not Found</h1>
-                        </body>
-                        </html>
-                        """;
-                content = notFoundHtml.getBytes();
+                content = HTML_404_NOT_FOUND.getBytes();
             }
             sendResponseHeaders(NOT_FOUND, "text/html", content.length);
             sendResponseBody(content);
@@ -498,37 +502,34 @@ public class Yggdrasill {
          *
          * @throws IOException if an error occurs while sending the response.
          */
-        private void sendUnauthorizedResponse() throws IOException {
+        private void sendUnauthorizedResponse(ResponseType responseType) throws IOException {
             byte[] content;
-//            Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_404);
-//            if (Files.exists(path)) {
-//                content = Files.readAllBytes(path);
-//            } else {
-            Logger.warn("Could not find 401 page, using hard coded default");
-            if (isHTMX()) {
-                String notFoundHtml = """
-                            <h1>401 - Unauthorized</h1>
-                        """;
-                sendResponseHeaders(OK, "text/html", notFoundHtml.getBytes().length);
-                sendResponseBody(notFoundHtml.getBytes());
-                return;
+            switch (responseType) {
+                case HTML -> {
+                    Logger.warn("Could not find 401 page, using hard coded default");
+                    if (isHTMX()) {
+                        sendResponseHeaders(OK, "text/html", HTML_401_UNAUTHORIZED_HTMX.getBytes().length);
+                        sendResponseBody(HTML_401_UNAUTHORIZED_HTMX.getBytes());
+                        return;
+                    }
+
+                    content = HTML_401_UNAUTHORIZED.getBytes();
+                    sendResponseHeaders(UNAUTHORIZED, "text/html", content.length);
+                    sendResponseBody(content);
+                }
+
+                case JSON -> {
+                    APIResponse<String> res = new APIResponse<>(false, null, UNAUTHORIZED.getMessage());
+                    content = APIHandler.encode(res).getBytes();
+                    sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
+                    sendResponseBody(content);
+                }
+
+                case INVALID -> {
+                    Logger.error("Invalid response type");
+                    // TODO: Handle this case
+                }
             }
-            String notFoundHtml = """
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>401 - Unauthorized</title>
-                    </head>
-                    <body>
-                        <h1>401 - Unauthorized</h1>
-                    </body>
-                    </html>
-                    """;
-            content = notFoundHtml.getBytes();
-//            }
-            sendResponseHeaders(UNAUTHORIZED, "text/html", content.length);
-            sendResponseBody(content);
         }
 
         /**
@@ -648,11 +649,12 @@ public class Yggdrasill {
             // Check if we have a static route match first
             Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
             if (routeMethod != null) {
+
                 // Check if the route requires authorization
                 if (isAuthorized(routeMethod)) {
                     return invokeRouteMethod(routeMethod);
                 } else {
-                    sendUnauthorizedResponse();
+                    sendUnauthorizedResponse(routeMethod.getAnnotation(Route.class).responseType());
                     return false;
                 }
             }
@@ -669,7 +671,7 @@ public class Yggdrasill {
                         if (isAuthorized(route)) {
                             return invokeRouteMethod(route);
                         } else {
-                            sendUnauthorizedResponse();
+                            sendUnauthorizedResponse(route.getAnnotation(Route.class).responseType());
                             return false;
                         }
                     }
@@ -725,7 +727,7 @@ public class Yggdrasill {
                 }
                 return true;
             } catch (Exception e) {
-                Logger.error("Failed to invoke method: ", e);
+                Logger.error("Failed to invoke method: {}", e);
                 closeSocket();
                 return false;
             }
