@@ -1,15 +1,15 @@
 package unit;
 
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.commands.RenderPartialCommand;
-import org.ruitx.server.components.Hermes;
+import org.ruitx.jaws.commands.RenderPartialCommand;
+import org.ruitx.jaws.components.Hermes;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.ruitx.server.configs.ApplicationConfig.PORT;
+import static org.ruitx.jaws.configs.ApplicationConfig.PORT;
 
 public class HermesUnitTests {
 
@@ -127,11 +127,11 @@ public class HermesUnitTests {
 
     @Test
     public void givenHTMLWithMixedPlaceholdersAndCommands_whenParseHTMLWithParams_thenAllReplacedCorrectly() throws IOException {
-        String input = "<div>Welcome, {{username}}! Your balance is {{balance}}. Btw the server port is {{getServerPort()}}</div>";
+        String input = "<div>Welcome, {{username}}! Your balance is {{balance}}. Btw the jaws port is {{getServerPort()}}</div>";
         Map<String, String> queryParams = Map.of("username", "JaneDoe");
         Map<String, String> bodyParams = Map.of("balance", "$75.00");
 
-        String expected = "<div>Welcome, JaneDoe! Your balance is $75.00. Btw the server port is 15000</div>";
+        String expected = "<div>Welcome, JaneDoe! Your balance is $75.00. Btw the jaws port is 15000</div>";
         String result = Hermes.parseHTML(input, queryParams, bodyParams);
 
         assertEquals(expected, result);

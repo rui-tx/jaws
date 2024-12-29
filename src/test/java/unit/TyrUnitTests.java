@@ -7,8 +7,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.components.Mimir;
-import org.ruitx.server.components.Tyr;
+import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Tyr;
 import org.tinylog.Logger;
 
 import java.security.Key;
@@ -17,7 +17,7 @@ import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.ruitx.server.configs.ApplicationConfig.*;
+import static org.ruitx.jaws.configs.ApplicationConfig.*;
 
 public class TyrUnitTests {
 

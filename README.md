@@ -1,12 +1,14 @@
 # JAWS
+
 <div align="center">
 <a href="https://github.com/rui-tx/jaws">
     <img src="https://openmoji.org/data/color/svg/1F988.svg" alt="Logo" width="128" height="128">
 </a>
 </div>
-  
+
 JAWS (Just Another Web Server) is a web server implemented in Java. It can serve static files, process
 basic HTTP requests and comes with:
+
 - A way to have variables in the HTML and change them on-the-fly, like a mini template engine
 - Dynamic routing, so it's easier to create new endpoints like /user/:id
 - A database system
@@ -69,16 +71,16 @@ curl http://localhost:8080
 
 ## Project Structure
 
-- `org.ruitx.server.components.Yggdrasill`: Main server class that handles incoming HTTP requests.
+- `org.ruitx.jaws.components.Yggdrasill`: Main server class that handles incoming HTTP requests.
     - `Yggdrasill.RequestHandler`: Inner class that processes different types of HTTP requests.
-- `org.ruitx.server.components.Heimdall`: A file watcher that monitors changes in the specified directory.
-- `org.ruitx.server.components.Hephaestus`: Represents an HTTP response header.
-- `org.ruitx.server.components.Hermes`: HTML parser.
-- `org.ruitx.server.components.Njord`: Dynamic router that routes requests to controllers.
-- `org.ruitx.server.components.Mimir`: Database connector with a couple of functions to improve QoL and DX.
-- `org.ruitx.server.components.Tyr`: Component class for JWT handling.
-- `org.ruitx.server.aspects.LoggingAspect`: AspectJ-based logging aspect to log request processing events.
-- `org.ruitx.server.aspects.ExceptionAspect`: AspectJ-based exception handler.
+- `org.ruitx.jaws.components.Heimdall`: A file watcher that monitors changes in the specified directory.
+- `org.ruitx.jaws.components.Hephaestus`: Represents an HTTP response header.
+- `org.ruitx.jaws.components.Hermes`: HTML parser.
+- `org.ruitx.jaws.components.Njord`: Dynamic router that routes requests to controllers.
+- `org.ruitx.jaws.components.Mimir`: Database connector with a couple of functions to improve QoL and DX.
+- `org.ruitx.jaws.components.Tyr`: Component class for JWT handling.
+- `org.ruitx.jaws.aspects.LoggingAspect`: AspectJ-based logging aspect to log request processing events.
+- `org.ruitx.jaws.aspects.ExceptionAspect`: AspectJ-based exception handler.
 
 ### Yggdrasill
 

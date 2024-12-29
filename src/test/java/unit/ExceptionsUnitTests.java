@@ -2,7 +2,7 @@ package unit;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.exceptions.ConnectionException;
+import org.ruitx.jaws.exceptions.ConnectionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 

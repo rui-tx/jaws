@@ -1,6 +1,6 @@
 package org.ruitx;
 
-import org.ruitx.server.components.Odin;
+import org.ruitx.jaws.components.Odin;
 
 public class Jaws {
 

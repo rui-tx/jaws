@@ -4,15 +4,15 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.components.Njord;
-import org.ruitx.server.components.Yggdrasill;
-import org.ruitx.server.configs.ApplicationConfig;
+import org.ruitx.jaws.components.Njord;
+import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.jaws.configs.ApplicationConfig;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
-import static org.ruitx.server.configs.ApplicationConfig.PORT;
-import static org.ruitx.server.configs.ApplicationConfig.URL;
-import static org.ruitx.server.configs.RoutesConfig.ROUTES;
+import static org.ruitx.jaws.configs.ApplicationConfig.PORT;
+import static org.ruitx.jaws.configs.ApplicationConfig.URL;
+import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
 
 @Disabled
 public class TodoControllerTest {
@@ -28,7 +28,7 @@ public class TodoControllerTest {
         Njord njord = Njord.getInstance();
         ROUTES.forEach(njord::registerRoutes);
 
-        // Allow time for the server to start
+        // Allow time for the jaws to start
         Thread.sleep(1000);
     }
 

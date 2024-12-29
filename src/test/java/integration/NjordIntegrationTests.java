@@ -2,11 +2,11 @@ package integration;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.components.Njord;
-import org.ruitx.server.components.Yggdrasill;
-import org.ruitx.server.configs.ApplicationConfig;
-import org.ruitx.server.controllers.Todo;
-import org.ruitx.server.strings.ResponseCode;
+import org.ruitx.jaws.components.Njord;
+import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.jaws.configs.ApplicationConfig;
+import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.www.examples.Todo;
 
 import static io.restassured.RestAssured.given;
 
@@ -24,7 +24,7 @@ public class NjordIntegrationTests {
         });
         serverThread.start();
 
-        // Allow time for the server to start
+        // Allow time for the jaws to start
         Thread.sleep(1000);
     }
 

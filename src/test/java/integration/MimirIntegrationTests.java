@@ -8,17 +8,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.components.Mimir;
-import org.ruitx.server.components.Tyr;
-import org.ruitx.server.utils.Row;
+import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Tyr;
+import org.ruitx.jaws.utils.Row;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.ruitx.server.configs.ApplicationConfig.DEFAULT_DATABASE_TESTS_PATH;
-import static org.ruitx.server.configs.ApplicationConfig.JWT_SECRET;
+import static org.ruitx.jaws.configs.ApplicationConfig.DEFAULT_DATABASE_TESTS_PATH;
+import static org.ruitx.jaws.configs.ApplicationConfig.JWT_SECRET;
 
 class MimirIntegrationTests {
 

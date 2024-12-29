@@ -4,16 +4,16 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.components.Njord;
-import org.ruitx.server.components.Yggdrasill;
-import org.ruitx.server.configs.ApplicationConfig;
+import org.ruitx.jaws.components.Njord;
+import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.jaws.configs.ApplicationConfig;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.ruitx.server.configs.ApplicationConfig.PORT;
-import static org.ruitx.server.configs.RoutesConfig.ROUTES;
-import static org.ruitx.server.strings.ResponseCode.*;
+import static org.ruitx.jaws.configs.ApplicationConfig.PORT;
+import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
+import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class YggdrasillIntegrationTests {
 
@@ -28,7 +28,7 @@ public class YggdrasillIntegrationTests {
         Njord njord = Njord.getInstance();
         ROUTES.forEach(njord::registerRoutes);
 
-        // Allow time for the server to start
+        // Allow time for the jaws to start
         Thread.sleep(1000);
     }
 

@@ -1,12 +1,12 @@
 package unit;
 
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.components.Hephaestus;
+import org.ruitx.jaws.components.Hephaestus;
 
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.ruitx.server.configs.ApplicationConfig.APPLICATION_NAME;
+import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
 
 public class HephaestusUnitTests {
 

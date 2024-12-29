@@ -1,7 +1,7 @@
 package unit;
 
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.strings.ResponseCode;
+import org.ruitx.jaws.strings.ResponseCode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;

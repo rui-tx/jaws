@@ -3,4 +3,17 @@
     <p>Here’s a simple gallery example, with a few images.</p>
     <p>In this example, JAWS is using API calls to get the images from the backend. This API is also managed by JAWS,
         and it is a simple GET request that returns a JSON response.</p>
+    <p>The API is defined in the <code>GalleryAPIController</code> class, and it is used in the
+        <code>GalleryController</code>
+        class to get the images from the database.</p>
+    <p>The API is organized with the classic folder structure, with a <code>controller</code>, <code>service</code>,
+        <code>repository</code></p>
+    <p>A single DTO class is used to represent the image data, and it is defined in the <code>dto</code> package.</p>
+    <p>The API has 2 endpoints:</p>
+    <ul>
+        <li><code>/api/v1/gallery</code> to get all the images.</li>
+        <li><code>/api/v1/gallery/:id</code> to get an image by its ID.</li>
+    </ul>
+    <p>Its possible to use authorization to restrict access to the API endpoints, using the <code>@AccessControl</code>
+        annotation.</p>
 </article>

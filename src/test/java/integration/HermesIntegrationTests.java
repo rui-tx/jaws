@@ -2,7 +2,7 @@ package integration;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.ruitx.server.components.Hermes;
+import org.ruitx.jaws.components.Hermes;
 
 import java.io.IOException;
 
