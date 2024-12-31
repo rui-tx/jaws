@@ -4,6 +4,7 @@ import org.ruitx.www.examples.Auth;
 import org.ruitx.www.examples.Todo;
 import org.ruitx.www.examples.gallery.controller.GalleryAPIController;
 import org.ruitx.www.examples.gallery.controller.GalleryController;
+import org.ruitx.www.examples.trust.controller.EntityAPIController;
 
 import java.util.List;
 
@@ -16,6 +17,7 @@ public class RoutesConfig {
             new Todo(),
             new GalleryAPIController(),
             new GalleryController(),
+            new EntityAPIController(),
             new Auth()
     );
 }
