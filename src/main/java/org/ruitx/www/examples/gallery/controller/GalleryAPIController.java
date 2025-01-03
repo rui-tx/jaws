@@ -3,6 +3,7 @@ package org.ruitx.www.examples.gallery.controller;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.www.examples.gallery.dto.Image;
@@ -32,9 +33,10 @@ public class GalleryAPIController {
         rh.sendJSONResponse(OK, APIHandler.encode(
                 new APIResponse<>(
                         true,
-                        images,
-                        null))
-        );
+                        OK.getCodeAndMessage(),
+                        "",
+                        images))
+                );
     }
 
     @AccessControl(login = false)
@@ -45,9 +47,10 @@ public class GalleryAPIController {
             rh.sendJSONResponse(BAD_REQUEST, APIHandler.encode(
                     new APIResponse<>(
                             false,
-                            null,
-                            "Image ID is empty"))
-            );
+                            BAD_REQUEST.getCodeAndMessage(),
+                            "Image ID is invalid/empty",
+                            null))
+                    );
         }
 
         GalleryService galleryService = new GalleryService();
@@ -55,18 +58,20 @@ public class GalleryAPIController {
         if (image == null) {
             rh.sendJSONResponse(NOT_FOUND, APIHandler.encode(
                     new APIResponse<>(
-                            false,
-                            null,
-                            "Image not found")
-            ));
+                            true,
+                            NOT_FOUND.getCodeAndMessage(),
+                            "Image with ID " + imageId + " not found",
+                            null))
+                    );
             return;
         }
 
         rh.sendJSONResponse(OK, APIHandler.encode(
                 new APIResponse<>(
                         true,
-                        image,
-                        null))
-        );
+                        OK.getCodeAndMessage(),
+                        "",
+                        image))
+                );
     }
 }

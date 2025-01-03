@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.exceptions.APIParsingException;
+import org.ruitx.jaws.strings.ResponseCode;
 import org.tinylog.Logger;
 
 import java.io.IOException;
@@ -60,20 +61,33 @@ public class APIHandler {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200 && response.statusCode() != 201) {
                 Logger.error("API request failed with status code: {}", response.statusCode());
-                return new APIResponse<>(false, null, "Server returned error status: " + response.statusCode());
+                return new APIResponse<>(
+                        false,
+                        response.statusCode() + "",
+                        "Server returned error status: " + response.statusCode(),
+                        null);
             }
 
             String contentType = response.headers().firstValue("content-type").orElse("");
             if (!contentType.contains("application/json")) {
                 Logger.error("Unexpected content type: {}", contentType);
                 Logger.error("Response body: {}", response.body());
-                return new APIResponse<>(false, null, "Server returned non-JSON response");
+                return new APIResponse<>(
+                        false,
+                        response.statusCode() + "",
+                        "Server returned non-JSON response",
+                        null);
             }
-
             return parseResponse(response.body(), responseType);
+
         } catch (IOException | InterruptedException e) {
             Logger.error("HTTP request failed: {}", e.getMessage());
-            return new APIResponse<>(false, null, "Failed to fetch data from jaws");
+            //return new APIResponse<>(false, null, "Failed to fetch data from jaws");
+            return new APIResponse<>(
+                    false,
+                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+                    "Failed to fetch data from JAWS",
+                    null);
         }
     }
 
@@ -92,10 +106,18 @@ public class APIHandler {
             return objectMapper.readValue(response, fullType);
         } catch (JsonParseException e) {
             Logger.error("Failed to parse JSON (invalid format): {}", e.getMessage());
-            return new APIResponse<>(false, null, "Invalid JSON response from jaws");
+            return new APIResponse<>(
+                    false,
+                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+                    "Invalid JSON response from JAWS",
+                    null);
         } catch (IOException e) {
             Logger.error("Failed to parse JSON response: {}", e.getMessage());
-            return new APIResponse<>(false, null, "Failed to process jaws response");
+            return new APIResponse<>(
+                    false,
+                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+                    "Failed to process JAWS response",
+                    null);
         }
     }
 }
