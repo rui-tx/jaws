@@ -2,6 +2,8 @@ package org.ruitx.jaws.components;
 
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.exceptions.ConnectionException;
+import org.ruitx.jaws.exceptions.ProcessRequestException;
+import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.RequestType;
@@ -207,26 +209,15 @@ public class Yggdrasill {
          */
         @Override
         public void run() {
-            try {
-                processRequest();
-            } catch (IOException e) {
-                try {
-                    Logger.error("Request failed, closing socket: {}", e.getMessage());
-                    closeSocket();
-                } catch (IOException ex) {
-                    Logger.error("Closing socket failed: {}", ex.getMessage());
-                }
-                currentConnections--;
-            }
+            processRequest();
         }
 
         /**
          * Initializes input/output streams and processes the request.
          * Reads the request's headers, body, and sends the appropriate response.
          *
-         * @throws IOException if an error occurs while reading or writing to the socket.
          */
-        private void processRequest() throws IOException {
+        private void processRequest() {
             initializeStreams();
             readHeaders();
             readBody();
@@ -237,23 +228,29 @@ public class Yggdrasill {
         /**
          * Initializes the input and output streams for the socket.
          *
-         * @throws IOException if an error occurs while initializing the streams.
          */
-        private void initializeStreams() throws IOException {
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new DataOutputStream(socket.getOutputStream());
+        private void initializeStreams()  {
+            try {
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                out = new DataOutputStream(socket.getOutputStream());
+            } catch (IOException e) {
+                throw new ProcessRequestException("Error initializing streams", e);
+            }
         }
 
         /**
          * Reads the HTTP request headers and stores them in the {@link #headers} map.
          *
-         * @throws IOException if an error occurs while reading the headers.
          */
-        private void readHeaders() throws IOException {
+        private void readHeaders() {
             String headerLine;
-            while (!(headerLine = in.readLine()).isEmpty()) {
-                String[] parts = headerLine.split(" ", 2);
-                headers.put(parts[0].replace(":", ""), parts[1]);
+            try {
+                while (!(headerLine = in.readLine()).isEmpty()) {
+                    String[] parts = headerLine.split(" ", 2);
+                    headers.put(parts[0].replace(":", ""), parts[1]);
+                }
+            } catch (IOException e) {
+                throw new ProcessRequestException("Error reading headers", e);
             }
             extractAndStoreToken(headers);
         }
@@ -261,20 +258,22 @@ public class Yggdrasill {
         /**
          * Reads the body of the HTTP request (if any).
          *
-         * @throws IOException if an error occurs while reading the body.
          */
-        private void readBody() throws IOException {
-            while (in.ready()) {
-                body.append((char) in.read());
+        private void readBody() {
+            try {
+                while (in.ready()) {
+                    body.append((char) in.read());
+                }
+            } catch (IOException e) {
+                throw new ProcessRequestException("Error reading body", e);
             }
         }
 
         /**
          * Determines the type of HTTP request (e.g., GET, POST, etc.) and sends a response accordingly.
          *
-         * @throws IOException if an error occurs while sending the response.
          */
-        private void checkRequestAndSendResponse() throws IOException {
+        private void checkRequestAndSendResponse() {
             String requestType = getRequestType();
             if (requestType.equals("INVALID")) {
                 Logger.error("Invalid method: " + requestType);
@@ -303,9 +302,8 @@ public class Yggdrasill {
          *
          * @param requestType the type of the HTTP request.
          * @param body        the body of the HTTP request.
-         * @throws IOException if an error occurs while sending the response.
          */
-        private void sendResponse(String requestType, String body) throws IOException {
+        private void sendResponse(String requestType, String body) {
             String endPoint = headers.get(requestType).split(" ")[0];
             queryParams = extractQueryParameters(endPoint);
 
@@ -332,9 +330,8 @@ public class Yggdrasill {
          * Processes GET requests, serving static files or invoking dynamic routes.
          *
          * @param endPoint the endpoint of the request.
-         * @throws IOException if an error occurs while processing the GET request.
          */
-        private void processGET(String endPoint) throws IOException {
+        private void processGET(String endPoint) {
 
             if (findDynamicRouteFor(endPoint, GET)) {
                 return;
@@ -356,9 +353,8 @@ public class Yggdrasill {
          *
          * @param endPoint the endpoint of the request.
          * @param body     the body of the request.
-         * @throws IOException if an error occurs while processing the POST request.
          */
-        private void processPOST(String endPoint, String body) throws IOException {
+        private void processPOST(String endPoint, String body) {
             bodyParams = extractBodyParameters(body);
 
             if (findDynamicRouteFor(endPoint, POST)) {
@@ -372,9 +368,8 @@ public class Yggdrasill {
          *
          * @param endPoint the endpoint of the request.
          * @param body     the body of the request.
-         * @throws IOException if an error occurs while processing the PUT request.
          */
-        private void processPUT(String endPoint, String body) throws IOException {
+        private void processPUT(String endPoint, String body) {
             bodyParams = extractBodyParameters(body);
 
             if (findDynamicRouteFor(endPoint, PUT)) {
@@ -388,9 +383,8 @@ public class Yggdrasill {
          *
          * @param endPoint the endpoint of the request.
          * @param body     the body of the request.
-         * @throws IOException if an error occurs while processing the PATCH request.
          */
-        private void processPATCH(String endPoint, String body) throws IOException {
+        private void processPATCH(String endPoint, String body) {
             bodyParams = extractBodyParameters(body);
 
             if (findDynamicRouteFor(endPoint, PATCH)) {
@@ -406,7 +400,7 @@ public class Yggdrasill {
          * @param body     the body of the request.
          * @throws IOException if an error occurs while processing the DELETE request.
          */
-        private void processDELETE(String endPoint, String body) throws IOException {
+        private void processDELETE(String endPoint, String body) {
             bodyParams = extractBodyParameters(body);
 
             if (findDynamicRouteFor(endPoint, DELETE)) {
@@ -437,9 +431,8 @@ public class Yggdrasill {
          *
          * @param responseCode the HTTP response code.
          * @param body         the body content of the response.
-         * @throws IOException if an error occurs while sending the response.
          */
-        public void sendJSONResponse(ResponseCode responseCode, String body) throws IOException {
+        public void sendJSONResponse(ResponseCode responseCode, String body) {
             byte[] content = body.getBytes();
             String contentType = "application/json";
 
@@ -461,48 +454,56 @@ public class Yggdrasill {
          * Sends a file response for the specified path.
          *
          * @param path the path to the file.
-         * @throws IOException if an error occurs while sending the file response.
          */
-        private void sendFileResponse(Path path) throws IOException {
-            byte[] content = Files.readAllBytes(path);
-            String contentType = Files.probeContentType(path);
+        private void sendFileResponse(Path path) {
+            try {
+                byte[] content = Files.readAllBytes(path);
+                String contentType = Files.probeContentType(path);
 
-            if (contentType.equals("text/html")) {
-                String parsedHTML = Hermes.parseHTML(new String(content), queryParams, bodyParams);
-                parsedHTML += "\n\n"; // prevents truncation of the last line
-                sendResponseHeaders(OK, contentType, parsedHTML.length());
-                out.write(parsedHTML.getBytes(StandardCharsets.UTF_8));
-            } else {
-                sendResponseHeaders(OK, contentType, content.length);
-                out.write(content);
+                if (contentType.equals("text/html")) {
+                    String parsedHTML = Hermes.parseHTML(new String(content), queryParams, bodyParams);
+                    parsedHTML += "\n\n"; // prevents truncation of the last line
+                    sendResponseHeaders(OK, contentType, parsedHTML.length());
+                    out.write(parsedHTML.getBytes(StandardCharsets.UTF_8));
+                } else {
+                    sendResponseHeaders(OK, contentType, content.length);
+                    out.write(content);
+                }
+                out.flush();
             }
-            out.flush();
+            catch (IOException e) {
+                throw new ProcessRequestException("Error sending file response", e);
+            }
+
         }
 
         /**
          * Sends a 404 Not Found response.
          *
-         * @throws IOException if an error occurs while sending the response.
          */
-        private void sendNotFoundResponse() throws IOException {
-            byte[] content;
-            Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_404);
-            if (Files.exists(path)) {
-                content = Files.readAllBytes(path);
-            } else {
-                Logger.warn("Could not find 404 page, using hard coded default");
-                content = HTML_404_NOT_FOUND.getBytes();
+        private void sendNotFoundResponse() {
+            try {
+                byte[] content;
+                Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_404);
+                if (Files.exists(path)) {
+                    content = Files.readAllBytes(path);
+                } else {
+                    Logger.warn("Could not find 404 page, using hard coded default");
+                    content = HTML_404_NOT_FOUND.getBytes();
+                }
+                sendResponseHeaders(NOT_FOUND, "text/html", content.length);
+                sendResponseBody(content);
             }
-            sendResponseHeaders(NOT_FOUND, "text/html", content.length);
-            sendResponseBody(content);
+            catch (IOException e) {
+                throw new ProcessRequestException("Error sending 404 response", e);
+            }
         }
 
         /**
          * Sends a 401 Not Found response.
          *
-         * @throws IOException if an error occurs while sending the response.
          */
-        private void sendUnauthorizedResponse(ResponseType responseType) throws IOException {
+        private void sendUnauthorizedResponse(ResponseType responseType) {
             byte[] content;
             switch (responseType) {
                 case HTML -> {
@@ -538,9 +539,8 @@ public class Yggdrasill {
          * @param responseCode  the HTTP response code.
          * @param contentType   the content type of the response.
          * @param contentLength the length of the content.
-         * @throws IOException if an error occurs while sending the headers.
          */
-        private void sendResponseHeaders(ResponseCode responseCode, String contentType, int contentLength) throws IOException {
+        private void sendResponseHeaders(ResponseCode responseCode, String contentType, int contentLength) {
             Hephaestus.Builder builder = new Hephaestus.Builder()
                     .responseType(responseCode.toString())
                     .contentType(contentType)
@@ -554,19 +554,26 @@ public class Yggdrasill {
             builder.build();
 
             Hephaestus responseHeader = builder.build();
-            out.write(responseHeader.headerToBytes());
-            out.flush();
+            try {
+                out.write(responseHeader.headerToBytes());
+                out.flush();
+            } catch (IOException e) {
+                throw new SendRespondException("Error sending response headers", e);
+            }
         }
 
         /**
          * Sends the body of the response to the client.
          *
          * @param body the body content of the response.
-         * @throws IOException if an error occurs while sending the response body.
          */
-        private void sendResponseBody(byte[] body) throws IOException {
-            out.write(body);
-            out.flush();
+        private void sendResponseBody(byte[] body) {
+            try {
+                out.write(body);
+                out.flush();
+            } catch (IOException e) {
+                throw new SendRespondException("Error sending response body", e);
+            }
         }
 
         /**
@@ -645,7 +652,7 @@ public class Yggdrasill {
          * @return true if a route is found and invoked, false otherwise.
          * @throws IOException if an error occurs while invoking the route.
          */
-        private boolean findDynamicRouteFor(String endPoint, RequestType method) throws IOException {
+        private boolean findDynamicRouteFor(String endPoint, RequestType method) {
             // Check if we have a static route match first
             Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
             if (routeMethod != null) {
@@ -686,9 +693,8 @@ public class Yggdrasill {
          *
          * @param routeMethod the route method to check.
          * @return true if the user is authorized, false otherwise.
-         * @throws IOException if an error occurs while checking the authorization.
          */
-        private boolean isAuthorized(Method routeMethod) throws IOException {
+        private boolean isAuthorized(Method routeMethod) {
             if (routeMethod.isAnnotationPresent(AccessControl.class)) {
                 AccessControl auth = routeMethod.getAnnotation(AccessControl.class);
                 if (auth.login()) {
@@ -713,9 +719,8 @@ public class Yggdrasill {
          *
          * @param routeMethod the route method to invoke.
          * @return true if the method was invoked successfully, false otherwise.
-         * @throws IOException if an error occurs while invoking the route method.
          */
-        private boolean invokeRouteMethod(Method routeMethod) throws IOException {
+        private boolean invokeRouteMethod(Method routeMethod) {
             try {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
@@ -808,14 +813,17 @@ public class Yggdrasill {
         /**
          * Closes the socket connection.
          *
-         * @throws IOException if an error occurs while closing the socket.
          */
-        private void closeSocket() throws IOException {
+        private void closeSocket() {
             synchronized (Yggdrasill.class) {
                 currentConnections--;
             }
             currentToken.remove();
-            socket.close();
+            try {
+                socket.close();
+            } catch (IOException e) {
+                throw new ProcessRequestException("Error closing socket", e);
+            }
         }
 
         /**
