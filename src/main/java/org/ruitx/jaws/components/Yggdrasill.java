@@ -520,7 +520,11 @@ public class Yggdrasill {
                 }
 
                 case JSON -> {
-                    APIResponse<String> res = new APIResponse<>(false, null, UNAUTHORIZED.getMessage());
+                    APIResponse<String> res = new APIResponse<>(
+                            false,
+                            UNAUTHORIZED.getCodeAndMessage(),
+                            "You are not authorized to access this resource",
+                            null);
                     content = APIHandler.encode(res).getBytes();
                     sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
                     sendResponseBody(content);
@@ -528,7 +532,14 @@ public class Yggdrasill {
 
                 case INVALID -> {
                     Logger.error("Invalid response type");
-                    // TODO: Handle this case
+                    APIResponse<String> res = new APIResponse<>(
+                            false,
+                            METHOD_NOT_ALLOWED.getCodeAndMessage(),
+                            "The requested response type is invalid",
+                            null);
+                    content = APIHandler.encode(res).getBytes();
+                    sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
+                    sendResponseBody(content);
                 }
             }
         }
@@ -650,7 +661,6 @@ public class Yggdrasill {
          * @param endPoint the endpoint to match.
          * @param method   the HTTP method (GET, POST, etc.).
          * @return true if a route is found and invoked, false otherwise.
-         * @throws IOException if an error occurs while invoking the route.
          */
         private boolean findDynamicRouteFor(String endPoint, RequestType method) {
             // Check if we have a static route match first

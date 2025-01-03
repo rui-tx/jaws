@@ -63,6 +63,10 @@ public enum ResponseCode {
         return message;
     }
 
+    public String getCodeAndMessage() {
+        return code + " " + message;
+    }
+
     @Override
     public String toString() {
         return code + " " + message;
