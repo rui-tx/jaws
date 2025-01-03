@@ -25,20 +25,34 @@ public class ExceptionAspect {
 
     @AfterThrowing(pointcut = "requestHandlerMethods() || apiHandlerMethods()", throwing = "ex")
     public void handleException(Throwable ex) {
-        if (ex instanceof ConnectionException) {
-            Logger.error("ConnectionException occurred: {}", ex.getMessage());
-        } else if (ex instanceof SocketTimeoutException) {
-            Logger.error("SocketTimeoutException occurred: {}", ex.getMessage());
-        } else if (ex instanceof IOException) {
-            Logger.error("IOException occurred: {}", ex.getMessage());
-        } else if (ex instanceof APIParsingException) {
-            Logger.error("API Parsing Error: {}", ex.getMessage());
-        } else if (ex instanceof APIException) {
-            Logger.error("API Error: {}", ex.getMessage());
-        } else {
-            Logger.error("An unexpected exception occurred: {}", ex.getMessage());
+        switch (ex.getClass().getSimpleName()) {
+            case "ConnectionException":
+                Logger.error("ConnectionException occurred: {}", ex.getMessage());
+                break;
+            case "SocketTimeoutException":
+                Logger.error("SocketTimeoutException occurred: {}", ex.getMessage());
+                break;
+            case "IOException":
+                Logger.error("IOException occurred: {}", ex.getMessage());
+                break;
+            case "APIParsingException":
+                Logger.error("API Parsing Error: {}", ex.getMessage());
+                break;
+            case "APIException":
+                Logger.error("API Error: {}", ex.getMessage());
+                break;
+            case "ProcessRequestException":
+                Logger.error("ProcessRequestException occurred: {}", ex.getMessage());
+                break;
+            case "SendRespondException":
+                Logger.error("SendRespondException occurred: {}", ex.getMessage());
+                break;
+            default:
+                Logger.error("An unexpected exception occurred: {}", ex.getMessage());
+                break;
         }
     }
+
 
 //    Disabled for now, as I need to test it
 //    @Around("requestHandlerMethods() || apiHandlerMethods()")

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.ruitx.jaws.exceptions.APIParsingException;
 import org.tinylog.Logger;
 
 import java.io.IOException;
@@ -32,10 +33,13 @@ public class APIHandler {
      *
      * @param obj the object to encode.
      * @return the encoded JSON string.
-     * @throws JsonProcessingException if an error occurs while encoding the object.
      */
-    public static String encode(Object obj) throws JsonProcessingException {
-        return APIHandler.getMapper().writeValueAsString(obj);
+    public static String encode(Object obj) {
+        try {
+            return APIHandler.getMapper().writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            throw new APIParsingException("Failed to encode object to JSON", e);
+        }
     }
 
     /**
