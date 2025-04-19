@@ -1,11 +1,18 @@
 package org.ruitx.jaws.aspects;
 
-import org.aspectj.lang.annotation.AfterThrowing;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.ruitx.jaws.components.BaseController;
+import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.exceptions.APIException;
 import org.ruitx.jaws.exceptions.APIParsingException;
 import org.ruitx.jaws.exceptions.ConnectionException;
+import org.ruitx.jaws.exceptions.SendRespondException;
+import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.utils.APIHandler;
+import org.ruitx.jaws.utils.APIResponse;
 import org.tinylog.Logger;
 
 import java.io.IOException;
@@ -13,6 +20,11 @@ import java.net.SocketTimeoutException;
 
 @Aspect
 public class ExceptionAspect {
+
+    // Pointcut to match any method in controllers
+    @Pointcut("execution(* org.ruitx.jaws.controllers..*(..))")
+    public void controllerMethods() {
+    }
 
     // Pointcut to match any method in RequestHandler
     @Pointcut("execution(* org.ruitx.jaws.components.Yggdrasill.RequestHandler.*(..))")
@@ -23,74 +35,78 @@ public class ExceptionAspect {
     public void apiHandlerMethods() {
     }
 
-    @AfterThrowing(pointcut = "requestHandlerMethods() || apiHandlerMethods()", throwing = "ex")
-    public void handleException(Throwable ex) {
-        switch (ex.getClass().getSimpleName()) {
-            case "ConnectionException":
-                Logger.error("ConnectionException occurred: {}", ex.getMessage());
-                break;
-            case "SocketTimeoutException":
-                Logger.error("SocketTimeoutException occurred: {}", ex.getMessage());
-                break;
-            case "IOException":
-                Logger.error("IOException occurred: {}", ex.getMessage());
-                break;
-            case "APIParsingException":
-                Logger.error("API Parsing Error: {}", ex.getMessage());
-                break;
-            case "APIException":
-                Logger.error("API Error: {}", ex.getMessage());
-                break;
-            case "ProcessRequestException":
-                Logger.error("ProcessRequestException occurred: {}", ex.getMessage());
-                break;
-            case "SendRespondException":
-                Logger.error("SendRespondException occurred: {}", ex.getMessage());
-                break;
-            default:
-                Logger.error("An unexpected exception occurred: {}", ex.getMessage());
-                break;
+    @Around("controllerMethods() || requestHandlerMethods() || apiHandlerMethods()")
+    public Object handleException(ProceedingJoinPoint joinPoint) throws Throwable {
+        try {
+            return joinPoint.proceed();
+        } catch (Exception ex) {
+            handleException(ex, joinPoint);
+            throw ex; // Re-throw the exception after handling
         }
     }
 
+    private void handleException(Throwable ex, ProceedingJoinPoint joinPoint) {
+        // Log the exception
+        Logger.error("Exception occurred: {}", ex.getMessage(), ex);
 
-//    Disabled for now, as I need to test it
-//    @Around("requestHandlerMethods() || apiHandlerMethods()")
-//    public Object handleException(ProceedingJoinPoint joinPoint) throws Throwable {
-//        Object result = null;
-//        try {
-//            result = joinPoint.proceed(); // Proceed with the method execution
-//        } catch (Throwable ex) {
-//            // Handle the exception
-//            if (ex instanceof APIParsingException) {
-//                Logger.error("API Parsing error: {}", ex.getMessage());
-//                sendErrorResponse(ex, "Failed to parse JSON response", joinPoint);
-//            } else if (ex instanceof APIException) {
-//                Logger.error("API error: {}", ex.getMessage());
-//                sendErrorResponse(ex, "API error", joinPoint);
-//            } else {
-//                Logger.error("Unexpected error: {}", ex.getMessage());
-//            }
-//        }
-//        return result;
-//    }
-//
-//    private void sendErrorResponse(Throwable ex, String reason, ProceedingJoinPoint joinPoint) {
-//        // Extract RequestHandler (rh) from the method arguments (if it's the first argument)
-//        for (Object arg : joinPoint.getArgs()) {
-//            System.out.println(arg.getClass());
-//        }
-//        for (Object arg : joinPoint.getArgs()) {
-//            if (arg instanceof Yggdrasill.RequestHandler rh) {
-//                try {
-//                    // Create the APIResponse and send it back to the client
-//                    APIResponse<String> response = new APIResponse<>(false, null, reason + ": " + ex.getMessage());
-//                    rh.sendJSONResponse(ResponseCode.INTERNAL_SERVER_ERROR, APIHandler.encode(response));
-//                } catch (IOException e) {
-//                    Logger.error("Error sending error response: {}", e.getMessage());
-//                }
-//                break;
-//            }
-//        }
-//    }
+        // Try to send error response if we have access to RequestHandler
+        try {
+            Yggdrasill.RequestHandler requestHandler = getRequestHandler(joinPoint);
+            if (requestHandler != null) {
+                sendErrorResponse(ex, requestHandler);
+            }
+        } catch (Exception e) {
+            Logger.error("Failed to send error response: {}", e.getMessage());
+        }
+    }
+
+    private Yggdrasill.RequestHandler getRequestHandler(ProceedingJoinPoint joinPoint) {
+        // Check if the target is a BaseController
+        if (joinPoint.getTarget() instanceof BaseController controller) {
+            return controller.getRequestHandler();
+        }
+        
+        // Check method arguments
+        for (Object arg : joinPoint.getArgs()) {
+            if (arg instanceof Yggdrasill.RequestHandler) {
+                return (Yggdrasill.RequestHandler) arg;
+            }
+        }
+        
+        return null;
+    }
+
+    private void sendErrorResponse(Throwable ex, Yggdrasill.RequestHandler requestHandler) {
+        try {
+            ResponseCode responseCode = determineResponseCode(ex);
+            String errorMessage = ex.getMessage();
+            
+            APIResponse<String> response = new APIResponse<>(
+                false,
+                responseCode.getCodeAndMessage(),
+                errorMessage,
+                null
+            );
+            
+            requestHandler.sendJSONResponse(responseCode, APIHandler.encode(response));
+        } catch (Exception e) {
+            Logger.error("Failed to send error response: {}", e.getMessage());
+        }
+    }
+
+    private ResponseCode determineResponseCode(Throwable ex) {
+        if (ex instanceof SendRespondException) {
+            return ResponseCode.INTERNAL_SERVER_ERROR;
+        } else if (ex instanceof APIParsingException) {
+            return ResponseCode.BAD_REQUEST;
+        } else if (ex instanceof APIException) {
+            return ResponseCode.SERVICE_UNAVAILABLE;
+        } else if (ex instanceof ConnectionException || ex instanceof SocketTimeoutException) {
+            return ResponseCode.GATEWAY_TIMEOUT;
+        } else if (ex instanceof IOException) {
+            return ResponseCode.INTERNAL_SERVER_ERROR;
+        } else {
+            return ResponseCode.INTERNAL_SERVER_ERROR;
+        }
+    }
 }

@@ -122,6 +122,14 @@ public abstract class BaseController {
         }
     }
 
+    /**
+     * Get the request handler for the current thread.
+     * @return The request handler for the current thread
+     */
+    public Yggdrasill.RequestHandler getRequestHandler() {
+        return requestHandler.get();
+    }
+
     protected void addCustomHeader(String name, String value) {
         requestHandler.get().addCustomHeader(name, value);
     }
