@@ -21,6 +21,7 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
  * <li>Yggdrasill is the jaws that listens for incoming connections</li>
  * <li>Heimdall is a file watcher that watches for changes in the www path</li>
  * <li>Njord is a dynamic router that routes requests to controllers</li>
+ * <li>Norns is a cron job that runs scheduled tasks</li>
  * <li>Hel is the shutdown hook that stops the jaws</li>
  * </ul>
  */
