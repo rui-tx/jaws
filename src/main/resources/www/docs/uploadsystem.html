@@ -1,0 +1,56 @@
+<div id="upload-system">
+    <article>
+        <h3>Upload System</h3>
+        <p>JAWS includes a comprehensive file upload system that allows users to upload, manage, and share files with custom expiry times. The system includes user authentication, file management, and automatic cleanup of expired files.</p>
+
+        <h4>1. Basic Features</h4>
+        <ul>
+            <li>File upload with custom expiry times</li>
+            <li>User authentication and management</li>
+            <li>File management (list, download, delete)</li>
+            <li>Automatic cleanup of expired files</li>
+            <li>Drag and drop support</li>
+            <li>Progress tracking</li>
+            <li>File size limits (10MB)</li>
+        </ul>
+
+        <h4>2. Configuration</h4>
+        <p>The upload system can be configured using the following environment variables:</p>
+        <ul>
+            <li><strong><code>UPLOADDIR</code></strong>: Specifies the directory where uploaded files will be stored. Defaults to <code>examples/upload/files</code>.</li>
+        </ul>
+
+        <h4>3. Database Schema</h4>
+        <p>The upload system uses two main tables:</p>
+        <ul>
+            <li><strong><code>UPLOADS</code></strong>: Stores information about uploaded files</li>
+            <li><strong><code>USER</code></strong>: Stores user authentication information</li>
+        </ul>
+
+        <h4>4. API Endpoints</h4>
+        <p>The upload system provides the following API endpoints:</p>
+        <ul>
+            <li><strong><code>GET /upload</code></strong>: Renders the upload page</li>
+            <li><strong><code>POST /api/v1/upload/upload</code></strong>: Handles file uploads</li>
+            <li><strong><code>GET /api/v1/upload/list</code></strong>: Lists user's uploads</li>
+            <li><strong><code>DELETE /api/v1/upload/:id</code></strong>: Deletes an upload</li>
+            <li><strong><code>GET /upload/download/:id</code></strong>: Downloads a file</li>
+            <li><strong><code>GET /upload/login-page</code></strong>: Renders the login page</li>
+            <li><strong><code>POST /upload/login</code></strong>: Handles user login</li>
+            <li><strong><code>GET /upload/logout</code></strong>: Handles user logout</li>
+            <li><strong><code>GET /upload/create-account-page</code></strong>: Renders the create account page</li>
+            <li><strong><code>POST /upload/create-account</code></strong>: Handles user registration</li>
+        </ul>
+
+        <h4>5. Example Usage</h4>
+        <p>To use the upload system, you can:</p>
+        <ol>
+            <li>Create a user account or log in</li>
+            <li>Upload files with custom expiry times</li>
+            <li>Manage your uploads (view, download, delete)</li>
+            <li>Share download links with others</li>
+        </ol>
+
+        <aside>The upload system automatically cleans up expired files every 5 minutes. Files are deleted both from the filesystem and the database when they expire.</aside>
+    </article>
+</div> 
