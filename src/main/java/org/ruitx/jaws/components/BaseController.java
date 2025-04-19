@@ -1,5 +1,6 @@
 package org.ruitx.jaws.components;
 
+import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
@@ -31,34 +32,42 @@ public abstract class BaseController {
 
     /**
      * Send a JSON response to the client.
-     * @param code
-     * @param data
-     * @throws IOException
+     * @param code the response code
+     * @param data the data to send
      */
-    protected void sendJSONResponse(ResponseCode code, Object data) throws IOException {
-        requestHandler.get().sendJSONResponse(code, APIHandler.encode(
-                new APIResponse<>(
-                        true,
-                        code.getCodeAndMessage(),
-                        "",
-                        data))
-        );
+    protected void sendJSONResponse(ResponseCode code, Object data) {
+        try {
+            requestHandler.get().sendJSONResponse(code, APIHandler.encode(
+                    new APIResponse<>(
+                            true,
+                            code.getCodeAndMessage(),
+                            "",
+                            data))
+            );
+        } catch (Exception e) {
+            Logger.error("Failed to send JSON response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send JSON response", e);
+        }
     }
 
     /**
      * Send an HTML response to the client.
-     * @param code
-     * @param content
-     * @throws IOException
+     * @param code the response code
+     * @param content the HTML content to send
      */
-    protected void sendHTMLResponse(ResponseCode code, String content) throws IOException {
-        requestHandler.get().sendHTMLResponse(code, content);
+    protected void sendHTMLResponse(ResponseCode code, String content) {
+        try {
+            requestHandler.get().sendHTMLResponse(code, content);
+        } catch (Exception e) {
+            Logger.error("Failed to send HTML response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send HTML response", e);
+        }
     }
 
     /**
      * Get a path parameter from the request.
-     * @param name
-     * @return
+     * @param name the parameter name
+     * @return the parameter value
      */
     protected String getPathParam(String name) {
         return requestHandler.get().getPathParams().get(name);
@@ -66,86 +75,111 @@ public abstract class BaseController {
 
     /**
      * Get a query parameter from the request.
-     * @param name
-     * @return
+     * @param name the parameter name
+     * @return the parameter value
      */
     protected String getQueryParam(String name) {
-        return requestHandler.get().getQueryParams() != null ? requestHandler.get().getQueryParams().get(name) : null;
+        return requestHandler.get().getQueryParams().get(name);
     }
 
     /**
      * Get a body parameter from the request.
-     * @param name
-     * @return
+     * @param name the parameter name
+     * @return the parameter value
      */
     protected String getBodyParam(String name) {
-        return requestHandler.get().getBodyParams() != null ? requestHandler.get().getBodyParams().get(name) : null;
+        return requestHandler.get().getBodyParams().get(name);
     }
 
     /**
-     * Check if the request is an HTMX request.
-     * @return
-     */ 
+     * Check if the request is from HTMX.
+     * @return true if the request is from HTMX
+     */
     protected boolean isHTMX() {
         return requestHandler.get().isHTMX();
     }
 
     /**
-     * Cleanup the request handler for the current thread.
+     * Clean up the request handler.
      */
     protected void cleanup() {
-        try {
-            requestHandler.remove();
-        } catch (Exception e) {
-            Logger.error("Error cleaning up request handler: {}", e.getMessage());
-        }
+        requestHandler.remove();
     }
 
+    /**
+     * Add a custom header to the response.
+     * @param name the header name
+     * @param value the header value
+     */
     protected void addCustomHeader(String name, String value) {
         requestHandler.get().addCustomHeader(name, value);
     }
 
     /**
-     * Render a template file with parameters.
-     * @param templatePath The path to the template file
-     * @param params The parameters to be used in the template
-     * @return The rendered template with parameters replaced
-     * @throws IOException if there's an error reading the template file
+     * Render a template with parameters.
+     * @param templatePath the path to the template
+     * @param params the parameters to render
+     * @return the rendered template
      */
-    protected String renderTemplate(String templatePath, Map<String, String> params) throws IOException {
-        String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
-        return Hermes.processTemplate(templateHtml, params, null);
+    protected String renderTemplate(String templatePath, Map<String, String> params) {
+        try {
+            Path path = Path.of(WWW_PATH, templatePath);
+            String template = new String(Files.readAllBytes(path));
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                template = template.replace("{{" + entry.getKey() + "}}", entry.getValue());
+            }
+            return template;
+        } catch (Exception e) {
+            Logger.error("Failed to render template: {}", e.getMessage());
+            throw new SendRespondException("Failed to render template", e);
+        }
     }
 
     /**
-     * Render a template file without parameters.
-     * @param templatePath The path to the template file
-     * @return The rendered template
-     * @throws IOException if there's an error reading the template file
+     * Render a template without parameters.
+     * @param templatePath the path to the template
+     * @return the rendered template
      */
-    protected String renderTemplate(String templatePath) throws IOException {
-        return renderTemplate(templatePath, new HashMap<>());
+    protected String renderTemplate(String templatePath) {
+        try {
+            Path path = Path.of(WWW_PATH, templatePath);
+            return new String(Files.readAllBytes(path));
+        } catch (Exception e) {
+            Logger.error("Failed to render template: {}", e.getMessage());
+            throw new SendRespondException("Failed to render template", e);
+        }
     }
 
     /**
-     * Assemble a full page by combining a base template with a partial template.
-     * @param baseTemplatePath The path to the base template file
-     * @param partialTemplatePath The path to the partial template file
-     * @return The assembled page
-     * @throws IOException if there's an error reading or processing the templates
+     * Assemble a page from a base template and a partial template.
+     * @param baseTemplatePath the path to the base template
+     * @param partialTemplatePath the path to the partial template
+     * @return the assembled page
      */
-    protected String assemblePage(String baseTemplatePath, String partialTemplatePath) throws IOException {
-        return Hermes.assemblePage(baseTemplatePath, partialTemplatePath);
+    protected String assemblePage(String baseTemplatePath, String partialTemplatePath) {
+        try {
+            String baseTemplate = renderTemplate(baseTemplatePath);
+            String partialTemplate = renderTemplate(partialTemplatePath);
+            return baseTemplate.replace("{{content}}", partialTemplate);
+        } catch (Exception e) {
+            Logger.error("Failed to assemble page: {}", e.getMessage());
+            throw new SendRespondException("Failed to assemble page", e);
+        }
     }
 
     /**
-     * Assemble a full page by combining a base template with raw content.
-     * @param baseTemplatePath The path to the base template file
-     * @param content The raw content to insert
-     * @return The assembled page
-     * @throws IOException if there's an error reading or processing the template
+     * Assemble a page from a base template and content.
+     * @param baseTemplatePath the path to the base template
+     * @param content the content to insert
+     * @return the assembled page
      */
-    protected String assemblePageWithContent(String baseTemplatePath, String content) throws IOException {
-        return Hermes.assemblePageWithContent(baseTemplatePath, content);
+    protected String assemblePageWithContent(String baseTemplatePath, String content) {
+        try {
+            String baseTemplate = renderTemplate(baseTemplatePath);
+            return baseTemplate.replace("{{content}}", content);
+        } catch (Exception e) {
+            Logger.error("Failed to assemble page with content: {}", e.getMessage());
+            throw new SendRespondException("Failed to assemble page with content", e);
+        }
     }
 } 
