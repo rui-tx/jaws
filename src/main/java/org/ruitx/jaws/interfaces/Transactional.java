@@ -19,10 +19,4 @@ public @interface Transactional {
      * Defaults to false.
      */
     boolean readOnly() default false;
-
-    /**
-     * The timeout in seconds for the transaction.
-     * Defaults to -1 (no timeout).
-     */
-    int timeout() default -1;
 } 
