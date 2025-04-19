@@ -743,10 +743,40 @@ public class Yggdrasill {
                 // TODO: This is not ideal, find a better way to do this.
                 // Synchronize the controller instance to prevent concurrent access. Works but is not ideal, as it can be a bottleneck.
                 synchronized (controllerInstance) {
-                    if (routeMethod.getParameterCount() > 0) {
-                        routeMethod.invoke(controllerInstance, this);
-                    } else {
-                        routeMethod.invoke(controllerInstance);
+                    try {
+                        if (routeMethod.getParameterCount() > 0) {
+                            routeMethod.invoke(controllerInstance, this);
+                        } else {
+                            routeMethod.invoke(controllerInstance);
+                        }
+                    } catch (Exception e) {
+                        Logger.error("Controller execution failed: {}", e.getMessage(), e);
+                        
+                        // Try to send error response if possible
+                        if (controllerInstance instanceof BaseController) {
+                            BaseController controller = (BaseController) controllerInstance;
+                            Yggdrasill.RequestHandler handler = controller.getRequestHandler();
+                            if (handler != null) {
+                                // Create error response
+                                APIResponse<String> response = new APIResponse<>(
+                                    false,
+                                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+                                    e.getMessage(),
+                                    null
+                                );
+                                
+                                // Send error response
+                                handler.sendJSONResponse(
+                                    ResponseCode.INTERNAL_SERVER_ERROR,
+                                    APIHandler.encode(response)
+                                );
+                                
+                                // Cleanup after sending response
+                                controller.cleanup();
+                                return true;
+                            }
+                        }
+                        throw e; // Re-throw if we couldn't handle it
                     }
                 }
 
@@ -757,7 +787,7 @@ public class Yggdrasill {
                 
                 return true;
             } catch (Exception e) {
-                Logger.error("Failed to invoke method: {}", e);
+                Logger.error("Failed to send error response: {}", e.getMessage());
                 closeSocket();
                 return false;
             }
