@@ -1,7 +1,6 @@
 package org.ruitx.www.examples.upload.controller;
 
 import org.ruitx.jaws.components.BaseController;
-import org.ruitx.jaws.components.Hermes;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.components.Yggdrasill;
@@ -9,8 +8,8 @@ import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.utils.Row;
 import org.ruitx.jaws.configs.ApplicationConfig;
-
-import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
+import org.ruitx.jaws.exceptions.SendRespondException;
+import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -37,7 +36,7 @@ public class UploadController extends BaseController {
     private static final String API_ENDPOINT = "/api/v1/upload/";
 
     public UploadController() {
-        Hermes.setBodyPath(BODY_HTML_PATH);
+        bodyHtmlPath = BODY_HTML_PATH;
         // Create upload directory if it doesn't exist
         try {
             Path uploadPath = Paths.get(UPLOAD_DIR);
@@ -45,7 +44,7 @@ public class UploadController extends BaseController {
                 Files.createDirectories(uploadPath);
                 System.out.println("Created upload directory at: " + uploadPath.toAbsolutePath());
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("Error creating upload directory: " + e.getMessage());
             e.printStackTrace();
         }
@@ -142,7 +141,7 @@ public class UploadController extends BaseController {
     // ===========================================
 
     @Route(endpoint = API_ENDPOINT + "upload", method = POST)
-    public void handleUpload() throws IOException {
+    public void handleUpload() {
         String base64File = getBodyParam("file");
         String fileName = getBodyParam("filename");
         String expiryMinutes = getBodyParam("expiry");
@@ -167,7 +166,12 @@ public class UploadController extends BaseController {
         // Save file
         Path filePath = Paths.get(UPLOAD_DIR, newFileName);
         System.out.println("Saving file to: " + filePath.toAbsolutePath());
-        Files.write(filePath, fileBytes);
+        try {
+            Files.write(filePath, fileBytes);
+        } catch (Exception e) {
+            Logger.error("Failed to save file: {}", e.getMessage());
+            throw new SendRespondException("Failed to save file", e);
+        }
 
         // Calculate expiry time - ensure it's at least 1 minute in the future
         long minutes = Long.parseLong(expiryMinutes);
@@ -177,41 +181,21 @@ public class UploadController extends BaseController {
         // Save to database
         Mimir db = new Mimir();
         Integer userId = null;
-        if (Yggdrasill.RequestHandler.getCurrentToken() != null && 
-            Tyr.isTokenValid(Yggdrasill.RequestHandler.getCurrentToken())) {
-            try {
-                String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
-                userId = db.getRow("SELECT id FROM USER WHERE user = ?", tokenUserId).getInt("id");
-            } catch (Exception e) {
-                // Token is invalid or user not found, treat as anonymous upload
-                userId = null;
-            }
+        if (getBodyParam("user_id") != null) {
+            userId = Integer.parseInt(getBodyParam("user_id"));
         }
 
-        db.executeSql("INSERT INTO UPLOADS (id, original_name, file_name, file_size, expiry_time, user_id) VALUES (?, ?, ?, ?, ?, ?)",
-            uniqueId, fileName, newFileName, fileSize, new Date(expiryTime), userId);
+        int affectedRows = db.executeSql(
+            "INSERT INTO UPLOADS (file_name, original_name, file_size, expiry_time, user_id) VALUES (?, ?, ?, ?, ?)",
+            newFileName, fileName, fileSize, expiryTime, userId
+        );
 
-        if (userId != null) {
-            // Add the HX-Trigger header to trigger the table update
-            addCustomHeader("HX-Trigger", "newUpload");
-            String response = """
-                <div class='success'>
-                    File uploaded successfully!
-                </div>
-            """;
-            sendHTMLResponse(OK, response);
-        } else {
-            // For anonymous uploads, return a success message with download link
-            String downloadUrl = "/upload/download/" + uniqueId;
-            String response = """
-                <div class='success'>
-                    File uploaded successfully!<br>
-                    <a href='%s' target='_blank'>Download Link</a><br>
-                    Expires in %s minutes
-                </div>
-            """.formatted(downloadUrl, expiryMinutes);
-            sendHTMLResponse(OK, response);
+        if (affectedRows == 0) {
+            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<div class='error'>Failed to save upload information</div>");
+            return;
         }
+
+        sendHTMLResponse(OK, "<div class='success'>File uploaded successfully</div>");
     }
 
     @AccessControl(login = true)
@@ -325,7 +309,7 @@ public class UploadController extends BaseController {
     }
 
     @Route(endpoint = API_ENDPOINT + "download/:id", method = GET)
-    public void handleFileDownload() throws IOException {
+    public void handleFileDownload() {
         String id = getPathParam("id");
         Mimir db = new Mimir();
         Row upload = db.getRow("SELECT * FROM UPLOADS WHERE id = ?", id);
@@ -362,8 +346,13 @@ public class UploadController extends BaseController {
         addCustomHeader("Content-Length", String.valueOf(fileSize));
         
         // Send the file
-        byte[] fileBytes = Files.readAllBytes(filePath);
-        sendHTMLResponse(OK, new String(fileBytes, StandardCharsets.ISO_8859_1));
+        try {
+            byte[] fileBytes = Files.readAllBytes(filePath);
+            sendHTMLResponse(OK, new String(fileBytes, StandardCharsets.ISO_8859_1));
+        } catch (Exception e) {
+            Logger.error("Failed to read file: {}", e.getMessage());
+            throw new SendRespondException("Failed to read file", e);
+        }
     }
 
     @Route(endpoint = "/upload/login", method = POST)

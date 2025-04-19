@@ -1,14 +1,11 @@
 package org.ruitx.www.examples.gallery.controller;
 
 import org.ruitx.jaws.components.BaseController;
-import org.ruitx.jaws.components.Hermes;
-import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.www.examples.gallery.dto.Image;
 
-import java.io.IOException;
 import java.util.List;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.URL;
@@ -22,10 +19,11 @@ public class GalleryController extends BaseController {
     private static final String BODY_HTML_PATH = "examples/gallery/partials/_body.html";
 
     public GalleryController() {
+        bodyHtmlPath = BODY_HTML_PATH;
     }
 
     @Route(endpoint = "/gallery", method = GET)
-    public void renderIndex() throws IOException {
+    public void renderIndex() {
         String apiURL = URL + GalleryAPIController.URL + "/gallery";
         APIResponse<List<Image>> response = new APIHandler().callAPI(apiURL, IMAGE_LIST);
 

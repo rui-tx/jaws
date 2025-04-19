@@ -1,5 +1,6 @@
 package org.ruitx.jaws.components;
 
+import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
@@ -20,39 +21,59 @@ import java.util.HashMap;
  */
 public abstract class BaseController {
     private static final ThreadLocal<Yggdrasill.RequestHandler> requestHandler = new ThreadLocal<>();
+    protected String bodyHtmlPath;
 
     /**
-     * Set the request handler for the current thread.
+     * Set the request handler and body path for the current thread.
      * @param handler
      */
     public void setRequestHandler(Yggdrasill.RequestHandler handler) {
         requestHandler.set(handler);
+        if (bodyHtmlPath != null) {
+            setBodyPath(bodyHtmlPath);
+        }
+    }
+
+    /**
+     * Set the body path for the current thread.
+     * @param bodyPath
+     */
+    private void setBodyPath(String bodyPath) {
+        Hermes.setBodyPath(bodyPath);
     }
 
     /**
      * Send a JSON response to the client.
      * @param code
      * @param data
-     * @throws IOException
      */
-    protected void sendJSONResponse(ResponseCode code, Object data) throws IOException {
-        requestHandler.get().sendJSONResponse(code, APIHandler.encode(
-                new APIResponse<>(
-                        true,
-                        code.getCodeAndMessage(),
-                        "",
-                        data))
-        );
+    protected void sendJSONResponse(ResponseCode code, Object data) {
+        try {
+            requestHandler.get().sendJSONResponse(code, APIHandler.encode(
+                    new APIResponse<>(
+                            true,
+                            code.getCodeAndMessage(),
+                            "",
+                            data))
+            );
+        } catch (Exception e) {
+            Logger.error("Failed to send JSON response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send JSON response", e);
+        }
     }
 
     /**
      * Send an HTML response to the client.
      * @param code
      * @param content
-     * @throws IOException
      */
-    protected void sendHTMLResponse(ResponseCode code, String content) throws IOException {
-        requestHandler.get().sendHTMLResponse(code, content);
+    protected void sendHTMLResponse(ResponseCode code, String content) {
+        try {
+            requestHandler.get().sendHTMLResponse(code, content);
+        } catch (Exception e) {
+            Logger.error("Failed to send HTML response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send HTML response", e);
+        }
     }
 
     /**
@@ -101,6 +122,14 @@ public abstract class BaseController {
         }
     }
 
+    /**
+     * Get the request handler for the current thread.
+     * @return The request handler for the current thread
+     */
+    public Yggdrasill.RequestHandler getRequestHandler() {
+        return requestHandler.get();
+    }
+
     protected void addCustomHeader(String name, String value) {
         requestHandler.get().addCustomHeader(name, value);
     }
@@ -110,20 +139,23 @@ public abstract class BaseController {
      * @param templatePath The path to the template file
      * @param params The parameters to be used in the template
      * @return The rendered template with parameters replaced
-     * @throws IOException if there's an error reading the template file
      */
-    protected String renderTemplate(String templatePath, Map<String, String> params) throws IOException {
-        String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
-        return Hermes.processTemplate(templateHtml, params, null);
+    protected String renderTemplate(String templatePath, Map<String, String> params) {
+        try {
+            String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
+            return Hermes.processTemplate(templateHtml, params, null);
+        } catch (IOException e) {
+            Logger.error("Failed to render template: {}", e.getMessage());
+            throw new SendRespondException("Failed to render template", e);
+        }
     }
 
     /**
      * Render a template file without parameters.
      * @param templatePath The path to the template file
      * @return The rendered template
-     * @throws IOException if there's an error reading the template file
      */
-    protected String renderTemplate(String templatePath) throws IOException {
+    protected String renderTemplate(String templatePath) {
         return renderTemplate(templatePath, new HashMap<>());
     }
 
@@ -132,10 +164,14 @@ public abstract class BaseController {
      * @param baseTemplatePath The path to the base template file
      * @param partialTemplatePath The path to the partial template file
      * @return The assembled page
-     * @throws IOException if there's an error reading or processing the templates
      */
-    protected String assemblePage(String baseTemplatePath, String partialTemplatePath) throws IOException {
-        return Hermes.assemblePage(baseTemplatePath, partialTemplatePath);
+    protected String assemblePage(String baseTemplatePath, String partialTemplatePath) {
+        try {
+            return Hermes.assemblePage(baseTemplatePath, partialTemplatePath);
+        } catch (IOException e) {
+            Logger.error("Failed to assemble page: {}", e.getMessage());
+            throw new SendRespondException("Failed to assemble page", e);
+        }
     }
 
     /**
@@ -143,9 +179,13 @@ public abstract class BaseController {
      * @param baseTemplatePath The path to the base template file
      * @param content The raw content to insert
      * @return The assembled page
-     * @throws IOException if there's an error reading or processing the template
      */
-    protected String assemblePageWithContent(String baseTemplatePath, String content) throws IOException {
-        return Hermes.assemblePageWithContent(baseTemplatePath, content);
+    protected String assemblePageWithContent(String baseTemplatePath, String content) {
+        try {
+            return Hermes.assemblePageWithContent(baseTemplatePath, content);
+        } catch (IOException e) {
+            Logger.error("Failed to assemble page with content: {}", e.getMessage());
+            throw new SendRespondException("Failed to assemble page with content", e);
+        }
     }
 } 

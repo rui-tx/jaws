@@ -2,7 +2,6 @@ package org.ruitx.www.examples;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.BaseController;
-import org.ruitx.jaws.components.Hermes;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.components.Yggdrasill;
@@ -27,7 +26,7 @@ public class Todo extends BaseController {
     private int pageSize;
 
     public Todo() {
-        Hermes.setBodyPath(BODY_HTML_PATH);
+        bodyHtmlPath = BODY_HTML_PATH;
         page = DEFAULT_PAGE;
         pageSize = DEFAULT_PAGE_SIZE;
     }

@@ -5,7 +5,6 @@ import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.utils.Row;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -15,13 +14,16 @@ public class API extends BaseController {
 
     private static final String API_ENDPOINT = "/api/v1/";
 
+    public API() {
+    }
+
     @Route(endpoint = API_ENDPOINT + "ping")
-    public void ping() throws IOException {
+    public void ping() {
         sendJSONResponse(OK, "pong");
     }
 
     @Route(endpoint = API_ENDPOINT + "increment")
-    public void increment() throws IOException {
+    public void increment() {
         Mimir db = new Mimir();
         Date timestamp = new Date();
         int affectedRows = db.executeSql("INSERT INTO STRESS_TEST (created_at) VALUES (?)", timestamp);
@@ -33,7 +35,7 @@ public class API extends BaseController {
     }
 
     @Route(endpoint = API_ENDPOINT + "current")
-    public void getAllStressTest() throws IOException {
+    public void getAllStressTest() {
         Mimir db = new Mimir();
         List<Row> rows = db.getRows("SELECT * FROM STRESS_TEST;");
         sendJSONResponse(OK, rows);

@@ -6,7 +6,6 @@ import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.www.examples.gallery.dto.Image;
 import org.ruitx.www.examples.gallery.service.GalleryService;
 
-import java.io.IOException;
 import java.util.List;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
@@ -23,7 +22,7 @@ public class GalleryAPIController extends BaseController {
     }
 
     @Route(endpoint = API + "/gallery", method = GET, responseType = JSON)
-    public void getImages() throws IOException {
+    public void getImages() {
         GalleryService galleryService = new GalleryService();
         List<Image> images = galleryService.getAllImages();
         sendJSONResponse(OK, images);
@@ -31,7 +30,7 @@ public class GalleryAPIController extends BaseController {
 
     @AccessControl(login = false)
     @Route(endpoint = API + "/gallery/:id", method = GET, responseType = JSON)
-    public void getImageById() throws IOException {
+    public void getImageById() {
         String imageId = getPathParam("id");
         if (imageId == null || imageId.isEmpty()) {
             sendJSONResponse(BAD_REQUEST, "Image ID is invalid/empty");

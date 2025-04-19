@@ -7,15 +7,16 @@ import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.utils.Row;
 
-import java.io.IOException;
-
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class Auth extends BaseController {
 
+    public Auth() {
+    }
+
     @Route(endpoint = "/auth/token/create", method = POST)
-    public void generateToken() throws IOException {
+    public void generateToken() {
         if (getBodyParam("user") == null || getBodyParam("password") == null) {
             sendJSONResponse(BAD_REQUEST, "{\"error\": \"User / password is missing\"}");
             return;
@@ -34,7 +35,7 @@ public class Auth extends BaseController {
     }
 
     @Route(endpoint = "/auth/token/verify", method = POST)
-    public void validateToken() throws IOException {
+    public void validateToken() {
         String token = getBodyParam("token");
         if (token == null || token.isEmpty()) {
             sendJSONResponse(BAD_REQUEST, "{\"error\": \"Token is missing or empty\"}");
@@ -46,7 +47,7 @@ public class Auth extends BaseController {
     }
 
     @Route(endpoint = "/auth/user/create", method = POST)
-    public void createUser() throws IOException {
+    public void createUser() {
         if (getBodyParam("user") == null || getBodyParam("password") == null) {
             sendJSONResponse(BAD_REQUEST, "{\"error\": \"User / password is missing\"}");
             return;
@@ -74,7 +75,7 @@ public class Auth extends BaseController {
     }
 
     @Route(endpoint = "/auth/user/login", method = POST)
-    public void loginUser() throws IOException {
+    public void loginUser() {
         if (getBodyParam("user") == null || getBodyParam("password") == null) {
             sendJSONResponse(BAD_REQUEST, "{\"error\": \"User / password is missing\"}");
             return;
