@@ -47,6 +47,16 @@
               <artifactId>aspectjrt</artifactId>
             </aspectLibrary>
           </aspectLibraries>
+          <weaveDependencies>
+            <weaveDependency>
+              <groupId>org.aspectj</groupId>
+              <artifactId>aspectjrt</artifactId>
+            </weaveDependency>
+          </weaveDependencies>
+          <source>1.8</source>
+          <target>1.8</target>
+          <Xlint>ignore</Xlint>
+          <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
       <plugin>
@@ -64,6 +74,16 @@
                   <mainClass>org.ruitx.Jaws</mainClass>
                 </transformer>
               </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>

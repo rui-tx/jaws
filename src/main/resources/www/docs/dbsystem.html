@@ -96,5 +96,54 @@
             database before use.
         </aside>
 
+        <h4>6. Database Transactions</h4>
+        <p>Jaws provides support for database transactions to ensure data consistency. There are two ways to use transactions:</p>
+
+        <h5>1. Manual Transaction Management</h5>
+        <p>To perform operations within a transaction manually, use the following pattern:</p>
+        <pre><code>
+            Mimir db = new Mimir();
+            try {
+                db.beginTransaction();
+                
+                // Perform your database operations here
+                db.executeSql("INSERT INTO TODO (todo) VALUES (?)", "New task");
+                db.executeSql("UPDATE TODO SET status = ? WHERE id = ?", "completed", 1);
+                
+                db.commitTransaction();
+            } catch (SQLException e) {
+                db.rollbackTransaction();
+                // Handle the error
+            }
+        </code></pre>
+
+        <h5>2. Using @Transactional Annotation</h5>
+        <p>For a more declarative approach, you can use the <code>@Transactional</code> annotation on your methods:</p>
+        <pre><code>
+            @Transactional(isolation = IsolationLevel.SERIALIZABLE, readOnly = false)
+            @Route(endpoint = "/api/todos", method = POST)
+            public void createTodo(Yggdrasill.RequestHandler rh) throws IOException {
+                String todo = rh.getBodyParams().get("todo");
+                db.executeSql("INSERT INTO TODO (todo) VALUES (?)", todo);
+                rh.sendJSONResponse(CREATED, "Todo created successfully");
+            }
+        </code></pre>
+
+        <p>The <code>@Transactional</code> annotation supports the following attributes:</p>
+        <ul>
+            <li><code>isolation</code> - Sets the transaction isolation level (default: SERIALIZABLE)</li>
+            <li><code>readOnly</code> - Specifies if the transaction is read-only (default: false)</li>
+        </ul>
+
+        <h5>Transaction Methods</h5>
+        <p>The following methods are available for manual transaction management:</p>
+        <ul>
+            <li><code>beginTransaction()</code> - Starts a new transaction</li>
+            <li><code>commitTransaction()</code> - Commits the current transaction</li>
+            <li><code>rollbackTransaction()</code> - Rolls back the current transaction</li>
+        </ul>
+
+        <aside>When using the <code>@Transactional</code> annotation, the transaction is automatically managed by the framework. For read-only operations, consider setting <code>readOnly = true</code> for better performance.</aside>
+
     </article>
 </div>

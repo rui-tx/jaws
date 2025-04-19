@@ -23,6 +23,7 @@ import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 public class Mimir {
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
     private static DataSource dataSource;
+    private static final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
     private File db;
 
     public Mimir() {
@@ -74,11 +75,76 @@ public class Mimir {
         }
     }
 
+    /**
+     * Get a connection from the data source.
+     * If we're in a transaction, return the transaction connection.
+     * Otherwise, get a new connection from the data source.
+     * 
+     * @return A connection to the database
+     * @throws SQLException If the connection fails
+     */
     public Connection getConnection() throws SQLException {
+        // If we're in a transaction, return the transaction connection
+        Connection conn = transactionConnection.get();
+        if (conn != null) {
+            return conn;
+        }
+
+        // Otherwise get a new connection
         if (dataSource == null) {
             throw new SQLException("DataSource not initialized");
         }
         return dataSource.getConnection();
+    }
+
+    /**
+     * Begin a transaction.
+     * 
+     * @throws SQLException If the transaction fails
+     */
+    public void beginTransaction() throws SQLException {
+        if (transactionConnection.get() != null) {
+            throw new SQLException("Transaction already in progress");
+        }
+        Connection conn = dataSource.getConnection();
+        conn.setAutoCommit(false);
+        transactionConnection.set(conn);
+    }
+
+    /**
+     * Commit a transaction.
+     * 
+     * @throws SQLException If the transaction fails
+     */
+    public void commitTransaction() throws SQLException {
+        Connection conn = transactionConnection.get();
+        if (conn == null) {
+            throw new SQLException("No transaction in progress");
+        }
+        try {
+            conn.commit();
+        } finally {
+            conn.close();
+            transactionConnection.remove();
+        }
+    }
+
+    /**
+     * Rollback a transaction.
+     * 
+     * @throws SQLException If the transaction fails
+     */
+    public void rollbackTransaction() throws SQLException {
+        Connection conn = transactionConnection.get();
+        if (conn == null) {
+            throw new SQLException("No transaction in progress");
+        }
+        try {
+            conn.rollback();
+        } finally {
+            conn.close();
+            transactionConnection.remove();
+        }
     }
 
     /**
@@ -126,21 +192,6 @@ public class Mimir {
     }
 
     /**
-     * Execute a SQL statement that doesn't return data (like UPDATE, DELETE, etc.).
-     *
-     * @param sql SQL statement string
-     * @return true if executed successfully, false otherwise
-     */
-    public boolean executeSql(String sql) {
-        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            return stmt.execute(sql);
-        } catch (SQLException e) {
-            Logger.error("Error executing SQL: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
      * Execute a SQL statement with parameters (like INSERT, UPDATE, DELETE).
      *
      * @param sql    SQL statement string
@@ -148,16 +199,42 @@ public class Mimir {
      * @return The number of affected rows
      */
     public int executeSql(String sql, Object... params) {
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                for (int i = 0; i < params.length; i++) {
+                    stmt.setObject(i + 1, params[i]);
+                }
 
-            for (int i = 0; i < params.length; i++) {
-                stmt.setObject(i + 1, params[i]);
+                int result = stmt.executeUpdate();
+                return result;
             }
-
-            return stmt.executeUpdate();
         } catch (SQLException e) {
-            Logger.error("Error executing prepared update: " + e.getMessage());
+            Logger.error("Error executing prepared update: {}", e.getMessage());
+            throw new RuntimeException("Database update failed", e);
+        }
+    }
+
+    /**
+     * Execute a SQL statement that doesn't return data (like UPDATE, DELETE, etc.).
+     *
+     * @param sql SQL statement string
+     * @return true if executed successfully, false otherwise
+     */
+    public boolean executeSql(String sql) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            
+            try (Statement stmt = conn.createStatement()) {
+                boolean result = stmt.execute(sql);
+                Logger.info("SQL executed: {}, result: {}", sql, result);
+                return result;
+            }
+        } catch (SQLException e) {
+            Logger.error("Error executing SQL: {}", e.getMessage());
             throw new RuntimeException("Database update failed", e);
         }
     }
@@ -171,10 +248,13 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
-        try (Connection conn = getConnection(); 
-             Statement stmt = conn.createStatement(); 
-             ResultSet rs = stmt.executeQuery(sql)) {
-            return action.apply(rs);
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            try (Statement stmt = conn.createStatement(); 
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                return action.apply(rs);
+            }
         } catch (SQLException e) {
             Logger.error("Error executing SQL: " + e.getMessage());
             throw new RuntimeException("Database query failed", e);
@@ -191,15 +271,17 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action, Object... params) {
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                for (int i = 0; i < params.length; i++) {
+                    stmt.setObject(i + 1, params[i]);
+                }
 
-            for (int i = 0; i < params.length; i++) {
-                stmt.setObject(i + 1, params[i]);
-            }
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                return action.apply(rs);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    return action.apply(rs);
+                }
             }
         } catch (SQLException e) {
             Logger.error("Error executing prepared query: " + e.getMessage());
