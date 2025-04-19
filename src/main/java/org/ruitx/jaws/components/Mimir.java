@@ -75,6 +75,14 @@ public class Mimir {
         }
     }
 
+    /**
+     * Get a connection from the data source.
+     * If we're in a transaction, return the transaction connection.
+     * Otherwise, get a new connection from the data source.
+     * 
+     * @return A connection to the database
+     * @throws SQLException If the connection fails
+     */
     public Connection getConnection() throws SQLException {
         // If we're in a transaction, return the transaction connection
         Connection conn = transactionConnection.get();
@@ -89,6 +97,11 @@ public class Mimir {
         return dataSource.getConnection();
     }
 
+    /**
+     * Begin a transaction.
+     * 
+     * @throws SQLException If the transaction fails
+     */
     public void beginTransaction() throws SQLException {
         if (transactionConnection.get() != null) {
             throw new SQLException("Transaction already in progress");
@@ -98,6 +111,11 @@ public class Mimir {
         transactionConnection.set(conn);
     }
 
+    /**
+     * Commit a transaction.
+     * 
+     * @throws SQLException If the transaction fails
+     */
     public void commitTransaction() throws SQLException {
         Connection conn = transactionConnection.get();
         if (conn == null) {
@@ -111,6 +129,11 @@ public class Mimir {
         }
     }
 
+    /**
+     * Rollback a transaction.
+     * 
+     * @throws SQLException If the transaction fails
+     */
     public void rollbackTransaction() throws SQLException {
         Connection conn = transactionConnection.get();
         if (conn == null) {
@@ -186,7 +209,6 @@ public class Mimir {
                 }
 
                 int result = stmt.executeUpdate();
-                Logger.info("SQL executed: {}, affected rows: {}", sql, result);
                 return result;
             }
         } catch (SQLException e) {

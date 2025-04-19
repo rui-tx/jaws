@@ -20,6 +20,13 @@ public class TransactionAspect {
     public void apiMethods() {
     }
 
+    /**
+     * Manage a transaction.
+     * 
+     * @param joinPoint The join point
+     * @return The result of the method
+     * @throws Throwable If the method throws an exception
+     */
     @Around("apiMethods() && @annotation(org.ruitx.jaws.interfaces.Transactional)")
     public Object manageTransaction(ProceedingJoinPoint joinPoint) throws Throwable {
         Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
@@ -59,6 +66,12 @@ public class TransactionAspect {
         }
     }
 
+    /**
+     * Find the Mimir instance in the method arguments or fields of the target object.
+     * 
+     * @param joinPoint The join point
+     * @return The Mimir instance or null if not found
+     */
     private Mimir findMimirInstance(ProceedingJoinPoint joinPoint) {
         // First check method arguments
         for (Object arg : joinPoint.getArgs()) {
@@ -83,6 +96,13 @@ public class TransactionAspect {
         return null;
     }
 
+    /**
+     * Set the transaction isolation level.
+     * 
+     * @param conn The connection
+     * @param level The isolation level
+     * @throws SQLException If the transaction isolation level fails
+     */
     private void setTransactionIsolation(Connection conn, IsolationLevel level) throws SQLException {
         switch (level) {
             case READ_UNCOMMITTED:
