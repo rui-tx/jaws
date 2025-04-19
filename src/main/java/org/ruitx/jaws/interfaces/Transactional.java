@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 public @interface Transactional {
     /**
      * The isolation level for the transaction.
-     * Defaults to READ_UNCOMMITTED.
+     * Defaults to SERIALIZABLE.
      */
     IsolationLevel isolation() default IsolationLevel.SERIALIZABLE;
 

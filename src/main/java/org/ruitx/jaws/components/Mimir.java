@@ -179,10 +179,6 @@ public class Mimir {
         Connection conn = null;
         try {
             conn = getConnection();
-            // Only set auto-commit to false if we're not in a transaction
-            if (transactionConnection.get() == null) {
-                conn.setAutoCommit(false);
-            }
             
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 for (int i = 0; i < params.length; i++) {
@@ -196,15 +192,6 @@ public class Mimir {
         } catch (SQLException e) {
             Logger.error("Error executing prepared update: {}", e.getMessage());
             throw new RuntimeException("Database update failed", e);
-        } finally {
-            // Only close the connection if we're not in a transaction
-            if (transactionConnection.get() == null && conn != null) {
-                try {
-                    conn.close();
-                } catch (SQLException e) {
-                    Logger.error("Error closing connection: {}", e.getMessage());
-                }
-            }
         }
     }
 
@@ -218,10 +205,6 @@ public class Mimir {
         Connection conn = null;
         try {
             conn = getConnection();
-            // Only set auto-commit to false if we're not in a transaction
-            if (transactionConnection.get() == null) {
-                conn.setAutoCommit(false);
-            }
             
             try (Statement stmt = conn.createStatement()) {
                 boolean result = stmt.execute(sql);
@@ -231,15 +214,6 @@ public class Mimir {
         } catch (SQLException e) {
             Logger.error("Error executing SQL: {}", e.getMessage());
             throw new RuntimeException("Database update failed", e);
-        } finally {
-            // Only close the connection if we're not in a transaction
-            if (transactionConnection.get() == null && conn != null) {
-                try {
-                    conn.close();
-                } catch (SQLException e) {
-                    Logger.error("Error closing connection: {}", e.getMessage());
-                }
-            }
         }
     }
 
@@ -252,10 +226,13 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
-        try (Connection conn = getConnection(); 
-             Statement stmt = conn.createStatement(); 
-             ResultSet rs = stmt.executeQuery(sql)) {
-            return action.apply(rs);
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            try (Statement stmt = conn.createStatement(); 
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                return action.apply(rs);
+            }
         } catch (SQLException e) {
             Logger.error("Error executing SQL: " + e.getMessage());
             throw new RuntimeException("Database query failed", e);
@@ -272,15 +249,17 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action, Object... params) {
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                for (int i = 0; i < params.length; i++) {
+                    stmt.setObject(i + 1, params[i]);
+                }
 
-            for (int i = 0; i < params.length; i++) {
-                stmt.setObject(i + 1, params[i]);
-            }
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                return action.apply(rs);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    return action.apply(rs);
+                }
             }
         } catch (SQLException e) {
             Logger.error("Error executing prepared query: " + e.getMessage());

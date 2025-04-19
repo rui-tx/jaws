@@ -26,21 +26,19 @@ public class API extends BaseController {
         sendJSONResponse(OK, "pong");
     }
 
-    //@Transactional(readOnly = false)
+    @Transactional
     @Route(endpoint = API_ENDPOINT + "increment")
     public void increment() {
         Date timestamp = new Date();
         int affectedRows = db.executeSql("INSERT INTO STRESS_TEST (created_at) VALUES (?)", timestamp);
-        int affectedRowss = db.executeSql("INSERT INTO STRESS_TEST2 (created_at) VALUES (?)", timestamp);
-        
         if (affectedRows == 0) {
-            throw new RuntimeException("Failed to insert into STRESS_TEST");
+            sendJSONResponse(INTERNAL_SERVER_ERROR, "Failed to insert into STRESS_TEST");
+            return;
         }
         
         sendJSONResponse(OK, null);
     }
 
-    @Transactional(readOnly = true, isolation = IsolationLevel.READ_UNCOMMITTED)
     @Route(endpoint = API_ENDPOINT + "current")
     public void getAllStressTest() {
         List<Row> rows = db.getRows("SELECT * FROM STRESS_TEST;");
