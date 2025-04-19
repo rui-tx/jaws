@@ -248,13 +248,10 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
-        Connection conn = null;
-        try {
-            conn = getConnection();
-            try (Statement stmt = conn.createStatement(); 
-                 ResultSet rs = stmt.executeQuery(sql)) {
-                return action.apply(rs);
-            }
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement(); 
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return action.apply(rs);
         } catch (SQLException e) {
             Logger.error("Error executing SQL: " + e.getMessage());
             throw new RuntimeException("Database query failed", e);
