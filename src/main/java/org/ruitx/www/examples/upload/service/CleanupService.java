@@ -3,7 +3,6 @@ package org.ruitx.www.examples.upload.service;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.utils.Row;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;

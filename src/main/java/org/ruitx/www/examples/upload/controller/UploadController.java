@@ -102,7 +102,6 @@ public class UploadController extends BaseController {
         db.executeSql("INSERT INTO UPLOADS (id, original_name, file_name, file_size, expiry_time, user_id) VALUES (?, ?, ?, ?, ?, ?)",
             uniqueId, fileName, newFileName, fileSize, new Date(expiryTime), userId);
 
-        // If user is logged in, update the table
         if (userId != null) {
             // Add the HX-Trigger header to trigger the table update
             addCustomHeader("HX-Trigger", "newUpload");
