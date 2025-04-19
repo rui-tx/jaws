@@ -2,7 +2,9 @@ package org.ruitx.www.examples;
 
 import org.ruitx.jaws.components.BaseController;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.interfaces.IsolationLevel;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.interfaces.Transactional;
 import org.ruitx.jaws.utils.Row;
 
 import java.util.Date;
@@ -13,8 +15,10 @@ import static org.ruitx.jaws.strings.ResponseCode.*;
 public class API extends BaseController {
 
     private static final String API_ENDPOINT = "/api/v1/";
+    private Mimir db;
 
     public API() {
+        this.db = new Mimir();
     }
 
     @Route(endpoint = API_ENDPOINT + "ping")
@@ -22,21 +26,23 @@ public class API extends BaseController {
         sendJSONResponse(OK, "pong");
     }
 
+    //@Transactional(readOnly = false)
     @Route(endpoint = API_ENDPOINT + "increment")
     public void increment() {
-        Mimir db = new Mimir();
         Date timestamp = new Date();
         int affectedRows = db.executeSql("INSERT INTO STRESS_TEST (created_at) VALUES (?)", timestamp);
+        int affectedRowss = db.executeSql("INSERT INTO STRESS_TEST2 (created_at) VALUES (?)", timestamp);
+        
         if (affectedRows == 0) {
-            sendJSONResponse(INTERNAL_SERVER_ERROR, "Failed to increment");
-            return;
+            throw new RuntimeException("Failed to insert into STRESS_TEST");
         }
+        
         sendJSONResponse(OK, null);
     }
 
+    @Transactional(readOnly = true, isolation = IsolationLevel.READ_UNCOMMITTED)
     @Route(endpoint = API_ENDPOINT + "current")
     public void getAllStressTest() {
-        Mimir db = new Mimir();
         List<Row> rows = db.getRows("SELECT * FROM STRESS_TEST;");
         sendJSONResponse(OK, rows);
     }

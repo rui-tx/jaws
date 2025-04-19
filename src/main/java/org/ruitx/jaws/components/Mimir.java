@@ -23,6 +23,7 @@ import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 public class Mimir {
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
     private static DataSource dataSource;
+    private static final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
     private File db;
 
     public Mimir() {
@@ -75,10 +76,52 @@ public class Mimir {
     }
 
     public Connection getConnection() throws SQLException {
+        // If we're in a transaction, return the transaction connection
+        Connection conn = transactionConnection.get();
+        if (conn != null) {
+            return conn;
+        }
+
+        // Otherwise get a new connection
         if (dataSource == null) {
             throw new SQLException("DataSource not initialized");
         }
         return dataSource.getConnection();
+    }
+
+    public void beginTransaction() throws SQLException {
+        if (transactionConnection.get() != null) {
+            throw new SQLException("Transaction already in progress");
+        }
+        Connection conn = dataSource.getConnection();
+        conn.setAutoCommit(false);
+        transactionConnection.set(conn);
+    }
+
+    public void commitTransaction() throws SQLException {
+        Connection conn = transactionConnection.get();
+        if (conn == null) {
+            throw new SQLException("No transaction in progress");
+        }
+        try {
+            conn.commit();
+        } finally {
+            conn.close();
+            transactionConnection.remove();
+        }
+    }
+
+    public void rollbackTransaction() throws SQLException {
+        Connection conn = transactionConnection.get();
+        if (conn == null) {
+            throw new SQLException("No transaction in progress");
+        }
+        try {
+            conn.rollback();
+        } finally {
+            conn.close();
+            transactionConnection.remove();
+        }
     }
 
     /**
@@ -126,21 +169,6 @@ public class Mimir {
     }
 
     /**
-     * Execute a SQL statement that doesn't return data (like UPDATE, DELETE, etc.).
-     *
-     * @param sql SQL statement string
-     * @return true if executed successfully, false otherwise
-     */
-    public boolean executeSql(String sql) {
-        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            return stmt.execute(sql);
-        } catch (SQLException e) {
-            Logger.error("Error executing SQL: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
      * Execute a SQL statement with parameters (like INSERT, UPDATE, DELETE).
      *
      * @param sql    SQL statement string
@@ -148,17 +176,70 @@ public class Mimir {
      * @return The number of affected rows
      */
     public int executeSql(String sql, Object... params) {
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            for (int i = 0; i < params.length; i++) {
-                stmt.setObject(i + 1, params[i]);
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            // Only set auto-commit to false if we're not in a transaction
+            if (transactionConnection.get() == null) {
+                conn.setAutoCommit(false);
             }
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                for (int i = 0; i < params.length; i++) {
+                    stmt.setObject(i + 1, params[i]);
+                }
 
-            return stmt.executeUpdate();
+                int result = stmt.executeUpdate();
+                Logger.info("SQL executed: {}, affected rows: {}", sql, result);
+                return result;
+            }
         } catch (SQLException e) {
-            Logger.error("Error executing prepared update: " + e.getMessage());
+            Logger.error("Error executing prepared update: {}", e.getMessage());
             throw new RuntimeException("Database update failed", e);
+        } finally {
+            // Only close the connection if we're not in a transaction
+            if (transactionConnection.get() == null && conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing connection: {}", e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Execute a SQL statement that doesn't return data (like UPDATE, DELETE, etc.).
+     *
+     * @param sql SQL statement string
+     * @return true if executed successfully, false otherwise
+     */
+    public boolean executeSql(String sql) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            // Only set auto-commit to false if we're not in a transaction
+            if (transactionConnection.get() == null) {
+                conn.setAutoCommit(false);
+            }
+            
+            try (Statement stmt = conn.createStatement()) {
+                boolean result = stmt.execute(sql);
+                Logger.info("SQL executed: {}, result: {}", sql, result);
+                return result;
+            }
+        } catch (SQLException e) {
+            Logger.error("Error executing SQL: {}", e.getMessage());
+            throw new RuntimeException("Database update failed", e);
+        } finally {
+            // Only close the connection if we're not in a transaction
+            if (transactionConnection.get() == null && conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing connection: {}", e.getMessage());
+                }
+            }
         }
     }
 
