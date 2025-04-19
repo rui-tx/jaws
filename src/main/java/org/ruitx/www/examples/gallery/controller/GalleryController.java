@@ -1,5 +1,6 @@
 package org.ruitx.www.examples.gallery.controller;
 
+import org.ruitx.jaws.components.BaseController;
 import org.ruitx.jaws.components.Hermes;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Route;
@@ -15,7 +16,7 @@ import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.utils.APITypeDefinition.IMAGE_LIST;
 
-public class GalleryController {
+public class GalleryController extends BaseController {
 
     private static final String BASE_HTML_PATH = "examples/gallery/index.html";
     private static final String BODY_HTML_PATH = "examples/gallery/partials/_body.html";
@@ -24,7 +25,7 @@ public class GalleryController {
     }
 
     @Route(endpoint = "/gallery", method = GET)
-    public void renderIndex(Yggdrasill.RequestHandler rh) throws IOException {
+    public void renderIndex() throws IOException {
         String apiURL = URL + GalleryAPIController.URL + "/gallery";
         APIResponse<List<Image>> response = new APIHandler().callAPI(apiURL, IMAGE_LIST);
 
@@ -60,6 +61,6 @@ public class GalleryController {
                 </div>
                 """);
 
-        rh.sendHTMLResponse(OK, Hermes.makeFullPageWithHTML(BASE_HTML_PATH, bodyHTML.toString()));
+        sendHTMLResponse(OK, Hermes.makeFullPageWithHTML(BASE_HTML_PATH, bodyHTML.toString()));
     }
 }

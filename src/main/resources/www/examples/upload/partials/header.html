@@ -1,0 +1,52 @@
+<div class="block block-embossed">
+    <div class="menu-overlay" onclick="closeMenu()"></div>
+    <header class="header">
+        <div class="logo">
+            <a class="no-link" href="/upload/">📁 File Upload</a>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+        </div>
+        <nav class="nav-links" id="navLinks">
+            {{if(isLoggedIn)
+            <a class="nav-item" href="/upload/" onclick="toggleMenu()">Upload</a>
+            <a class="nav-item" hx-get="/upload/logout" hx-push-url="true" hx-target="#main"
+               onclick="toggleMenu()">Logout</a>
+            else
+            <a class="nav-item" hx-get="/upload/login-page" hx-push-url="true" hx-target="#main"
+               onclick="toggleMenu()">Login</a>
+            }}
+        </nav>
+    </header>
+</div>
+
+<script>
+    let menuOpen = false;
+
+    // Toggle menu visibility
+    function toggleMenu() {
+      // Check if the hamburger is visible, then toggle the menu
+      if (window.innerWidth <= 767) { // Ensure this only works on small screens
+        menuOpen = !menuOpen;
+        document.body.classList.toggle("menu-open", menuOpen);
+        const navLinks = document.querySelector(".nav-links");
+        navLinks.classList.toggle("open", menuOpen);
+        const hamburger = document.querySelector(".hamburger");
+        hamburger.classList.toggle("open", menuOpen);
+      }
+    }
+
+    // Close the menu (used when overlay is clicked)
+    function closeMenu() {
+      if (window.innerWidth <= 767) { // Ensure this only works on small screens
+        menuOpen = false;
+        document.body.classList.remove("menu-open");
+        const navLinks = document.querySelector(".nav-links");
+        navLinks.classList.remove("open");
+        const hamburger = document.querySelector(".hamburger");
+        hamburger.classList.remove("open");
+      }
+    }
+</script> 

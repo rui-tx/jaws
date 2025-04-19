@@ -1,0 +1,12 @@
+<div class="block block-embossed ">
+    <h2>Create Account</h2>
+    <form hx-post="/upload/create-account" hx-target="#create-account-message">
+        <div class="input-group">
+            <input type="text" name="user" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Create Account</button>
+        </div>
+    </form>
+    <div id="create-account-message"></div>
+    <p>Already have an account? <a href="/upload/login-page" hx-get="/upload/login-page" hx-target="#main" hx-push-url="true">Login</a></p>
+</div> 

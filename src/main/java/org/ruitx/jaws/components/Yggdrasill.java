@@ -735,11 +735,26 @@ public class Yggdrasill {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
 
+                // Set request handler if the controller extends BaseController
+                if (controllerInstance instanceof BaseController) {
+                    ((BaseController) controllerInstance).setRequestHandler(this);
+                }
+
                 // TODO: This is not ideal, find a better way to do this.
                 // Synchronize the controller instance to prevent concurrent access. Works but is not ideal, as it can be a bottleneck.
                 synchronized (controllerInstance) {
-                    routeMethod.invoke(controllerInstance, this);
+                    if (routeMethod.getParameterCount() > 0) {
+                        routeMethod.invoke(controllerInstance, this);
+                    } else {
+                        routeMethod.invoke(controllerInstance);
+                    }
                 }
+
+                // Cleanup if the controller extends BaseController
+                if (controllerInstance instanceof BaseController) {
+                    ((BaseController) controllerInstance).cleanup();
+                }
+                
                 return true;
             } catch (Exception e) {
                 Logger.error("Failed to invoke method: {}", e);

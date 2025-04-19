@@ -1,0 +1,199 @@
+<div class="container">
+    <div class="block block-embossed">
+        <div class="upload-section" id="upload-section">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">
+                <h2>Upload Your Files</h2>
+                <p></p>
+            </div>
+            <div class="upload-controls">
+                <button class="upload-button select-button" onclick="document.getElementById('file-input').click()">Select File</button>
+                <button class="upload-button upload-trigger-button" id="upload-trigger" disabled>Upload File</button>
+            </div>
+            <form id="upload-form" class="upload-form" hx-encoding="multipart/form-data" hx-post="/api/v1/upload/upload" hx-target="#upload-result">
+                <input type="file" id="file-input" name="file" style="display: none" onchange="handleFileSelect(this)">
+                <input type="hidden" name="expiry" value="60">
+            </form>
+        </div>
+        <div class="upload-progress">
+            <progress id="upload-progress" value="0" max="100" style="display: none;"></progress>
+        </div>
+        <div id="upload-status" class="status-message"></div>
+        <div id="upload-result" class="upload-result"></div>
+    </div>
+
+    {{if(isLoggedIn)
+    <div class="block block-embossed">
+        <h2>My Uploads</h2>
+        <div class="tab-list" role="tablist">
+            <button hx-get="/api/v1/upload/list?filter=active" 
+                    hx-target="#uploads-list"
+                    hx-swap="innerHTML"
+                    class="tab-button selected" 
+                    role="tab" 
+                    aria-selected="true" 
+                    aria-controls="tab-content">Active Files</button>
+            <button hx-get="/api/v1/upload/list?filter=expired" 
+                    hx-target="#uploads-list"
+                    hx-swap="innerHTML"
+                    class="tab-button" 
+                    role="tab" 
+                    aria-selected="false" 
+                    aria-controls="tab-content">Expired Files</button>
+        </div>
+        <div id="uploads-list" 
+             hx-get="/api/v1/upload/list?filter=active" 
+             hx-trigger="load, newUpload from:body" 
+             hx-swap="innerHTML">
+            <!-- Table will be loaded here -->
+        </div>
+    </div>
+    }}
+</div>
+
+<script>
+    // Add drag and drop functionality
+    const uploadSection = document.getElementById('upload-section');
+    const fileInput = document.getElementById('file-input');
+    const uploadTrigger = document.getElementById('upload-trigger');
+    let selectedFile = null;
+
+    uploadSection.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadSection.classList.add('dragover');
+    });
+
+    uploadSection.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadSection.classList.remove('dragover');
+    });
+
+    uploadSection.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadSection.classList.remove('dragover');
+        
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFileSelect(fileInput);
+        }
+    });
+
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Check file size (10MB limit)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            document.getElementById('upload-status').innerHTML = '<div class="error">File size exceeds 10MB limit</div>';
+            document.getElementById('upload-trigger').disabled = true;
+            return;
+        }
+
+        selectedFile = file;
+        document.getElementById('upload-status').innerHTML = '<div class="success">File selected: ' + file.name + '</div>';
+        document.getElementById('upload-trigger').disabled = false;
+    }
+
+    uploadTrigger.addEventListener('click', function() {
+        if (selectedFile) {
+            const progressBar = document.getElementById('upload-progress');
+            const statusMessage = document.getElementById('upload-status');
+            
+            // Reset UI
+            progressBar.style.display = 'block';
+            progressBar.value = 0;
+            statusMessage.textContent = 'Preparing upload...';
+            statusMessage.className = 'status-message';
+            
+            // Disable upload button during upload
+            uploadTrigger.disabled = true;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result.split(',')[1];
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progressBar.value = percentComplete;
+                        statusMessage.textContent = `Uploading: ${Math.round(percentComplete)}%`;
+                    }
+                };
+                
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        document.getElementById('upload-result').innerHTML = xhr.responseText;
+                        statusMessage.textContent = '';
+                        statusMessage.className = 'status-message';
+                        fileInput.value = '';
+                        progressBar.style.display = 'none';
+                        uploadTrigger.disabled = false; // Re-enable upload button
+                        selectedFile = null; // Clear the selected file
+
+                        // Manually trigger the table update
+                        const uploadsList = document.getElementById('uploads-list');
+                        if (uploadsList) {
+                            htmx.trigger(uploadsList, 'newUpload');
+                        }
+                    } else {
+                        statusMessage.textContent = 'Error uploading file';
+                        statusMessage.className = 'status-message error';
+                        uploadTrigger.disabled = false; // Re-enable upload button on error
+                        selectedFile = null; // Clear the selected file on error
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    statusMessage.textContent = 'Error uploading file';
+                    statusMessage.className = 'status-message error';
+                    uploadTrigger.disabled = false; // Re-enable upload button on error
+                    selectedFile = null; // Clear the selected file on error
+                };
+                
+                xhr.open('POST', '/api/v1/upload/upload');
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.send(`file=${encodeURIComponent(base64)}&filename=${encodeURIComponent(selectedFile.name)}&expiry=60`);
+            };
+            
+            reader.onerror = function() {
+                statusMessage.textContent = 'Error reading file';
+                statusMessage.className = 'status-message error';
+                uploadTrigger.disabled = false; // Re-enable upload button on error
+                selectedFile = null; // Clear the selected file on error
+            };
+            
+            reader.readAsDataURL(selectedFile);
+        }
+    });
+
+    // Handle tab switching
+    document.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'uploads-list') {
+            // Update tab button states based on the current filter
+            const activeTab = document.querySelector('.tab-button[aria-selected="true"]');
+            const otherTab = document.querySelector('.tab-button:not([aria-selected="true"])');
+            
+            if (activeTab) {
+                activeTab.classList.add('selected');
+            }
+            if (otherTab) {
+                otherTab.classList.remove('selected');
+            }
+        }
+    });
+
+    // Initialize tab buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', function() {
+            // Update aria-selected attributes
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.setAttribute('aria-selected', 'false');
+                btn.classList.remove('selected');
+            });
+            this.setAttribute('aria-selected', 'true');
+            this.classList.add('selected');
+        });
+    });
+</script> 
