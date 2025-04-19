@@ -51,10 +51,95 @@ public class UploadController extends BaseController {
         }
     }
 
+    // ===========================================
+    // Frontend Methods (HTML/UI)
+    // ===========================================
+
     @Route(endpoint = "/upload", method = GET)
     public void renderIndex() throws IOException {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
+
+    @Route(endpoint = "/upload/login-page", method = GET)
+    public void loginPage() throws IOException {
+        if (isHTMX()) {
+            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/login.html"));
+            return;
+        }
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/login.html"));
+    }
+
+    @Route(endpoint = "/upload/create-account-page", method = GET)
+    public void createAccountPage() throws IOException {
+        if (isHTMX()) {
+            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/create-account.html"));
+            return;
+        }
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/create-account.html"));
+    }
+
+    @Route(endpoint = "/upload/download/:id", method = GET)
+    public void downloadFile() throws IOException {
+        String id = getPathParam("id");
+        Mimir db = new Mimir();
+        Row upload = db.getRow("SELECT * FROM UPLOADS WHERE id = ?", id);
+
+        if (upload == null) {
+            if (isHTMX()) {
+                sendHTMLResponse(OK, renderTemplate("examples/upload/partials/not-found.html"));
+            } else {
+                sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/not-found.html"));
+            }
+            return;
+        }
+
+        String fileName = upload.getString("file_name");
+        String originalName = upload.getString("original_name");
+        long fileSize = upload.get("file_size") instanceof Integer ? 
+            ((Integer) upload.get("file_size")).longValue() : 
+            (Long) upload.get("file_size");
+        long expiryTime = upload.get("expiry_time") instanceof Integer ? 
+            ((Integer) upload.get("expiry_time")).longValue() : 
+            (Long) upload.get("expiry_time");
+        Date expiryDate = new Date(expiryTime);
+
+        if (expiryDate.getTime() < System.currentTimeMillis()) {
+            if (isHTMX()) {
+                sendHTMLResponse(OK, renderTemplate("examples/upload/partials/expired.html"));
+            } else {
+                sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/expired.html"));
+            }
+            return;
+        }
+
+        Path filePath = Paths.get(UPLOAD_DIR, fileName);
+        if (!Files.exists(filePath)) {
+            if (isHTMX()) {
+                sendHTMLResponse(OK, renderTemplate("examples/upload/partials/not-found.html"));
+            } else {
+                sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/not-found.html"));
+            }
+            return;
+        }
+
+        // Show download page with file info
+        Map<String, String> params = new HashMap<>();
+        params.put("id", id);
+        params.put("filename", originalName);
+        params.put("filesize", formatFileSize(fileSize));
+        params.put("expires", String.valueOf((expiryDate.getTime() - System.currentTimeMillis()) / (60 * 1000)));
+
+        if (isHTMX()) {
+            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/download-page.html", params));
+            return;
+        }
+
+        sendHTMLResponse(OK, assemblePageWithContent(BASE_HTML_PATH, renderTemplate("examples/upload/partials/download-page.html", params)));
+    }
+
+    // ===========================================
+    // Backend Methods (API)
+    // ===========================================
 
     @Route(endpoint = API_ENDPOINT + "upload", method = POST)
     public void handleUpload() throws IOException {
@@ -239,65 +324,6 @@ public class UploadController extends BaseController {
         listUploads();
     }
 
-    @Route(endpoint = "/upload/download/:id", method = GET)
-    public void downloadFile() throws IOException {
-        String id = getPathParam("id");
-        Mimir db = new Mimir();
-        Row upload = db.getRow("SELECT * FROM UPLOADS WHERE id = ?", id);
-
-        if (upload == null) {
-            if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.renderTemplate("examples/upload/partials/not-found.html"));
-            } else {
-                sendHTMLResponse(OK, Hermes.assemblePage(BASE_HTML_PATH, Hermes.renderTemplate("examples/upload/partials/not-found.html")));
-            }
-            return;
-        }
-
-        String fileName = upload.getString("file_name");
-        String originalName = upload.getString("original_name");
-        long fileSize = upload.get("file_size") instanceof Integer ? 
-            ((Integer) upload.get("file_size")).longValue() : 
-            (Long) upload.get("file_size");
-        long expiryTime = upload.get("expiry_time") instanceof Integer ? 
-            ((Integer) upload.get("expiry_time")).longValue() : 
-            (Long) upload.get("expiry_time");
-        Date expiryDate = new Date(expiryTime);
-
-        if (expiryDate.getTime() < System.currentTimeMillis()) {
-            if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.renderTemplate("examples/upload/partials/expired.html"));
-            } else {
-                sendHTMLResponse(OK, Hermes.assemblePage(BASE_HTML_PATH, Hermes.renderTemplate("examples/upload/partials/expired.html")));
-            }
-            return;
-        }
-
-        Path filePath = Paths.get(UPLOAD_DIR, fileName);
-        if (!Files.exists(filePath)) {
-            if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.renderTemplate("examples/upload/partials/not-found.html"));
-            } else {
-                sendHTMLResponse(OK, Hermes.assemblePage(BASE_HTML_PATH, Hermes.renderTemplate("examples/upload/partials/not-found.html")));
-            }
-            return;
-        }
-
-        // Show download page with file info
-        Map<String, String> params = new HashMap<>();
-        params.put("id", id);
-        params.put("filename", originalName);
-        params.put("filesize", formatFileSize(fileSize));
-        params.put("expires", String.valueOf((expiryDate.getTime() - System.currentTimeMillis()) / (60 * 1000)));
-
-        if (isHTMX()) {
-            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/download-page.html", params));
-            return;
-        }
-
-        sendHTMLResponse(OK, assemblePageWithContent(BASE_HTML_PATH, renderTemplate("examples/upload/partials/download-page.html", params)));
-    }
-
     @Route(endpoint = API_ENDPOINT + "download/:id", method = GET)
     public void handleFileDownload() throws IOException {
         String id = getPathParam("id");
@@ -340,15 +366,6 @@ public class UploadController extends BaseController {
         sendHTMLResponse(OK, new String(fileBytes, StandardCharsets.ISO_8859_1));
     }
 
-    @Route(endpoint = "/upload/login-page", method = GET)
-    public void loginPage() throws IOException {
-        if (isHTMX()) {
-            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/login.html"));
-            return;
-        }
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/login.html"));
-    }
-
     @Route(endpoint = "/upload/login", method = POST)
     public void loginUser() throws IOException {
         if (getBodyParam("user") == null || getBodyParam("password") == null) {
@@ -389,15 +406,6 @@ public class UploadController extends BaseController {
         addCustomHeader("Set-Cookie", "token=; Max-Age=0; Path=/; HttpOnly; Secure");
         addCustomHeader("HX-Location", "/upload/");
         sendHTMLResponse(OK, "<div id=\"login-message\" class=\"success\">Logout successful! Redirecting...</div>");
-    }
-
-    @Route(endpoint = "/upload/create-account-page", method = GET)
-    public void createAccountPage() throws IOException {
-        if (isHTMX()) {
-            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/create-account.html"));
-            return;
-        }
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/create-account.html"));
     }
 
     @Route(endpoint = "/upload/create-account", method = POST)
