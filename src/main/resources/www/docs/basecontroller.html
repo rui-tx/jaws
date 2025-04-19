@@ -1,0 +1,52 @@
+<div id="base-controller">
+    <article>
+        <h3>Base Controller</h3>
+        <p>JAWS now includes a <strong><code>BaseController</code></strong> class that provides a foundation for all controllers. This class simplifies request handling and provides common functionality for all controllers.</p>
+
+        <h4>1. Key Features</h4>
+        <ul>
+            <li>Thread-safe request handler management</li>
+            <li>Common response methods (HTML, JSON)</li>
+            <li>Parameter extraction (path, query, body)</li>
+            <li>HTMX request detection</li>
+            <li>Custom header management</li>
+            <li>Automatic cleanup of request handlers</li>
+        </ul>
+
+        <h4>2. Request Handler Management</h4>
+        <p>The <strong><code>BaseController</code></strong> uses a thread-local <strong><code>RequestHandler</code></strong> to ensure thread safety and proper request handling. The request handler is automatically set and cleaned up for each request.</p>
+
+        <h4>3. Common Methods</h4>
+        <p>The <strong><code>BaseController</code></strong> provides the following common methods:</p>
+        <ul>
+            <li><strong><code>sendHTMLResponse(code, content)</code></strong>: Send an HTML response</li>
+            <li><strong><code>sendJSONResponse(code, data)</code></strong>: Send a JSON response</li>
+            <li><strong><code>getPathParam(name)</code></strong>: Get a path parameter</li>
+            <li><strong><code>getQueryParam(name)</code></strong>: Get a query parameter</li>
+            <li><strong><code>getBodyParam(name)</code></strong>: Get a body parameter</li>
+            <li><strong><code>isHTMX()</code></strong>: Check if the request is from HTMX</li>
+            <li><strong><code>addCustomHeader(name, value)</code></strong>: Add a custom response header</li>
+        </ul>
+
+        <h4>4. Usage Example</h4>
+        <p>To create a new controller, extend the <strong><code>BaseController</code></strong> class:</p>
+        <pre><code>public class MyController extends BaseController {
+    @Route(endpoint = "/my-endpoint", method = GET)
+    public void handleRequest() throws IOException {
+        String param = getQueryParam("param");
+        sendHTMLResponse(OK, "&lt;div&gt;Hello " + param + "!&lt;/div&gt;");
+    }
+}</code></pre>
+
+        <h4>5. Benefits</h4>
+        <ul>
+            <li>Reduced code duplication</li>
+            <li>Consistent request handling</li>
+            <li>Thread-safe request processing</li>
+            <li>Simplified controller implementation</li>
+            <li>Automatic cleanup of resources</li>
+        </ul>
+
+        <aside>The <strong><code>BaseController</code></strong> automatically handles the cleanup of request handlers after each request, ensuring proper resource management.</aside>
+    </article>
+</div> 

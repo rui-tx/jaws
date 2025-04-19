@@ -13,20 +13,35 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javax.sql.DataSource;
+import org.sqlite.SQLiteDataSource;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 
 public class Mimir {
+    private static final AtomicBoolean initialized = new AtomicBoolean(false);
+    private static DataSource dataSource;
     private File db;
 
     public Mimir() {
         this.db = new File(DATABASE_PATH);
+        initializeDataSource();
+    }
+
+    private synchronized void initializeDataSource() {
+        if (!initialized.get()) {
+            SQLiteDataSource ds = new SQLiteDataSource();
+            ds.setUrl("jdbc:sqlite:" + db.getAbsolutePath());
+            dataSource = ds;
+            initialized.set(true);
+        }
     }
 
     public void initializeDatabase(String databasePath) {
         if (databasePath != null && !databasePath.isEmpty()) {
-            this.db = new File(databasePath); // database for tests
+            this.db = new File(databasePath);
         }
 
         createDatabaseFile();
@@ -44,6 +59,7 @@ public class Mimir {
             }
         } catch (IOException e) {
             Logger.error("Error creating database file: " + e.getMessage());
+            throw new RuntimeException("Failed to create database file", e);
         }
     }
 
@@ -54,11 +70,15 @@ public class Mimir {
             Logger.info("Database initialized with " + DATABASE_SCHEMA_PATH);
         } catch (SQLException | IOException e) {
             Logger.error("Error initializing database: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize database", e);
         }
     }
 
     public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection("jdbc:sqlite:" + db.getAbsolutePath());
+        if (dataSource == null) {
+            throw new SQLException("DataSource not initialized");
+        }
+        return dataSource.getConnection();
     }
 
     /**
@@ -135,10 +155,10 @@ public class Mimir {
                 stmt.setObject(i + 1, params[i]);
             }
 
-            return stmt.executeUpdate(); // affected rows
+            return stmt.executeUpdate();
         } catch (SQLException e) {
             Logger.error("Error executing prepared update: " + e.getMessage());
-            return 0;
+            throw new RuntimeException("Database update failed", e);
         }
     }
 
@@ -151,11 +171,13 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
-        try (Connection conn = getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+        try (Connection conn = getConnection(); 
+             Statement stmt = conn.createStatement(); 
+             ResultSet rs = stmt.executeQuery(sql)) {
             return action.apply(rs);
         } catch (SQLException e) {
             Logger.error("Error executing SQL: " + e.getMessage());
-            return null;
+            throw new RuntimeException("Database query failed", e);
         }
     }
 
@@ -181,7 +203,7 @@ public class Mimir {
             }
         } catch (SQLException e) {
             Logger.error("Error executing prepared query: " + e.getMessage());
-            return null;
+            throw new RuntimeException("Database query failed", e);
         }
     }
 

@@ -2,8 +2,10 @@ package org.ruitx.jaws.configs;
 
 import org.ruitx.www.examples.Auth;
 import org.ruitx.www.examples.Todo;
+import org.ruitx.www.examples.API;
 import org.ruitx.www.examples.gallery.controller.GalleryAPIController;
 import org.ruitx.www.examples.gallery.controller.GalleryController;
+import org.ruitx.www.examples.upload.controller.UploadController;
 
 import java.util.List;
 
@@ -16,6 +18,8 @@ public class RoutesConfig {
             new Todo(),
             new GalleryAPIController(),
             new GalleryController(),
-            new Auth()
+            new Auth(),
+            new API(), 
+            new UploadController()
     );
 }

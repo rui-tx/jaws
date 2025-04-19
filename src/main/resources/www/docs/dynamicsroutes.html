@@ -1,40 +1,43 @@
 <div id="dynamic-routes">
     <article>
         <h3>Dynamic Routes</h3>
-        <p>You can create <strong>dynamic routes</strong> by annotating a method with the
-            <strong><code>@Route</code></strong> annotation. This annotation takes two parameters: the
-            <strong>endpoint</strong> and the <strong>method</strong>.</p>
-        <p>The <strong>endpoint</strong> represents the path that the method will respond to. For instance, if you want
-            to create a dynamic route for the endpoint <code>/todos/:id</code> where <code>:id</code> is a dynamic
-            parameter, you would create a method with the following signature:</p>
-        <pre><code>@Route(endpoint = "/todos/:id", method = "GET")<br>public void getTodoById(Yggdrasill.RequestHandler requestHandler) {<br>    // Your code here<br>}</code></pre>
-        <p>The method will be triggered when the endpoint is requested, and the method should take a single parameter,
-            an instance of the <code>Yggdrasill.RequestHandler</code> class. This class provides methods to interact
-            with both the request and the response.</p>
+        <p>You can create <strong>dynamic routes</strong> by creating a controller class that extends <strong><code>BaseController</code></strong> and annotating its methods with the <strong><code>@Route</code></strong> annotation. This annotation takes two parameters: the <strong>endpoint</strong> and the <strong>method</strong>.</p>
 
-        <p>For example, to send a response with the status code <code>200 OK</code>, you would use the following code
-            inside your method:</p>
-        <pre><code>requestHandler.sendHTMLResponse(OK, "Todo item retrieved!");</code></pre>
+        <p>The <strong>endpoint</strong> represents the path that the method will respond to. For instance, if you want to create a dynamic route for the endpoint <code>/todos/:id</code> where <code>:id</code> is a dynamic parameter, you would create a method with the following signature:</p>
+        <pre><code>@Route(endpoint = "/todos/:id", method = "GET")
+public void getTodoById() throws IOException {
+    String id = getPathParam("id");
+    // Your code here
+}</code></pre>
 
-        <p>In the case of dynamic routes, the <code>:id</code> parameter in the endpoint will be automatically extracted
-            and passed as a part of the <code>pathParams</code> in the request handler. For example, for the endpoint
-            <code>/todos/25</code>, the parameter <code>id</code> will have the value <code>25</code>.</p>
+        <p>The method will be triggered when the endpoint is requested. The <strong><code>BaseController</code></strong> provides convenient methods to interact with the request and send responses:</p>
+        <ul>
+            <li><strong><code>getPathParam(name)</code></strong>: Get a path parameter</li>
+            <li><strong><code>getQueryParam(name)</code></strong>: Get a query parameter</li>
+            <li><strong><code>getBodyParam(name)</code></strong>: Get a body parameter</li>
+            <li><strong><code>sendHTMLResponse(code, content)</code></strong>: Send an HTML response</li>
+            <li><strong><code>sendJSONResponse(code, data)</code></strong>: Send a JSON response</li>
+        </ul>
 
-        <p><strong>Note:</strong> The dynamic route also requires the HTTP method (like <code>GET</code>,
-            <code>POST</code>, <code>DELETE</code>, etc.) to be specified. This ensures that the route is triggered only
-            for the correct type of request. Here's an example with a <code>DELETE</code> request to delete a todo:</p>
-        <pre><code>@Route(endpoint = "/todos/:id", method = "DELETE")<br>public void getTodoById(Yggdrasill.RequestHandler requestHandler) {<br>    // Retrieve and respond with the todo<br>}</code></pre>
+        <p>For example, to send a response with the status code <code>200 OK</code>, you would use the following code inside your method:</p>
+        <pre><code>sendHTMLResponse(OK, "Todo item retrieved!");</code></pre>
 
-        <p>The <code>@Route</code> annotation can be used to map methods to specific HTTP methods like <code>GET</code>,
-            <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, or <code>DELETE</code>, allowing you to define
-            actions for different request types on the same endpoint.</p>
+        <p>In the case of dynamic routes, the <code>:id</code> parameter in the endpoint will be automatically extracted and can be accessed using <code>getPathParam("id")</code>. For example, for the endpoint <code>/todos/25</code>, <code>getPathParam("id")</code> will return <code>"25"</code>.</p>
 
-        <p>For convenience, there is a folder called <strong><code>controllers</code></strong> inside the <code>src/main/java/org/ruitx/server</code>
-            package. This folder contains all the controllers that handle requests. You can create a new controller by
-            creating a new class in this folder and adding the <code>@Route</code> annotation to its methods.</p>
+        <p><strong>Note:</strong> The dynamic route also requires the HTTP method (like <code>GET</code>, <code>POST</code>, <code>DELETE</code>, etc.) to be specified. This ensures that the route is triggered only for the correct type of request. Here's an example with a <code>DELETE</code> request to delete a todo:</p>
+        <pre><code>@Route(endpoint = "/todos/:id", method = "DELETE")
+public void deleteTodo() throws IOException {
+    String id = getPathParam("id");
+    // Delete the todo and send response
+    sendHTMLResponse(OK, "Todo deleted successfully!");
+}</code></pre>
 
-        <p><strong>Important!</strong> Don't forget to add your new controller class to the list of routes in the
-            <strong><code>RoutesConfig</code></strong> configuration file located in <code>src/main/java/org/ruitx/configs/RoutesConfig</code>.
-            This ensures that your dynamic routes are registered and available to the server.</p>
+        <p>The <code>@Route</code> annotation can be used to map methods to specific HTTP methods like <code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, or <code>DELETE</code>, allowing you to define actions for different request types on the same endpoint.</p>
+
+        <p>For convenience, there is a folder called <strong><code>controllers</code></strong> inside the <code>src/main/java/org/ruitx/server</code> package. This folder contains all the controllers that handle requests. You can create a new controller by creating a new class in this folder that extends <strong><code>BaseController</code></strong> and adding the <code>@Route</code> annotation to its methods.</p>
+
+        <p><strong>Important!</strong> Don't forget to add your new controller class to the list of routes in the <strong><code>RoutesConfig</code></strong> configuration file located in <code>src/main/java/org/ruitx/configs/RoutesConfig</code>. This ensures that your dynamic routes are registered and available to the server.</p>
+
+        <aside>All controllers should extend <strong><code>BaseController</code></strong> to take advantage of its thread-safe request handling and convenient methods for working with requests and responses.</aside>
     </article>
 </div>

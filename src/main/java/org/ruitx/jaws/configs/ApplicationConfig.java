@@ -14,6 +14,7 @@ public class ApplicationConfig {
     public static final String DEFAULT_DATABASE_TESTS_PATH = "src/main/resources/db_tests.db";
     public static final String DEFAULT_DATABASE_SCHEMA_PATH = "src/main/resources/sql/create_schema_v1.sql";
     public static final String DEFAULT_JWT_SECRET = "";
+    public static final String DEFAULT_UPLOAD_DIR = "src/main/resources/www/examples/upload/uploads";
 
     // Static fields for configuration
     public static final String URL;
@@ -23,6 +24,7 @@ public class ApplicationConfig {
     public static final String DATABASE_PATH;
     public static final String DATABASE_SCHEMA_PATH;
     public static final String JWT_SECRET;
+    public static final String UPLOAD_DIR;
 
     static {
         URL = getUrl();
@@ -32,6 +34,7 @@ public class ApplicationConfig {
         DATABASE_PATH = getDatabasePath();
         DATABASE_SCHEMA_PATH = getDatabaseSchemaPath();
         JWT_SECRET = getJWTSecret();
+        UPLOAD_DIR = getUploadDir();
     }
 
     private static int getPort() {
@@ -82,5 +85,10 @@ public class ApplicationConfig {
 
         }
         return jwtTokenEnv;
+    }
+
+    private static String getUploadDir() {
+        String uploadDirEnv = System.getenv("UPLOADDIR");
+        return uploadDirEnv != null ? uploadDirEnv : DEFAULT_UPLOAD_DIR;
     }
 }
