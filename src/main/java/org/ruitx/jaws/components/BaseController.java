@@ -5,7 +5,13 @@ import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
 import org.tinylog.Logger;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
+
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Base controller class for all controllers.
@@ -97,5 +103,27 @@ public abstract class BaseController {
 
     protected void addCustomHeader(String name, String value) {
         requestHandler.get().addCustomHeader(name, value);
+    }
+
+    /**
+     * Render a partial HTML file with parameters.
+     * @param partialPath The path to the partial HTML file
+     * @param params The parameters to be used in the partial
+     * @return The rendered HTML with parameters replaced
+     * @throws IOException if there's an error reading the partial file
+     */
+    protected String renderPartial(String partialPath, Map<String, String> params) throws IOException {
+        String partialHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + partialPath)));
+        return Hermes.parseHTML(partialHtml, params, null);
+    }
+
+    /**
+     * Render a partial HTML file without parameters.
+     * @param partialPath The path to the partial HTML file
+     * @return The rendered HTML
+     * @throws IOException if there's an error reading the partial file
+     */
+    protected String renderPartial(String partialPath) throws IOException {
+        return renderPartial(partialPath, new HashMap<>());
     }
 } 

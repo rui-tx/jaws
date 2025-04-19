@@ -10,6 +10,8 @@ import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.utils.Row;
 import org.ruitx.jaws.configs.ApplicationConfig;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,7 +19,9 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.nio.charset.StandardCharsets;
 
@@ -243,9 +247,9 @@ public class UploadController extends BaseController {
 
         if (upload == null) {
             if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.makePartialPage("examples/upload/partials/not_found.html"));
+                sendHTMLResponse(OK, Hermes.makePartialPage("examples/upload/partials/not-found.html"));
             } else {
-                sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, Hermes.makePartialPage("examples/upload/partials/not_found.html")));
+                sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, Hermes.makePartialPage("examples/upload/partials/not-found.html")));
             }
             return;
         }
@@ -272,41 +276,24 @@ public class UploadController extends BaseController {
         Path filePath = Paths.get(UPLOAD_DIR, fileName);
         if (!Files.exists(filePath)) {
             if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.makePartialPage("examples/upload/partials/not_found.html"));
+                sendHTMLResponse(OK, Hermes.makePartialPage("examples/upload/partials/not-found.html"));
             } else {
-                sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, Hermes.makePartialPage("examples/upload/partials/not_found.html")));
+                sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, Hermes.makePartialPage("examples/upload/partials/not-found.html")));
             }
             return;
         }
 
         // Show download page with file info
-        String downloadPage = """
-            <div class="download-section">
-                <div class="download-icon">📥</div>
-                <div class="download-info">
-                    <h2>Download File</h2>
-                    <div class="file-details">
-                        <p><span class="label">File Name:</span> %s</p>
-                        <p><span class="label">File Size:</span> %s</p>
-                        <p><span class="label">Expires In:</span> %d minutes</p>
-                    </div>
-                </div>
-                <a href="/api/v1/upload/download/%s" class="download-button">
-                    <span class="button-icon">⬇️</span>
-                    Download File
-                </a>
-            </div>
-        """.formatted(
-            originalName,
-            formatFileSize(fileSize),
-            (expiryDate.getTime() - System.currentTimeMillis()) / (60 * 1000),
-            id
-        );
+        Map<String, String> params = new HashMap<>();
+        params.put("id", id);
+        params.put("filename", originalName);
+        params.put("filesize", formatFileSize(fileSize));
+        params.put("expires", String.valueOf((expiryDate.getTime() - System.currentTimeMillis()) / (60 * 1000)));
 
         if (isHTMX()) {
-            sendHTMLResponse(OK, downloadPage);
+            sendHTMLResponse(OK, renderPartial("examples/upload/partials/download-page.html", params));
         } else {
-            sendHTMLResponse(OK, Hermes.makeFullPageWithHTML(BASE_HTML_PATH, downloadPage));
+            sendHTMLResponse(OK, Hermes.makeFullPageWithHTML(BASE_HTML_PATH, renderPartial("examples/upload/partials/download-page.html", params)));
         }
     }
 
