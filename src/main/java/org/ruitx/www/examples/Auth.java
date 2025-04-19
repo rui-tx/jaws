@@ -12,6 +12,9 @@ import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class Auth extends BaseController {
 
+    public Auth() {
+    }
+
     @Route(endpoint = "/auth/token/create", method = POST)
     public void generateToken() {
         if (getBodyParam("user") == null || getBodyParam("password") == null) {

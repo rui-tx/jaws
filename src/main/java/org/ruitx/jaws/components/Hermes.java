@@ -24,7 +24,7 @@ import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
 public final class Hermes {
 
     private static final String DEFAULT_BODY_PATH = "_body.html";
-    private static String BODY_PATH;
+    private static final ThreadLocal<String> BODY_PATH = ThreadLocal.withInitial(() -> DEFAULT_BODY_PATH);
 
     /**
      * Get the body path for the default body template.
@@ -33,7 +33,7 @@ public final class Hermes {
      * @return the path to the default template.
      */
     public static synchronized String getBodyPath() {
-        return BODY_PATH;
+        return BODY_PATH.get();
     }
 
     /**
@@ -44,10 +44,10 @@ public final class Hermes {
      */
     public static synchronized void setBodyPath(String path) {
         if (path != null && !path.isEmpty()) {
-            BODY_PATH = path;
+            BODY_PATH.set(path);
             return;
         }
-        BODY_PATH = DEFAULT_BODY_PATH;
+        BODY_PATH.set(DEFAULT_BODY_PATH);
     }
 
     /**

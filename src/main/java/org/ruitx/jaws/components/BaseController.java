@@ -21,19 +21,31 @@ import java.util.HashMap;
  */
 public abstract class BaseController {
     private static final ThreadLocal<Yggdrasill.RequestHandler> requestHandler = new ThreadLocal<>();
+    protected String bodyHtmlPath;
 
     /**
-     * Set the request handler for the current thread.
+     * Set the request handler and body path for the current thread.
      * @param handler
      */
     public void setRequestHandler(Yggdrasill.RequestHandler handler) {
         requestHandler.set(handler);
+        if (bodyHtmlPath != null) {
+            setBodyPath(bodyHtmlPath);
+        }
+    }
+
+    /**
+     * Set the body path for the current thread.
+     * @param bodyPath
+     */
+    private void setBodyPath(String bodyPath) {
+        Hermes.setBodyPath(bodyPath);
     }
 
     /**
      * Send a JSON response to the client.
-     * @param code the response code
-     * @param data the data to send
+     * @param code
+     * @param data
      */
     protected void sendJSONResponse(ResponseCode code, Object data) {
         try {
@@ -52,8 +64,8 @@ public abstract class BaseController {
 
     /**
      * Send an HTML response to the client.
-     * @param code the response code
-     * @param content the HTML content to send
+     * @param code
+     * @param content
      */
     protected void sendHTMLResponse(ResponseCode code, String content) {
         try {
@@ -66,8 +78,8 @@ public abstract class BaseController {
 
     /**
      * Get a path parameter from the request.
-     * @param name the parameter name
-     * @return the parameter value
+     * @param name
+     * @return
      */
     protected String getPathParam(String name) {
         return requestHandler.get().getPathParams().get(name);
@@ -75,109 +87,95 @@ public abstract class BaseController {
 
     /**
      * Get a query parameter from the request.
-     * @param name the parameter name
-     * @return the parameter value
+     * @param name
+     * @return
      */
     protected String getQueryParam(String name) {
-        return requestHandler.get().getQueryParams().get(name);
+        return requestHandler.get().getQueryParams() != null ? requestHandler.get().getQueryParams().get(name) : null;
     }
 
     /**
      * Get a body parameter from the request.
-     * @param name the parameter name
-     * @return the parameter value
+     * @param name
+     * @return
      */
     protected String getBodyParam(String name) {
-        return requestHandler.get().getBodyParams().get(name);
+        return requestHandler.get().getBodyParams() != null ? requestHandler.get().getBodyParams().get(name) : null;
     }
 
     /**
-     * Check if the request is from HTMX.
-     * @return true if the request is from HTMX
-     */
+     * Check if the request is an HTMX request.
+     * @return
+     */ 
     protected boolean isHTMX() {
         return requestHandler.get().isHTMX();
     }
 
     /**
-     * Clean up the request handler.
+     * Cleanup the request handler for the current thread.
      */
     protected void cleanup() {
-        requestHandler.remove();
+        try {
+            requestHandler.remove();
+        } catch (Exception e) {
+            Logger.error("Error cleaning up request handler: {}", e.getMessage());
+        }
     }
 
-    /**
-     * Add a custom header to the response.
-     * @param name the header name
-     * @param value the header value
-     */
     protected void addCustomHeader(String name, String value) {
         requestHandler.get().addCustomHeader(name, value);
     }
 
     /**
-     * Render a template with parameters.
-     * @param templatePath the path to the template
-     * @param params the parameters to render
-     * @return the rendered template
+     * Render a template file with parameters.
+     * @param templatePath The path to the template file
+     * @param params The parameters to be used in the template
+     * @return The rendered template with parameters replaced
      */
     protected String renderTemplate(String templatePath, Map<String, String> params) {
         try {
-            Path path = Path.of(WWW_PATH, templatePath);
-            String template = new String(Files.readAllBytes(path));
-            for (Map.Entry<String, String> entry : params.entrySet()) {
-                template = template.replace("{{" + entry.getKey() + "}}", entry.getValue());
-            }
-            return template;
-        } catch (Exception e) {
+            String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
+            return Hermes.processTemplate(templateHtml, params, null);
+        } catch (IOException e) {
             Logger.error("Failed to render template: {}", e.getMessage());
             throw new SendRespondException("Failed to render template", e);
         }
     }
 
     /**
-     * Render a template without parameters.
-     * @param templatePath the path to the template
-     * @return the rendered template
+     * Render a template file without parameters.
+     * @param templatePath The path to the template file
+     * @return The rendered template
      */
     protected String renderTemplate(String templatePath) {
-        try {
-            Path path = Path.of(WWW_PATH, templatePath);
-            return new String(Files.readAllBytes(path));
-        } catch (Exception e) {
-            Logger.error("Failed to render template: {}", e.getMessage());
-            throw new SendRespondException("Failed to render template", e);
-        }
+        return renderTemplate(templatePath, new HashMap<>());
     }
 
     /**
-     * Assemble a page from a base template and a partial template.
-     * @param baseTemplatePath the path to the base template
-     * @param partialTemplatePath the path to the partial template
-     * @return the assembled page
+     * Assemble a full page by combining a base template with a partial template.
+     * @param baseTemplatePath The path to the base template file
+     * @param partialTemplatePath The path to the partial template file
+     * @return The assembled page
      */
     protected String assemblePage(String baseTemplatePath, String partialTemplatePath) {
         try {
-            String baseTemplate = renderTemplate(baseTemplatePath);
-            String partialTemplate = renderTemplate(partialTemplatePath);
-            return baseTemplate.replace("{{content}}", partialTemplate);
-        } catch (Exception e) {
+            return Hermes.assemblePage(baseTemplatePath, partialTemplatePath);
+        } catch (IOException e) {
             Logger.error("Failed to assemble page: {}", e.getMessage());
             throw new SendRespondException("Failed to assemble page", e);
         }
     }
 
     /**
-     * Assemble a page from a base template and content.
-     * @param baseTemplatePath the path to the base template
-     * @param content the content to insert
-     * @return the assembled page
+     * Assemble a full page by combining a base template with raw content.
+     * @param baseTemplatePath The path to the base template file
+     * @param content The raw content to insert
+     * @return The assembled page
      */
     protected String assemblePageWithContent(String baseTemplatePath, String content) {
         try {
-            String baseTemplate = renderTemplate(baseTemplatePath);
-            return baseTemplate.replace("{{content}}", content);
-        } catch (Exception e) {
+            return Hermes.assemblePageWithContent(baseTemplatePath, content);
+        } catch (IOException e) {
             Logger.error("Failed to assemble page with content: {}", e.getMessage());
             throw new SendRespondException("Failed to assemble page with content", e);
         }

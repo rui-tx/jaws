@@ -14,6 +14,9 @@ public class API extends BaseController {
 
     private static final String API_ENDPOINT = "/api/v1/";
 
+    public API() {
+    }
+
     @Route(endpoint = API_ENDPOINT + "ping")
     public void ping() {
         sendJSONResponse(OK, "pong");

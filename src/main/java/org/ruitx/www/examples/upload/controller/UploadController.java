@@ -1,7 +1,6 @@
 package org.ruitx.www.examples.upload.controller;
 
 import org.ruitx.jaws.components.BaseController;
-import org.ruitx.jaws.components.Hermes;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.components.Yggdrasill;
@@ -11,8 +10,6 @@ import org.ruitx.jaws.utils.Row;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.tinylog.Logger;
-
-import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,7 +36,7 @@ public class UploadController extends BaseController {
     private static final String API_ENDPOINT = "/api/v1/upload/";
 
     public UploadController() {
-        Hermes.setBodyPath(BODY_HTML_PATH);
+        bodyHtmlPath = BODY_HTML_PATH;
         // Create upload directory if it doesn't exist
         try {
             Path uploadPath = Paths.get(UPLOAD_DIR);
@@ -47,7 +44,7 @@ public class UploadController extends BaseController {
                 Files.createDirectories(uploadPath);
                 System.out.println("Created upload directory at: " + uploadPath.toAbsolutePath());
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("Error creating upload directory: " + e.getMessage());
             e.printStackTrace();
         }
