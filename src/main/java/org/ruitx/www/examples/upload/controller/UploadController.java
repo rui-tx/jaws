@@ -53,7 +53,7 @@ public class UploadController extends BaseController {
 
     @Route(endpoint = "/upload", method = GET)
     public void renderIndex() throws IOException {
-        sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, BODY_HTML_PATH));
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 
     @Route(endpoint = API_ENDPOINT + "upload", method = POST)
@@ -247,9 +247,9 @@ public class UploadController extends BaseController {
 
         if (upload == null) {
             if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.makePartialPage("examples/upload/partials/not-found.html"));
+                sendHTMLResponse(OK, Hermes.renderTemplate("examples/upload/partials/not-found.html"));
             } else {
-                sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, Hermes.makePartialPage("examples/upload/partials/not-found.html")));
+                sendHTMLResponse(OK, Hermes.assemblePage(BASE_HTML_PATH, Hermes.renderTemplate("examples/upload/partials/not-found.html")));
             }
             return;
         }
@@ -266,9 +266,9 @@ public class UploadController extends BaseController {
 
         if (expiryDate.getTime() < System.currentTimeMillis()) {
             if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.makePartialPage("examples/upload/partials/expired.html"));
+                sendHTMLResponse(OK, Hermes.renderTemplate("examples/upload/partials/expired.html"));
             } else {
-                sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, Hermes.makePartialPage("examples/upload/partials/expired.html")));
+                sendHTMLResponse(OK, Hermes.assemblePage(BASE_HTML_PATH, Hermes.renderTemplate("examples/upload/partials/expired.html")));
             }
             return;
         }
@@ -276,9 +276,9 @@ public class UploadController extends BaseController {
         Path filePath = Paths.get(UPLOAD_DIR, fileName);
         if (!Files.exists(filePath)) {
             if (isHTMX()) {
-                sendHTMLResponse(OK, Hermes.makePartialPage("examples/upload/partials/not-found.html"));
+                sendHTMLResponse(OK, Hermes.renderTemplate("examples/upload/partials/not-found.html"));
             } else {
-                sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, Hermes.makePartialPage("examples/upload/partials/not-found.html")));
+                sendHTMLResponse(OK, Hermes.assemblePage(BASE_HTML_PATH, Hermes.renderTemplate("examples/upload/partials/not-found.html")));
             }
             return;
         }
@@ -291,10 +291,11 @@ public class UploadController extends BaseController {
         params.put("expires", String.valueOf((expiryDate.getTime() - System.currentTimeMillis()) / (60 * 1000)));
 
         if (isHTMX()) {
-            sendHTMLResponse(OK, renderPartial("examples/upload/partials/download-page.html", params));
-        } else {
-            sendHTMLResponse(OK, Hermes.makeFullPageWithHTML(BASE_HTML_PATH, renderPartial("examples/upload/partials/download-page.html", params)));
+            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/download-page.html", params));
+            return;
         }
+
+        sendHTMLResponse(OK, assemblePageWithContent(BASE_HTML_PATH, renderTemplate("examples/upload/partials/download-page.html", params)));
     }
 
     @Route(endpoint = API_ENDPOINT + "download/:id", method = GET)
@@ -341,12 +342,11 @@ public class UploadController extends BaseController {
 
     @Route(endpoint = "/upload/login-page", method = GET)
     public void loginPage() throws IOException {
-        String partialPath = "examples/upload/partials/login.html";
         if (isHTMX()) {
-            sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
+            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/login.html"));
             return;
         }
-        sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, partialPath));
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/login.html"));
     }
 
     @Route(endpoint = "/upload/login", method = POST)
@@ -393,12 +393,11 @@ public class UploadController extends BaseController {
 
     @Route(endpoint = "/upload/create-account-page", method = GET)
     public void createAccountPage() throws IOException {
-        String partialPath = "examples/upload/partials/create-account.html";
         if (isHTMX()) {
-            sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
+            sendHTMLResponse(OK, renderTemplate("examples/upload/partials/create-account.html"));
             return;
         }
-        sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, partialPath));
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/upload/partials/create-account.html"));
     }
 
     @Route(endpoint = "/upload/create-account", method = POST)

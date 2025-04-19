@@ -26,7 +26,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.parseHTML(htmlInput);
+        String result = Hermes.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>
@@ -60,7 +60,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.parseHTML(htmlInput);
+        String result = Hermes.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>
@@ -95,7 +95,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.parseHTML(htmlInput);
+        String result = Hermes.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>
@@ -129,7 +129,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.parseHTML(htmlInput);
+        String result = Hermes.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>
