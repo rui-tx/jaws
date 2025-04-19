@@ -17,7 +17,9 @@ import java.util.regex.Pattern;
 import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
 
 /**
- * Hermes is a utility class that contains methods for parsing HTML files.
+ * Hermes is a utility class that handles template processing and page assembly.
+ * It provides methods for processing templates with variables, assembling full pages,
+ * and rendering template files.
  */
 public final class Hermes {
 
@@ -25,125 +27,104 @@ public final class Hermes {
     private static String BODY_PATH;
 
     /**
-     * Get the body path for the default body partial.
+     * Get the body path for the default body template.
      * This method is synchronized to prevent concurrent access.
      *
-     * @return the path to the default partials.
+     * @return the path to the default template.
      */
     public static synchronized String getBodyPath() {
         return BODY_PATH;
     }
 
     /**
-     * Set the body path for the default body partial.
+     * Set the body path for the default body template.
      * This method is synchronized to prevent concurrent access.
      *
-     * @param path the path to the default partials.
+     * @param path the path to the default template.
      */
     public static synchronized void setBodyPath(String path) {
         if (path != null && !path.isEmpty()) {
             BODY_PATH = path;
             return;
         }
-
         BODY_PATH = DEFAULT_BODY_PATH;
     }
 
     /**
-     * Parse the HTML file and replace the placeholders with the actual values
+     * Process a template file, replacing placeholders with actual values.
      *
-     * @param htmlPage The HTML file to parse
-     * @return the parsed HTML
-     * @throws IOException if there's an error reading the HTML file
+     * @param templateFile The template file to process
+     * @return the processed template
+     * @throws IOException if there's an error reading the template file
      */
-    public static String parseHTML(File htmlPage) throws IOException {
-        String html = new String(Files.readAllBytes(Path.of(htmlPage.getPath())));
-        return parseHTMLString(html);
+    public static String processTemplate(File templateFile) throws IOException {
+        String template = new String(Files.readAllBytes(Path.of(templateFile.getPath())));
+        return processTemplate(template);
     }
 
     /**
-     * Parse the HTML string and replace the placeholders with the actual values
+     * Process a template string, replacing placeholders with actual values.
      *
-     * @param htmlPage The HTML string to parse
-     * @return the parsed HTML
-     * @throws IOException if there's an error reading the HTML file
+     * @param template The template string to process
+     * @return the processed template
+     * @throws IOException if there's an error processing the template
      */
-    public static String parseHTML(String htmlPage) throws IOException {
-        return parseHTMLString(htmlPage);
+    public static String processTemplate(String template) throws IOException {
+        return processTemplate(template, new LinkedHashMap<>(), new LinkedHashMap<>());
     }
 
     /**
-     * Parse the HTML string and replace the placeholders with the actual values, using the provided request parameters.
+     * Process a template string with parameters, replacing placeholders with actual values.
      *
-     * @param htmlPage    The HTML string to parse
+     * @param template    The template string to process
      * @param queryParams The query parameters map
      * @param bodyParams  The body parameters map
-     * @return the parsed HTML
-     * @throws IOException if there's an error reading the HTML file
+     * @return the processed template
+     * @throws IOException if there's an error processing the template
      */
-    public static String parseHTML(String htmlPage, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
+    public static String processTemplate(String template, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
         if (queryParams == null) {
             queryParams = new LinkedHashMap<>();
         }
-
         if (bodyParams == null) {
             bodyParams = new LinkedHashMap<>();
         }
-
-        return parseHTMLStringWithParams(htmlPage, queryParams, bodyParams);
+        return processTemplateWithParams(template, queryParams, bodyParams);
     }
 
-    private static String parseHTMLString(String html) {
-        return parseHTMLStringWithParams(html, new LinkedHashMap<>(), new LinkedHashMap<>());
-    }
-
-    // TODO: Refactor this method
-    // needs more testing
-    private static String parseHTMLStringWithParams(String html, Map<String, String> queryParams, Map<String, String> bodyParams) {
-        // Regex to match placeholders like {{test}} (e.g., {{test}})
+    /**
+     * Core template processing method that handles variable substitution and command execution.
+     */
+    private static String processTemplateWithParams(String template, Map<String, String> queryParams, Map<String, String> bodyParams) {
         String regex = "\\{\\{([^}]*)}}";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(html);
+        Matcher matcher = pattern.matcher(template);
         StringBuilder result = new StringBuilder();
 
-        // Combine queryParams and bodyParams into one map
         Map<String, String> requestParams = new LinkedHashMap<>(queryParams);
         requestParams.putAll(bodyParams);
 
-        // Loop through the HTML and match each placeholder
         while (matcher.find()) {
-            String placeholderContent = matcher.group(1).trim(); // Get the content inside {{...}}
-
-            // Temporarily escape $ signs for regex matching (to avoid conflicts with regex special chars)
+            String placeholderContent = matcher.group(1).trim();
             String escapedContent = escapeDollarSigns(placeholderContent);
-
-            // Now we need to check if it's a command or parameter
-            String commandName = escapedContent.split("\\s*\\(")[0]; // Get the command name (before any parentheses)
+            String commandName = escapedContent.split("\\s*\\(")[0];
             Command commandExecutor = CommandList.LIST.get(commandName);
 
             if (commandExecutor != null) {
-                // If it's a command, execute it and append the result
                 String commandResult = commandExecutor.execute(escapedContent);
                 matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(commandResult)));
             } else {
-                // If it's a parameter, check if it's present in queryParams or bodyParams
                 String paramValue = requestParams.get(escapedContent);
                 if (paramValue != null) {
-                    // Directly use the parameter value without escaping the $ sign
                     matcher.appendReplacement(result, Matcher.quoteReplacement(paramValue));
                 } else {
-
-                    // TODO: Refactor this logic - not sure of the thread safety here
-                    // if param is bodyContent and is empty, then render default bodyContent
-                    // if more variables are needed this will be unmanageable fast
                     if (escapedContent.equals("_BODY_CONTENT_")) {
                         try {
                             synchronized (Hermes.class) {
                                 if (getBodyPath() == null || getBodyPath().isEmpty()) {
                                     setBodyPath(DEFAULT_BODY_PATH);
                                 }
-                                // parses the default body content, replacing placeholders with actual values
-                                paramValue = parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath()))));
+                                paramValue = processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath()))));
                             }
                         } catch (IOException e) {
                             Logger.error("Error reading default body content: " + e.getMessage());
@@ -151,61 +132,66 @@ public final class Hermes {
                         }
                         matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(paramValue)));
                     } else {
-                        // If no match is found, leave the placeholder as it is
                         matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
                     }
                 }
             }
         }
 
-        // Append the rest of the HTML after the last match
         matcher.appendTail(result);
-
         return result.toString();
     }
 
     /**
-     * Make a full HTML page by parsing the base HTML file and rendering the specified partial.
+     * Assemble a full page by combining a base template with a partial template.
      *
-     * @param basePath    the path to the base HTML file.
-     * @param partialPath the path to the partial HTML file.
-     * @return the full HTML page.
-     * @throws IOException if an error occurs while reading the base HTML file or the partial HTML file.
+     * @param baseTemplatePath    the path to the base template file
+     * @param partialTemplatePath the path to the partial template file
+     * @return the assembled page
+     * @throws IOException if there's an error reading or processing the templates
      */
-    public static String makeFullPage(String basePath, String partialPath) throws IOException {
+    public static String assemblePage(String baseTemplatePath, String partialTemplatePath) throws IOException {
         HashMap<String, String> params = new HashMap<>();
-        params.put("_BODY_CONTENT_", "{{renderPartial(\"" + partialPath + "\")}}");
-        return parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + basePath))), params, null);
-    }
-
-    public static String makeFullPageWithHTML(String basePath, String html) throws IOException {
-        HashMap<String, String> params = new HashMap<>();
-        params.put("_BODY_CONTENT_", html);
-        return parseHTML(new String(Files.readAllBytes(Path.of(WWW_PATH + basePath))), params, null);
+        params.put("_BODY_CONTENT_", "{{renderPartial(\"" + partialTemplatePath + "\")}}");
+        return processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + baseTemplatePath))), params, null);
     }
 
     /**
-     * Make a partial HTML page by parsing the specified partial HTML file.
+     * Assemble a full page by combining a base template with raw content.
      *
-     * @param partialPath the path to the partial HTML file.
-     * @return the partial HTML page.
-     * @throws IOException if an error occurs while reading the partial HTML file.
+     * @param baseTemplatePath the path to the base template file
+     * @param content          the raw content to insert
+     * @return the assembled page
+     * @throws IOException if there's an error reading or processing the template
      */
-    public static String makePartialPage(String partialPath) throws IOException {
-        return "{{renderPartial(\"" + partialPath + "\")}}";
+    public static String assemblePageWithContent(String baseTemplatePath, String content) throws IOException {
+        HashMap<String, String> params = new HashMap<>();
+        params.put("_BODY_CONTENT_", content);
+        return processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + baseTemplatePath))), params, null);
     }
 
     /**
-     * Escape all $ signs in the input string by adding a backslash before them.
+     * Render a template file.
+     *
+     * @param templatePath the path to the template file
+     * @return the rendered template
+     * @throws IOException if there's an error reading or processing the template
      */
-    private static String escapeDollarSigns(String html) {
-        return html.replaceAll("\\$", "\\\\\\$"); // Escape the dollar sign
+    public static String renderTemplate(String templatePath) throws IOException {
+        return "{{renderPartial(\"" + templatePath + "\")}}";
     }
 
     /**
-     * Restore all escaped $ signs in the output string.
+     * Escape dollar signs in the input string for regex processing.
      */
-    private static String restoreDollarSigns(String html) {
-        return html.replaceAll("\\\\\\$", "\\$"); // Restore the escaped dollar sign
+    private static String escapeDollarSigns(String input) {
+        return input.replaceAll("\\$", "\\\\\\$");
+    }
+
+    /**
+     * Restore escaped dollar signs in the output string.
+     */
+    private static String restoreDollarSigns(String input) {
+        return input.replaceAll("\\\\\\$", "\\$");
     }
 }

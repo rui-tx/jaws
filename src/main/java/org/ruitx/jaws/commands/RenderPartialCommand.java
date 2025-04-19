@@ -36,7 +36,7 @@ public class RenderPartialCommand implements Command {
         try {
             String rawHTML = new String(Files.readAllBytes(path));
             rawHTML = escapeDollarSigns(rawHTML); // Escape $ signs in the partial HTML content to avoid regex issues
-            parsedHTML = Hermes.parseHTML(rawHTML);
+            parsedHTML = Hermes.processTemplate(rawHTML);
             parsedHTML = restoreDollarSigns(parsedHTML);
 
         } catch (IOException e) {

@@ -61,6 +61,6 @@ public class GalleryController extends BaseController {
                 </div>
                 """);
 
-        sendHTMLResponse(OK, Hermes.makeFullPageWithHTML(BASE_HTML_PATH, bodyHTML.toString()));
+        sendHTMLResponse(OK, assemblePageWithContent(BASE_HTML_PATH, bodyHTML.toString()));
     }
 }

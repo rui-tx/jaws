@@ -420,7 +420,7 @@ public class Yggdrasill {
             byte[] content = body.getBytes();
             String contentType = "text/html";
 
-            String parsedHTML = Hermes.parseHTML(new String(content));
+            String parsedHTML = Hermes.processTemplate(new String(content));
             parsedHTML += "\n\n";
             sendResponseHeaders(responseCode, contentType, parsedHTML.length());
             sendResponseBody(parsedHTML.getBytes());
@@ -461,7 +461,7 @@ public class Yggdrasill {
                 String contentType = Files.probeContentType(path);
 
                 if (contentType.equals("text/html")) {
-                    String parsedHTML = Hermes.parseHTML(new String(content), queryParams, bodyParams);
+                    String parsedHTML = Hermes.processTemplate(new String(content), queryParams, bodyParams);
                     parsedHTML += "\n\n"; // prevents truncation of the last line
                     sendResponseHeaders(OK, contentType, parsedHTML.length());
                     out.write(parsedHTML.getBytes(StandardCharsets.UTF_8));

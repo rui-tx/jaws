@@ -26,6 +26,10 @@
             <li><strong><code>getBodyParam(name)</code></strong>: Get a body parameter</li>
             <li><strong><code>isHTMX()</code></strong>: Check if the request is from HTMX</li>
             <li><strong><code>addCustomHeader(name, value)</code></strong>: Add a custom response header</li>
+            <li><strong><code>renderTemplate(templatePath, params)</code></strong>: Render a template file with parameters</li>
+            <li><strong><code>renderTemplate(templatePath)</code></strong>: Render a template file without parameters</li>
+            <li><strong><code>assemblePage(baseTemplatePath, partialTemplatePath)</code></strong>: Assemble a full page by combining a base template with a partial template</li>
+            <li><strong><code>assemblePageWithContent(baseTemplatePath, content)</code></strong>: Assemble a full page by combining a base template with raw content</li>
         </ul>
 
         <h4>4. Usage Example</h4>
@@ -33,12 +37,24 @@
         <pre><code>public class MyController extends BaseController {
     @Route(endpoint = "/my-endpoint", method = GET)
     public void handleRequest() throws IOException {
-        String param = getQueryParam("param");
-        sendHTMLResponse(OK, "&lt;div&gt;Hello " + param + "!&lt;/div&gt;");
+        // Example using template rendering
+        Map<String, String> params = new HashMap<>();
+        params.put("title", "My Page");
+        String content = renderTemplate("partials/_content.html", params);
+        sendHTMLResponse(OK, assemblePageWithContent("base.html", content));
     }
 }</code></pre>
 
-        <h4>5. Benefits</h4>
+        <h4>5. Template Rendering</h4>
+        <p>The <strong><code>BaseController</code></strong> provides several methods for template rendering:</p>
+        <ul>
+            <li><strong><code>renderTemplate</code></strong>: Renders a template file with optional parameters</li>
+            <li><strong><code>assemblePage</code></strong>: Combines a base template with a partial template</li>
+            <li><strong><code>assemblePageWithContent</code></strong>: Combines a base template with raw content</li>
+        </ul>
+        <p>These methods make it easy to create dynamic pages by combining templates and injecting variables.</p>
+
+        <h4>6. Benefits</h4>
         <ul>
             <li>Reduced code duplication</li>
             <li>Consistent request handling</li>

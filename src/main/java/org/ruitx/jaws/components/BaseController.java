@@ -5,7 +5,13 @@ import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
 import org.tinylog.Logger;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
+
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Base controller class for all controllers.
@@ -97,5 +103,49 @@ public abstract class BaseController {
 
     protected void addCustomHeader(String name, String value) {
         requestHandler.get().addCustomHeader(name, value);
+    }
+
+    /**
+     * Render a template file with parameters.
+     * @param templatePath The path to the template file
+     * @param params The parameters to be used in the template
+     * @return The rendered template with parameters replaced
+     * @throws IOException if there's an error reading the template file
+     */
+    protected String renderTemplate(String templatePath, Map<String, String> params) throws IOException {
+        String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
+        return Hermes.processTemplate(templateHtml, params, null);
+    }
+
+    /**
+     * Render a template file without parameters.
+     * @param templatePath The path to the template file
+     * @return The rendered template
+     * @throws IOException if there's an error reading the template file
+     */
+    protected String renderTemplate(String templatePath) throws IOException {
+        return renderTemplate(templatePath, new HashMap<>());
+    }
+
+    /**
+     * Assemble a full page by combining a base template with a partial template.
+     * @param baseTemplatePath The path to the base template file
+     * @param partialTemplatePath The path to the partial template file
+     * @return The assembled page
+     * @throws IOException if there's an error reading or processing the templates
+     */
+    protected String assemblePage(String baseTemplatePath, String partialTemplatePath) throws IOException {
+        return Hermes.assemblePage(baseTemplatePath, partialTemplatePath);
+    }
+
+    /**
+     * Assemble a full page by combining a base template with raw content.
+     * @param baseTemplatePath The path to the base template file
+     * @param content The raw content to insert
+     * @return The assembled page
+     * @throws IOException if there's an error reading or processing the template
+     */
+    protected String assemblePageWithContent(String baseTemplatePath, String content) throws IOException {
+        return Hermes.assemblePageWithContent(baseTemplatePath, content);
     }
 } 

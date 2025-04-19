@@ -34,7 +34,7 @@ public class Todo extends BaseController {
 
     @Route(endpoint = "/todo", method = GET)
     public void renderIndex() throws IOException {
-        sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, BODY_HTML_PATH));
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 
     @Route(endpoint = "/todos", method = GET)
@@ -184,13 +184,11 @@ public class Todo extends BaseController {
 
     @Route(endpoint = "/todo/login-page", method = GET)
     public void loginPage() throws IOException {
-        String partialPath = "examples/todo/partials/login.html";
         if (isHTMX()) {
-            sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
+            sendHTMLResponse(OK, renderTemplate("examples/todo/partials/login.html"));
             return;
         }
-
-        sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, partialPath));
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/todo/partials/login.html"));
     }
 
     @Route(endpoint = "/todo/login", method = POST)
@@ -237,13 +235,11 @@ public class Todo extends BaseController {
 
     @Route(endpoint = "/todo/create-account-page", method = GET)
     public void createAccountPage() throws IOException {
-        String partialPath = "examples/todo/partials/create-account.html";
         if (isHTMX()) {
-            sendHTMLResponse(OK, Hermes.makePartialPage(partialPath));
+            sendHTMLResponse(OK, renderTemplate("examples/todo/partials/create-account.html"));
             return;
         }
-
-        sendHTMLResponse(OK, Hermes.makeFullPage(BASE_HTML_PATH, partialPath));
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, "examples/todo/partials/create-account.html"));
     }
 
     @Route(endpoint = "/todo/create-account", method = POST)
