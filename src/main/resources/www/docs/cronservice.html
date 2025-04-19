@@ -1,0 +1,48 @@
+<div id="cron-service">
+    <article>
+        <h3>Cron Service</h3>
+        <p>The Cron Service is a background service that manages scheduled tasks in JAWS, like the cleanup of expired uploads.</p>
+
+        <h4>1. Overview</h4>
+        <p>The Cron Service provides a flexible and reliable way to execute scheduled tasks in the application. It's built on top of the Norns task scheduler.</p>
+
+        <h4>2. Features</h4>
+        <ul>
+            <li>Configurable scheduling using time intervals</li>
+            <li>Background task execution</li>
+            <li>Error handling and logging</li>
+            <li>Thread-safe operation</li>
+            <li>Graceful shutdown support</li>
+        </ul>
+
+        <h4>3. Implementation Details</h4>
+        <p>The Cron Service is implemented using the Norns task scheduler:</p>
+        <pre><code>private static Thread createCronService() {
+    Norns norns = Norns.getInstance();
+    norns.registerTask(
+        "file-cleanup",
+        () -> new CleanupService().cleanup(),
+        5,
+        TimeUnit.MINUTES
+    );
+    return new Thread(norns, "norns");
+}</code></pre>
+        <p>This configuration:</p>
+        <ol>
+            <li>Creates a Norns instance for task scheduling</li>
+            <li>Registers a task named "file-cleanup"</li>
+            <li>Executes the cleanup method every 5 minutes</li>
+            <li>Runs the scheduler in a dedicated thread</li>
+        </ol>
+
+        <h4>4. Error Handling</h4>
+        <p>The service includes comprehensive error handling:</p>
+        <ul>
+            <li>Logs all errors with detailed stack traces</li>
+            <li>Continues operation even if individual tasks fail</li>
+            <li>Provides error notifications through the logging system</li>
+        </ul>
+
+        <aside>The Cron Service is designed to be lightweight and efficient, with minimal impact on the main application's performance.</aside>
+    </article>
+</div> 

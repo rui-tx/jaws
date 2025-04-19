@@ -2,34 +2,32 @@ package org.ruitx.www.examples.upload.service;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.utils.Row;
+import org.tinylog.Logger;
+import static org.ruitx.jaws.configs.ApplicationConfig.UPLOAD_DIR;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class CleanupService {
-    private static final String UPLOAD_DIR = "examples/upload/files";
-    private static final long CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    private final Mimir db;
 
-    public void start() {
-        Timer timer = new Timer(true);
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                cleanupExpiredFiles();
-            }
-        }, 0, CLEANUP_INTERVAL);
+    public CleanupService() {
+        this.db = new Mimir();
     }
 
-    private void cleanupExpiredFiles() {
+    public void cleanup() {
         try {
-            Mimir db = new Mimir();
+            
             List<Row> expiredUploads = db.getRows(
-                "SELECT * FROM UPLOADS WHERE expiry_time <= CURRENT_TIMESTAMP"
+                "SELECT * FROM UPLOADS WHERE expiry_time <= ?",
+                System.currentTimeMillis()
             );
+            
+            if (expiredUploads.isEmpty()) {
+                return;
+            }
 
             for (Row upload : expiredUploads) {
                 String fileName = upload.getString("file_name");
@@ -43,7 +41,7 @@ public class CleanupService {
                 db.executeSql("DELETE FROM UPLOADS WHERE id = ?", id);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Logger.error("Error during cleanup: {}", e.getMessage(), e);
         }
     }
 } 

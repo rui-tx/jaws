@@ -5,7 +5,7 @@
 
         <h4>1. Basic Features</h4>
         <ul>
-            <li>File upload with custom expiry times</li>
+            <li>File upload with custom expiry times (in minutes)</li>
             <li>User authentication and management</li>
             <li>File management (list, download, delete)</li>
             <li>Automatic cleanup of expired files</li>
@@ -17,14 +17,19 @@
         <h4>2. Configuration</h4>
         <p>The upload system can be configured using the following environment variables:</p>
         <ul>
-            <li><strong><code>UPLOADDIR</code></strong>: Specifies the directory where uploaded files will be stored. Defaults to <code>examples/upload/files</code>.</li>
+            <li><strong><code>UPLOAD_DIR</code></strong>: Specifies the directory where uploaded files will be stored. Defaults to <code>src/main/resources/www/examples/upload/uploads</code>.</li>
         </ul>
 
         <h4>3. Database Schema</h4>
-        <p>The upload system uses two main tables:</p>
+        <p>The upload system uses the following table:</p>
         <ul>
-            <li><strong><code>UPLOADS</code></strong>: Stores information about uploaded files</li>
-            <li><strong><code>USER</code></strong>: Stores user authentication information</li>
+            <li><strong><code>UPLOADS</code></strong>: Stores information about uploaded files
+                <ul>
+                    <li><code>id</code>: Unique identifier for the upload</li>
+                    <li><code>file_name</code>: Original name of the uploaded file</li>
+                    <li><code>expiry_time</code>: Timestamp when the file will expire (stored in milliseconds since epoch)</li>
+                </ul>
+            </li>
         </ul>
 
         <h4>4. API Endpoints</h4>
@@ -35,22 +40,33 @@
             <li><strong><code>GET /api/v1/upload/list</code></strong>: Lists user's uploads</li>
             <li><strong><code>DELETE /api/v1/upload/:id</code></strong>: Deletes an upload</li>
             <li><strong><code>GET /upload/download/:id</code></strong>: Downloads a file</li>
-            <li><strong><code>GET /upload/login-page</code></strong>: Renders the login page</li>
-            <li><strong><code>POST /upload/login</code></strong>: Handles user login</li>
-            <li><strong><code>GET /upload/logout</code></strong>: Handles user logout</li>
-            <li><strong><code>GET /upload/create-account-page</code></strong>: Renders the create account page</li>
-            <li><strong><code>POST /upload/create-account</code></strong>: Handles user registration</li>
         </ul>
 
-        <h4>5. Example Usage</h4>
+        <h4>5. Cleanup Service</h4>
+        <p>The cleanup service automatically removes expired files by:</p>
+        <ol>
+            <li>Querying the database for files where <code>expiry_time</code> is less than or equal to the current time</li>
+            <li>Deleting the physical files from the filesystem</li>
+            <li>Removing the corresponding database records</li>
+        </ol>
+
+        <h4>6. Cron Service</h4>
+        <p>The cron service manages the scheduling of cleanup operations:</p>
+        <ul>
+            <li>Runs the cleanup service at regular intervals</li>
+            <li>Configurable schedule through cron expressions</li>
+            <li>Handles cleanup operations in a separate thread to avoid blocking the main application</li>
+            <li>Logs cleanup operations and any errors that occur during the process</li>
+        </ul>
+
+        <h4>7. Example Usage</h4>
         <p>To use the upload system, you can:</p>
         <ol>
-            <li>Create a user account or log in</li>
-            <li>Upload files with custom expiry times</li>
+            <li>Upload files with custom expiry times (in minutes)</li>
             <li>Manage your uploads (view, download, delete)</li>
             <li>Share download links with others</li>
         </ol>
 
-        <aside>The upload system automatically cleans up expired files every 5 minutes. Files are deleted both from the filesystem and the database when they expire.</aside>
+        <aside>The upload system automatically cleans up expired files. Files are deleted both from the filesystem and the database when they expire.</aside>
     </article>
 </div> 
