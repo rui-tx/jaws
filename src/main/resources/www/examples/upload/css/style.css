@@ -926,6 +926,49 @@ td:last-child {
 
 .upload-form {
     display: none;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+/* Expiry Selector */
+.expiry-selector {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.expiry-selector label {
+    color: var(--default-font-color);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.expiry-selector select {
+    background-color: var(--default-block-bg-color);
+    color: var(--default-font-color);
+    border: 1px solid var(--default-block-border-color);
+    border-radius: var(--default-button-border-radius);
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.expiry-selector select:hover {
+    border-color: var(--accent);
+    background-color: var(--accent-fade);
+}
+
+.expiry-selector select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-fade);
 }
 
 /* Upload Progress */

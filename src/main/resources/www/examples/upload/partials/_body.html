@@ -12,7 +12,21 @@
             </div>
             <form id="upload-form" class="upload-form" hx-encoding="multipart/form-data" hx-post="/api/v1/upload/upload" hx-target="#upload-result">
                 <input type="file" id="file-input" name="file" style="display: none" onchange="handleFileSelect(this)">
-                <input type="hidden" name="expiry" value="60">
+                <div class="expiry-selector">
+                    <label for="expiry-select">Expiry Time:</label>
+                    <select id="expiry-select" name="expiry">
+                        {{if(isLoggedIn)
+                        <option value="5">5 minutes</option>
+                        <option value="30">30 minutes</option>
+                        <option value="60" selected>1 hour</option>
+                        <option value="1440">1 day</option>
+                        <option value="10080">1 week</option>
+                        <option value="43200">1 month</option>
+                        else
+                        <option value="60" selected>1 hour</option>
+                        }}
+                    </select>
+                </div>
             </form>
         </div>
         <div class="upload-progress">
@@ -56,6 +70,7 @@
     const uploadSection = document.getElementById('upload-section');
     const fileInput = document.getElementById('file-input');
     const uploadTrigger = document.getElementById('upload-trigger');
+    const expirySelect = document.getElementById('expiry-select');
     let selectedFile = null;
 
     uploadSection.addEventListener('dragover', (e) => {
@@ -93,6 +108,9 @@
         selectedFile = file;
         document.getElementById('upload-status').innerHTML = '<div class="success">File selected: ' + file.name + '</div>';
         document.getElementById('upload-trigger').disabled = false;
+        
+        // Show the upload form
+        document.getElementById('upload-form').style.display = 'block';
     }
 
     uploadTrigger.addEventListener('click', function() {
@@ -154,7 +172,7 @@
                 
                 xhr.open('POST', '/api/v1/upload/upload');
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                xhr.send(`file=${encodeURIComponent(base64)}&filename=${encodeURIComponent(selectedFile.name)}&expiry=60`);
+                xhr.send(`file=${encodeURIComponent(base64)}&filename=${encodeURIComponent(selectedFile.name)}&expiry=${expirySelect.value}`);
             };
             
             reader.onerror = function() {

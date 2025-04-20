@@ -28,6 +28,7 @@ import static org.ruitx.jaws.strings.RequestType.*;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+import org.apache.tika.Tika;
 
 public class UploadController extends BaseController {
     private static final String BASE_HTML_PATH = "examples/upload/index.html";
@@ -181,13 +182,17 @@ public class UploadController extends BaseController {
         // Save to database
         Mimir db = new Mimir();
         Integer userId = null;
-        if (getBodyParam("user_id") != null) {
-            userId = Integer.parseInt(getBodyParam("user_id"));
+        if (Yggdrasill.RequestHandler.getCurrentToken() != null && Tyr.isTokenValid(Yggdrasill.RequestHandler.getCurrentToken())) {
+            String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
+            Row userRow = db.getRow("SELECT id FROM USER WHERE user = ?", tokenUserId);
+            if (userRow != null) {
+                userId = userRow.getInt("id");
+            }
         }
 
         int affectedRows = db.executeSql(
-            "INSERT INTO UPLOADS (file_name, original_name, file_size, expiry_time, user_id) VALUES (?, ?, ?, ?, ?)",
-            newFileName, fileName, fileSize, expiryTime, userId
+            "INSERT INTO UPLOADS (id, file_name, original_name, file_size, expiry_time, user_id) VALUES (?, ?, ?, ?, ?, ?)",
+            uniqueId, newFileName, fileName, fileSize, expiryTime, userId
         );
 
         if (affectedRows == 0) {
@@ -195,7 +200,14 @@ public class UploadController extends BaseController {
             return;
         }
 
-        sendHTMLResponse(OK, "<div class='success'>File uploaded successfully</div>");
+        String downloadLink = String.format(
+            "<div class='success'>File uploaded successfully</div>" +
+            "<div class='download-link'>" +
+            "<a href='/upload/download/%s' class='action-button share'>Download File</a>" +
+            "</div>",
+            uniqueId
+        );
+        sendHTMLResponse(OK, downloadLink);
     }
 
     @AccessControl(login = true)
@@ -340,8 +352,18 @@ public class UploadController extends BaseController {
             return;
         }
 
+        // Detect MIME type using Tika
+        Tika tika = new Tika();
+        String mimeType;
+        try {
+            mimeType = tika.detect(filePath);
+        } catch (IOException e) {
+            Logger.error("Failed to detect MIME type: {}", e.getMessage());
+            mimeType = "application/octet-stream"; // Fallback to binary
+        }
+
         // Set proper download headers
-        addCustomHeader("Content-Type", "application/octet-stream");
+        addCustomHeader("Content-Type", mimeType);
         addCustomHeader("Content-Disposition", "attachment; filename=\"" + originalName + "\"");
         addCustomHeader("Content-Length", String.valueOf(fileSize));
         
