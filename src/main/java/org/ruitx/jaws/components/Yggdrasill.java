@@ -441,6 +441,18 @@ public class Yggdrasill {
         }
 
         /**
+         * Sends a binary response with the specified response code and body content.
+         *
+         * @param responseCode the HTTP response code.
+         * @param contentType the content type of the response.
+         * @param body the body content of the response.
+         */
+        public void sendBinaryResponse(ResponseCode responseCode, String contentType, byte[] body) {
+            sendResponseHeaders(responseCode, contentType, body.length);
+            sendResponseBody(body);
+        }
+
+        /**
          * Returns the path for the static resource corresponding to the endpoint.
          *
          * @param endPoint the endpoint of the request.

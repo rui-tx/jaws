@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.nio.charset.StandardCharsets;
 
 import static org.ruitx.jaws.strings.RequestType.*;
 import static org.ruitx.jaws.strings.ResponseCode.*;
@@ -35,9 +34,11 @@ public class UploadController extends BaseController {
     private static final String BODY_HTML_PATH = "examples/upload/partials/_body.html";
     private static final String UPLOAD_DIR = ApplicationConfig.UPLOAD_DIR;
     private static final String API_ENDPOINT = "/api/v1/upload/";
+    private Mimir db;
 
     public UploadController() {
         bodyHtmlPath = BODY_HTML_PATH;
+        db = new Mimir();
         // Create upload directory if it doesn't exist
         try {
             Path uploadPath = Paths.get(UPLOAD_DIR);
@@ -81,7 +82,6 @@ public class UploadController extends BaseController {
     @Route(endpoint = "/upload/download/:id", method = GET)
     public void downloadFile() throws IOException {
         String id = getPathParam("id");
-        Mimir db = new Mimir();
         Row upload = db.getRow("SELECT * FROM UPLOADS WHERE id = ?", id);
 
         if (upload == null) {
@@ -179,8 +179,6 @@ public class UploadController extends BaseController {
         long expiryTime = System.currentTimeMillis() + (minutes * 60 * 1000);
         long fileSize = fileBytes.length;
 
-        // Save to database
-        Mimir db = new Mimir();
         Integer userId = null;
         if (Yggdrasill.RequestHandler.getCurrentToken() != null && Tyr.isTokenValid(Yggdrasill.RequestHandler.getCurrentToken())) {
             String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
@@ -214,7 +212,6 @@ public class UploadController extends BaseController {
     @Route(endpoint = API_ENDPOINT + "list", method = GET)
     public void listUploads() throws IOException {
         try {
-            Mimir db = new Mimir();
             String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
             int dbUserId = db.getRow("SELECT id FROM USER WHERE user = ?", tokenUserId).getInt("id");
             
@@ -298,7 +295,6 @@ public class UploadController extends BaseController {
     @Route(endpoint = API_ENDPOINT + ":id", method = DELETE)
     public void deleteUpload() throws IOException {
         String id = getPathParam("id");
-        Mimir db = new Mimir();
         String tokenUserId = Tyr.getUserIdFromJWT(Yggdrasill.RequestHandler.getCurrentToken());
         int dbUserId = db.getRow("SELECT id FROM USER WHERE user = ?", tokenUserId).getInt("id");
 
@@ -323,7 +319,6 @@ public class UploadController extends BaseController {
     @Route(endpoint = API_ENDPOINT + "download/:id", method = GET)
     public void handleFileDownload() {
         String id = getPathParam("id");
-        Mimir db = new Mimir();
         Row upload = db.getRow("SELECT * FROM UPLOADS WHERE id = ?", id);
 
         if (upload == null) {
@@ -333,47 +328,24 @@ public class UploadController extends BaseController {
 
         String fileName = upload.getString("file_name");
         String originalName = upload.getString("original_name");
-        long fileSize = upload.get("file_size") instanceof Integer ? 
-            ((Integer) upload.get("file_size")).longValue() : 
-            (Long) upload.get("file_size");
-        long expiryTime = upload.get("expiry_time") instanceof Integer ? 
-            ((Integer) upload.get("expiry_time")).longValue() : 
-            (Long) upload.get("expiry_time");
-        Date expiryDate = new Date(expiryTime);
-
-        if (expiryDate.getTime() < System.currentTimeMillis()) {
-            sendHTMLResponse(GONE, "File has expired");
-            return;
-        }
-
         Path filePath = Paths.get(UPLOAD_DIR, fileName);
+        
         if (!Files.exists(filePath)) {
-            sendHTMLResponse(NOT_FOUND, "File not found");
+            sendHTMLResponse(NOT_FOUND, "File not found: " + fileName);
             return;
         }
 
-        // Detect MIME type using Tika
-        Tika tika = new Tika();
-        String mimeType;
-        try {
-            mimeType = tika.detect(filePath);
-        } catch (IOException e) {
-            Logger.error("Failed to detect MIME type: {}", e.getMessage());
-            mimeType = "application/octet-stream"; // Fallback to binary
-        }
-
-        // Set proper download headers
-        addCustomHeader("Content-Type", mimeType);
-        addCustomHeader("Content-Disposition", "attachment; filename=\"" + originalName + "\"");
-        addCustomHeader("Content-Length", String.valueOf(fileSize));
-        
-        // Send the file
         try {
             byte[] fileBytes = Files.readAllBytes(filePath);
-            sendHTMLResponse(OK, new String(fileBytes, StandardCharsets.ISO_8859_1));
+            String contentType = new Tika().detect(fileBytes);
+            
+            // Set content disposition header to prompt download with original filename
+            addCustomHeader("Content-Disposition", "attachment; filename=\"" + originalName + "\"");
+            
+            sendBinaryResponse(OK, contentType, fileBytes);
         } catch (Exception e) {
             Logger.error("Failed to read file: {}", e.getMessage());
-            throw new SendRespondException("Failed to read file", e);
+            sendHTMLResponse(INTERNAL_SERVER_ERROR, "Failed to read file: " + fileName);
         }
     }
 
@@ -384,7 +356,6 @@ public class UploadController extends BaseController {
             return;
         }
 
-        Mimir db = new Mimir();
         Row dbUser = db.getRow("SELECT * FROM USER WHERE user = ?",
                 getBodyParam("user"));
 
@@ -429,7 +400,6 @@ public class UploadController extends BaseController {
         String user = getBodyParam("user");
         String hashedPassword = BCrypt.withDefaults()
                 .hashToString(12, getBodyParam("password").toCharArray());
-        Mimir db = new Mimir();
         int affectedRows = db.executeSql("INSERT INTO USER (user, password_hash) VALUES (?, ?)",
                 user, hashedPassword);
 

@@ -188,4 +188,19 @@ public abstract class BaseController {
             throw new SendRespondException("Failed to assemble page with content", e);
         }
     }
+
+    /**
+     * Send a binary response to the client.
+     * @param code the response code
+     * @param contentType the content type of the response
+     * @param content the binary content
+     */
+    protected void sendBinaryResponse(ResponseCode code, String contentType, byte[] content) {
+        try {
+            requestHandler.get().sendBinaryResponse(code, contentType, content);
+        } catch (Exception e) {
+            Logger.error("Failed to send binary response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send binary response", e);
+        }
+    }
 } 
