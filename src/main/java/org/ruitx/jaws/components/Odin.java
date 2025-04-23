@@ -1,7 +1,6 @@
 package org.ruitx.jaws.components;
 
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.www.examples.upload.service.CleanupService;
 import org.tinylog.Logger;
 
 import java.nio.file.Paths;
@@ -9,7 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
@@ -60,7 +58,7 @@ public final class Odin {
         ROUTES.forEach(njord::registerRoutes);
     }
 
-    // Yggdrasill is the jaws that listens for incoming connections
+    // Yggdrasill is the component that listens for incoming connections
     private static Thread createYggdrasill() {
         return new Thread(() -> {
             new Yggdrasill(ApplicationConfig.PORT, ApplicationConfig.WWW_PATH).start();
@@ -77,12 +75,7 @@ public final class Odin {
     // Norns manages scheduled tasks
     private static Thread createNorns() {
         Norns norns = Norns.getInstance();
-        norns.registerTask(
-            "file-cleanup",
-            () -> new CleanupService().cleanup(),
-            5,
-            TimeUnit.MINUTES
-        );
+        //norns.registerTask("example", () -> new ExampleService().runMe(), 1, TimeUnit.HOURS);
         return new Thread(norns, "norns");
     }
 

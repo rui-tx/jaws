@@ -12,13 +12,15 @@ import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class Auth extends BaseController {
 
+    private static final String API_ENDPOINT = "/api/v1/";
+
     public Auth() {
     }
 
-    @Route(endpoint = "/auth/token/create", method = POST)
+    @Route(endpoint = API_ENDPOINT + "auth/token/create", method = POST)
     public void generateToken() {
         if (getBodyParam("user") == null || getBodyParam("password") == null) {
-            sendJSONResponse(BAD_REQUEST, "{\"error\": \"User / password is missing\"}");
+            sendJSONResponse(BAD_REQUEST, "User / password is missing");
             return;
         }
 
@@ -27,7 +29,7 @@ public class Auth extends BaseController {
         String token = Tyr.createToken(user, password);
 
         if (token == null) {
-            sendJSONResponse(UNAUTHORIZED, "{\"error\": \"Credentials are invalid\"}");
+            sendJSONResponse(UNAUTHORIZED, "Credentials are invalid");
             return;
         }
 
