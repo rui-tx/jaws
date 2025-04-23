@@ -55,6 +55,21 @@ public enum ResponseCode {
         return null;
     }
 
+    /**
+     * Extracts a ResponseCode from a code and message string (e.g., "400 BAD REQUEST")
+     * @param codeWithMessage The string containing the code and message
+     * @return The corresponding ResponseCode, or INTERNAL_SERVER_ERROR if parsing fails
+     */
+    public static ResponseCode fromCodeAndMessage(String codeWithMessage) {
+        try {
+            int code = Integer.parseInt(codeWithMessage.split(" ")[0]);
+            ResponseCode responseCode = fromCode(code);
+            return responseCode != null ? responseCode : INTERNAL_SERVER_ERROR;
+        } catch (Exception e) {
+            return INTERNAL_SERVER_ERROR;
+        }
+    }
+
     public int getCode() {
         return code;
     }

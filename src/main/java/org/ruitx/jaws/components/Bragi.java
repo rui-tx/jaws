@@ -19,7 +19,7 @@ import java.util.HashMap;
  * Contains methods for sending responses to the client.
  * The most important object is the requestHandler, that contains the request information.
  */
-public abstract class BaseController {
+public abstract class Bragi {
     private static final ThreadLocal<Yggdrasill.RequestHandler> requestHandler = new ThreadLocal<>();
     protected String bodyHtmlPath;
 
@@ -43,19 +43,77 @@ public abstract class BaseController {
     }
 
     /**
-     * Send a JSON response to the client.
-     * @param code
-     * @param data
+     * Send a JSON success response with no data
+     * @param code Response code
+     */
+    protected void sendJSONResponse(ResponseCode code) {
+        boolean isSuccess = code.toString().startsWith("2"); // 2xx codes are success
+        sendJSONResponse(isSuccess, code, null, null);
+    }
+
+    /**
+     * Send a JSON success response with data
+     * @param code Response code
+     * @param data Response data (can be null)
      */
     protected void sendJSONResponse(ResponseCode code, Object data) {
         try {
-            requestHandler.get().sendJSONResponse(code, APIHandler.encode(
-                    new APIResponse<>(
-                            true,
-                            code.getCodeAndMessage(),
-                            "",
-                            data))
-            );
+            APIResponse<?> response = APIResponse.success(code.getCodeAndMessage(), data);
+            requestHandler.get().sendJSONResponse(code, APIHandler.encode(response));
+        } catch (Exception e) {
+            Logger.error("Failed to send JSON response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send JSON response", e);
+        }
+    }
+
+    /**
+     * Send a JSON success response with data and info message
+     * @param code Response code
+     * @param info Info message
+     * @param data Response data (can be null)
+     */
+    protected void sendJSONResponse(ResponseCode code, String info, Object data) {
+        try {
+            APIResponse<?> response = APIResponse.success(code.getCodeAndMessage(), info, data);
+            requestHandler.get().sendJSONResponse(code, APIHandler.encode(response));
+        } catch (Exception e) {
+            Logger.error("Failed to send JSON response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send JSON response", e);
+        }
+    }
+
+    /**
+     * Send a JSON error response
+     * @param code Error code
+     * @param message Error message
+     */
+    protected void sendErrorResponse(ResponseCode code, String message) {
+        try {
+            APIResponse<?> response = APIResponse.error(code.getCodeAndMessage(), message);
+            requestHandler.get().sendJSONResponse(code, APIHandler.encode(response));
+        } catch (Exception e) {
+            Logger.error("Failed to send JSON response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send JSON response", e);
+        }
+    }
+
+    /**
+     * Send a JSON error response with data
+     * @param code Error code
+     * @param message Error message
+     * @param data Response data (can be null)
+     */
+    protected void sendErrorResponse(ResponseCode code, String message, Object data) {
+        sendJSONResponse(false, code, message, data);
+    }
+
+    /**
+     * Internal method to send JSON response
+     */
+    private void sendJSONResponse(boolean success, ResponseCode code, String info, Object data) {
+        try {
+            APIResponse<Object> response = APIResponse.success(code.getCodeAndMessage(), info, data);
+            requestHandler.get().sendJSONResponse(code, APIHandler.encode(response));
         } catch (Exception e) {
             Logger.error("Failed to send JSON response: {}", e.getMessage());
             throw new SendRespondException("Failed to send JSON response", e);

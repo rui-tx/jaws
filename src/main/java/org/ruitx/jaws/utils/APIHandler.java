@@ -61,33 +61,29 @@ public class APIHandler {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200 && response.statusCode() != 201) {
                 Logger.error("API request failed with status code: {}", response.statusCode());
-                return new APIResponse<>(
-                        false,
+                return APIResponse.error(
                         response.statusCode() + "",
-                        "Server returned error status: " + response.statusCode(),
-                        null);
+                        "Server returned error status: " + response.statusCode()
+                );
             }
 
             String contentType = response.headers().firstValue("content-type").orElse("");
             if (!contentType.contains("application/json")) {
                 Logger.error("Unexpected content type: {}", contentType);
                 Logger.error("Response body: {}", response.body());
-                return new APIResponse<>(
-                        false,
+                return APIResponse.error(
                         response.statusCode() + "",
-                        "Server returned non-JSON response",
-                        null);
+                        "Server returned non-JSON response"
+                );
             }
             return parseResponse(response.body(), responseType);
 
         } catch (IOException | InterruptedException e) {
             Logger.error("HTTP request failed: {}", e.getMessage());
-            //return new APIResponse<>(false, null, "Failed to fetch data from jaws");
-            return new APIResponse<>(
-                    false,
+            return APIResponse.error(
                     ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                    "Failed to fetch data from JAWS",
-                    null);
+                    "Failed to fetch data from JAWS"
+            );
         }
     }
 
@@ -106,18 +102,16 @@ public class APIHandler {
             return objectMapper.readValue(response, fullType);
         } catch (JsonParseException e) {
             Logger.error("Failed to parse JSON (invalid format): {}", e.getMessage());
-            return new APIResponse<>(
-                    false,
+            return APIResponse.error(
                     ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                    "Invalid JSON response from JAWS",
-                    null);
+                    "Invalid JSON response from JAWS"
+            );
         } catch (IOException e) {
             Logger.error("Failed to parse JSON response: {}", e.getMessage());
-            return new APIResponse<>(
-                    false,
+            return APIResponse.error(
                     ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                    "Failed to process JAWS response",
-                    null);
+                    "Failed to process JAWS response"
+            );
         }
     }
 }

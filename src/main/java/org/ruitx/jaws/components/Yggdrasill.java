@@ -532,11 +532,10 @@ public class Yggdrasill {
                 }
 
                 case JSON -> {
-                    APIResponse<String> res = new APIResponse<>(
-                            false,
+                    APIResponse<String> res = APIResponse.error(
                             UNAUTHORIZED.getCodeAndMessage(),
-                            "You are not authorized to access this resource",
-                            null);
+                            "You are not authorized to access this resource"
+                    );
                     content = APIHandler.encode(res).getBytes();
                     sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
                     sendResponseBody(content);
@@ -544,11 +543,10 @@ public class Yggdrasill {
 
                 case INVALID -> {
                     Logger.error("Invalid response type");
-                    APIResponse<String> res = new APIResponse<>(
-                            false,
+                    APIResponse<String> res = APIResponse.error(
                             METHOD_NOT_ALLOWED.getCodeAndMessage(),
-                            "The requested response type is invalid",
-                            null);
+                            "The requested response type is invalid"
+                    );
                     content = APIHandler.encode(res).getBytes();
                     sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
                     sendResponseBody(content);
@@ -745,36 +743,57 @@ public class Yggdrasill {
         private boolean invokeRouteMethod(Method routeMethod) {
             try {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
+                Logger.debug("Invoking route method {} in controller {}", routeMethod.getName(), controllerName);
+                
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
-
-                // Set request handler if the controller extends BaseController
-                if (controllerInstance instanceof BaseController) {
-                    ((BaseController) controllerInstance).setRequestHandler(this);
+                if (controllerInstance == null) {
+                    Logger.error("Failed to get controller instance for {}", controllerName);
+                    throw new IllegalStateException("Controller instance not found: " + controllerName);
                 }
 
-                // TODO: This is not ideal, find a better way to do this.
-                // Synchronize the controller instance to prevent concurrent access. Works but is not ideal, as it can be a bottleneck.
+                // Set request handler if the controller extends BaseController
+                if (controllerInstance instanceof Bragi) {
+                    ((Bragi) controllerInstance).setRequestHandler(this);
+                    Logger.debug("Set request handler for controller {}", controllerName);
+                }
+
+                // Synchronize the controller instance to prevent concurrent access
                 synchronized (controllerInstance) {
                     try {
+                        Logger.debug("Executing route method {} with {} parameters", 
+                            routeMethod.getName(), routeMethod.getParameterCount());
+                        
                         if (routeMethod.getParameterCount() > 0) {
                             routeMethod.invoke(controllerInstance, this);
                         } else {
                             routeMethod.invoke(controllerInstance);
                         }
+                        Logger.debug("Successfully executed route method {}", routeMethod.getName());
                     } catch (Exception e) {
-                        Logger.error("Controller execution failed: {}", e.getMessage(), e);
+                        Logger.error("Controller execution failed in {}.{}: {} - {}",
+                            controllerName,
+                            routeMethod.getName(),
+                            e.getClass().getSimpleName(),
+                            e.getMessage());
+                        
+                        if (e.getCause() != null) {
+                            Logger.error("Caused by: {} - {}", 
+                                e.getCause().getClass().getSimpleName(),
+                                e.getCause().getMessage());
+                        }
                         
                         // Try to send error response if possible
-                        if (controllerInstance instanceof BaseController) {
-                            BaseController controller = (BaseController) controllerInstance;
+                        if (controllerInstance instanceof Bragi) {
+                            Bragi controller = (Bragi) controllerInstance;
                             Yggdrasill.RequestHandler handler = controller.getRequestHandler();
                             if (handler != null) {
-                                // Create error response
-                                APIResponse<String> response = new APIResponse<>(
-                                    false,
+                                // Create error response with detailed message
+                                String errorMessage = e.getCause() != null ? 
+                                    e.getCause().getMessage() : e.getMessage();
+                                
+                                APIResponse<String> response = APIResponse.error(
                                     ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                                    e.getMessage(),
-                                    null
+                                    errorMessage != null ? errorMessage : "An unexpected error occurred"
                                 );
                                 
                                 // Send error response
@@ -793,13 +812,20 @@ public class Yggdrasill {
                 }
 
                 // Cleanup if the controller extends BaseController
-                if (controllerInstance instanceof BaseController) {
-                    ((BaseController) controllerInstance).cleanup();
+                if (controllerInstance instanceof Bragi) {
+                    ((Bragi) controllerInstance).cleanup();
                 }
                 
                 return true;
             } catch (Exception e) {
-                Logger.error("Failed to send error response: {}", e.getMessage());
+                Logger.error("Failed to handle request: {} - {}", 
+                    e.getClass().getSimpleName(), 
+                    e.getMessage());
+                if (e.getCause() != null) {
+                    Logger.error("Caused by: {} - {}", 
+                        e.getCause().getClass().getSimpleName(),
+                        e.getCause().getMessage());
+                }
                 closeSocket();
                 return false;
             }
