@@ -1,4 +1,4 @@
-package org.ruitx.www.examples.gallery.dto;
+package org.ruitx.jaws.utils.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

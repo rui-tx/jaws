@@ -1,11 +1,7 @@
 package org.ruitx.jaws.configs;
 
-import org.ruitx.www.examples.Auth;
-import org.ruitx.www.examples.Todo;
-import org.ruitx.www.examples.API;
-import org.ruitx.www.examples.gallery.controller.GalleryAPIController;
-import org.ruitx.www.examples.gallery.controller.GalleryController;
-import org.ruitx.www.examples.upload.controller.UploadController;
+import org.ruitx.www.API;
+import org.ruitx.www.Auth;
 
 import java.util.List;
 
@@ -15,11 +11,7 @@ public class RoutesConfig {
     // File paths are not needed here, as they are handled by Yggdrasill
 
     public static final List<Object> ROUTES = List.of(
-            new Todo(),
-            new GalleryAPIController(),
-            new GalleryController(),
             new Auth(),
-            new API(), 
-            new UploadController()
+            new API()
     );
 }

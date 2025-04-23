@@ -1,4 +1,4 @@
-package org.ruitx.www.examples;
+package org.ruitx.www;
 
 import org.ruitx.jaws.components.BaseController;
 import org.ruitx.jaws.components.Mimir;

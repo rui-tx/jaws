@@ -1,4 +1,4 @@
-package org.ruitx.www.examples;
+package org.ruitx.www;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.BaseController;

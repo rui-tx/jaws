@@ -2,9 +2,10 @@ package org.ruitx.jaws.utils;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.ruitx.www.examples.gallery.dto.Image;
 
 import java.util.List;
+
+import org.ruitx.jaws.utils.types.Image;
 
 /**
  * APITypeDefinition is a utility class for defining Java types for API calls.
