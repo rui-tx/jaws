@@ -98,6 +98,16 @@ public abstract class Bragi {
     }
 
     /**
+     * Send a JSON error response with a code and message
+     * The code should be like this a string like this "200 OK"
+     * @param code Error code
+     * @param message Error message
+     */
+    protected void sendErrorResponse(String code, String message) {
+        sendJSONResponse(false, ResponseCode.fromCodeAndMessage(code), message, null);
+    }
+
+    /**
      * Send a JSON error response with data
      * @param code Error code
      * @param message Error message

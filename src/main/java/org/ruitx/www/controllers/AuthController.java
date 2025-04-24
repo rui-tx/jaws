@@ -10,6 +10,7 @@ import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.jaws.strings.ResponseCode;
 
 import static org.ruitx.jaws.strings.RequestType.POST;
+import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class AuthController extends Bragi {
 
@@ -27,11 +28,11 @@ public class AuthController extends Bragi {
         
         APIResponse<TokenResponse> response = authService.loginUser(username, password);
         if (!response.success()) {
-            sendErrorResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
+            sendErrorResponse(response.code(), response.info());
             return;
         }
         
-        sendSucessfulResponse(ResponseCode.OK, response.data());
+        sendSucessfulResponse(OK, response.data());
     }
 
     @Route(endpoint = API_ENDPOINT + "create", method = POST)
@@ -41,10 +42,10 @@ public class AuthController extends Bragi {
         
         APIResponse<TokenResponse> response = authService.createUser(username, password);
         if (!response.success()) {
-            sendErrorResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
+            sendErrorResponse(response.code(), response.info());
             return;
         }
         
-        sendSucessfulResponse(ResponseCode.CREATED, response.data());
+        sendSucessfulResponse(CREATED, response.data());
     }
 }
