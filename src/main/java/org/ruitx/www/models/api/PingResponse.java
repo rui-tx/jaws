@@ -1,4 +1,4 @@
-package org.ruitx.www.models.responses;
+package org.ruitx.www.models.api;
 
 /**
  * Represents a ping response with server status information.

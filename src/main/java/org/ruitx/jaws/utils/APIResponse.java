@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 
+import org.ruitx.jaws.strings.ResponseCode;
+
 /**
  * APIResponse is a class for representing API responses.
  * @param <T> the type of the response data.
@@ -27,6 +29,10 @@ public record APIResponse<T>(
         return new APIResponse<>(true, code, Instant.now().getEpochSecond(), "", data);
     }
 
+    public static <T> APIResponse<T> success(ResponseCode code, T data) {
+        return new APIResponse<>(true, code.getCodeAndMessage(), Instant.now().getEpochSecond(), "", data);
+    }
+
     /**
      * Creates a success response with data and info message
      */
@@ -34,11 +40,19 @@ public record APIResponse<T>(
         return new APIResponse<>(true, code, Instant.now().getEpochSecond(), info, data);
     }
 
+    public static <T> APIResponse<T> success(ResponseCode code, String info, T data) {
+        return new APIResponse<>(true, code.getCodeAndMessage(), Instant.now().getEpochSecond(), info, data);
+    }
+
     /**
      * Creates an error response
      */
     public static <T> APIResponse<T> error(String code, String message) {
         return new APIResponse<>(false, code, Instant.now().getEpochSecond(), message, null);
+    }
+
+    public static <T> APIResponse<T> error(ResponseCode code, String message) {
+        return new APIResponse<>(false, code.getCodeAndMessage(), Instant.now().getEpochSecond(), message, null);
     }
 
     /**
