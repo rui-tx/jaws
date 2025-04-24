@@ -2,7 +2,6 @@ package org.ruitx.www.services;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.Tyr;
-import org.ruitx.jaws.utils.Row;
 import org.ruitx.jaws.utils.types.User;
 import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.jaws.utils.APIResponse;
