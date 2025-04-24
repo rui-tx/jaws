@@ -3,11 +3,14 @@ package org.ruitx.www.services;
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.utils.Row;
+import org.ruitx.jaws.utils.types.User;
 import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.www.models.auth.TokenResponse;
 
 import static org.ruitx.jaws.strings.ResponseCode.*;
+
+import java.util.Optional;
 
 public class AuthService {
 
@@ -22,18 +25,17 @@ public class AuthService {
             return APIResponse.error(BAD_REQUEST, "User / password is missing");
         }
 
-        Row dbUser = authRepo.getUserByUsername(username);
-        if (dbUser == null || dbUser.get("user").toString().isEmpty()) {
+        Optional<User> user = authRepo.getUserByUsername(username.toLowerCase());
+        if (user.isEmpty()) {
             return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
         }
 
-        String storedPasswordHash = dbUser.get("password_hash").toString();
         if (!BCrypt.verifyer()
-                .verify(password.toCharArray(), storedPasswordHash).verified) {
+                .verify(password.toCharArray(), user.get().passwordHash()).verified) {
             return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
         }
 
-        String token = Tyr.createToken(dbUser.get("user").toString());
+        String token = Tyr.createToken(user.get().user());
         if (token == null) {
             return APIResponse.error(UNAUTHORIZED, "Token creation failed");
         }
@@ -46,16 +48,15 @@ public class AuthService {
             return APIResponse.error(BAD_REQUEST, "User / password is missing");
         }
 
-        if (authRepo.getUserByUsername(username) != null) {
+        Optional<User> user = authRepo.getUserByUsername(username.toLowerCase());
+        if (user.isPresent()) {
             return APIResponse.error(CONFLICT, "User already exists");
         }
 
-        String hashedPassword = BCrypt.withDefaults()
-                .hashToString(12, password.toCharArray());
-
-        int affectedRows = authRepo.createUser(username, hashedPassword);
-        if (affectedRows == 0) {
-            return APIResponse.error(INTERNAL_SERVER_ERROR, "Cannot create user");
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, password.toCharArray());
+        Optional<Integer> result = authRepo.createUser(username, hashedPassword);
+        if (result.isEmpty()) {
+            return APIResponse.error(INTERNAL_SERVER_ERROR, "Cannot create user. Contact support");
         }
 
         String token = Tyr.createToken(username);
