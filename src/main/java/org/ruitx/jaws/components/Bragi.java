@@ -46,7 +46,7 @@ public abstract class Bragi {
      * Send a JSON success response with no data
      * @param code Response code
      */
-    protected void sendJSONResponse(ResponseCode code) {
+    protected void sendSucessfulResponse(ResponseCode code) {
         boolean isSuccess = code.toString().startsWith("2"); // 2xx codes are success
         sendJSONResponse(isSuccess, code, null, null);
     }
@@ -56,7 +56,7 @@ public abstract class Bragi {
      * @param code Response code
      * @param data Response data (can be null)
      */
-    protected void sendJSONResponse(ResponseCode code, Object data) {
+    protected void sendSucessfulResponse(ResponseCode code, Object data) {
         try {
             APIResponse<?> response = APIResponse.success(code.getCodeAndMessage(), data);
             requestHandler.get().sendJSONResponse(code, APIHandler.encode(response));
@@ -72,7 +72,7 @@ public abstract class Bragi {
      * @param info Info message
      * @param data Response data (can be null)
      */
-    protected void sendJSONResponse(ResponseCode code, String info, Object data) {
+    protected void sendSucessfulResponse(ResponseCode code, String info, Object data) {
         try {
             APIResponse<?> response = APIResponse.success(code.getCodeAndMessage(), info, data);
             requestHandler.get().sendJSONResponse(code, APIHandler.encode(response));

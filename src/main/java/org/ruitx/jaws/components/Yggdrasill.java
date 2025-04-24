@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -27,15 +28,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.Iterator;
 
 import static org.ruitx.jaws.strings.DefaultHTML.*;
 import static org.ruitx.jaws.strings.RequestType.*;
 import static org.ruitx.jaws.strings.ResponseCode.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Yggdrasill represents the main HTTP jaws, handling incoming requests and dispatching them
@@ -626,6 +633,13 @@ public class Yggdrasill {
          * @return a map of body parameters.
          */
         private Map<String, String> extractBodyParameters(String data) {
+            // Check if the content type is JSON
+            String contentType = headers.get("Content-Type");
+            if (contentType != null && contentType.contains("application/json")) {
+                return parseJsonBody(data);
+            }
+            
+            // Fall back to form data parsing
             Map<String, String> parsedData = new LinkedHashMap<>();
             String[] pairs = data.split("&");
             for (String pair : pairs) {
@@ -635,6 +649,25 @@ public class Yggdrasill {
                 parsedData.put(key, value);
             }
             return parsedData;
+        }
+
+        private Map<String, String> parseJsonBody(String json) {
+            try {
+                ObjectMapper mapper = APIHandler.getMapper();
+                Map<String, String> result = new LinkedHashMap<>();
+                JsonNode root = mapper.readTree(json);
+                
+                // Convert all fields to strings
+                root.fields().forEachRemaining(entry -> {
+                    JsonNode value = entry.getValue();
+                    result.put(entry.getKey(), value.isTextual() ? value.asText() : value.toString());
+                });
+                
+                return result;
+            } catch (Exception e) {
+                Logger.error("Failed to parse JSON body: {}", e.getMessage());
+                return new LinkedHashMap<>();
+            }
         }
 
         // TODO: Refactor this method
@@ -760,15 +793,100 @@ public class Yggdrasill {
                 // Synchronize the controller instance to prevent concurrent access
                 synchronized (controllerInstance) {
                     try {
-                        Logger.debug("Executing route method {} with {} parameters", 
-                            routeMethod.getName(), routeMethod.getParameterCount());
-                        
-                        if (routeMethod.getParameterCount() > 0) {
-                            routeMethod.invoke(controllerInstance, this);
-                        } else {
-                            routeMethod.invoke(controllerInstance);
+                        // Get method parameters
+                        Class<?>[] parameterTypes = routeMethod.getParameterTypes();
+                        Object[] parameters = new Object[parameterTypes.length];
+
+                        // If there's a parameter and it's a request object, try to deserialize it
+                        if (parameterTypes.length > 0) {
+                            String contentType = headers.get("Content-Type");
+                            String requestBody = body.toString().trim();
+                            
+                            // Check if Content-Type is missing or not JSON
+                            if (contentType == null || !contentType.contains("application/json")) {
+                                APIResponse<String> response = APIResponse.error(
+                                    ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                    "Request body is required. Check the API documentation for the correct request body"
+                                );
+                                sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                return true;
+                            }
+                            
+                            if (requestBody.isEmpty()) {
+                                // Send a proper error response for empty JSON body
+                                APIResponse<String> response = APIResponse.error(
+                                    ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                    "Request body is required. Check the API documentation for the correct request body"
+                                );
+                                sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                return true;
+                            }
+                            
+                            try {
+                                ObjectMapper mapper = APIHandler.getMapper();
+                                JsonNode root = mapper.readTree(requestBody);
+                                
+                                // Get the expected fields from the parameter type
+                                Class<?> paramType = parameterTypes[0];
+                                List<String> requiredFields = new ArrayList<>();
+                                for (Field field : paramType.getDeclaredFields()) {
+                                    requiredFields.add(field.getName());
+                                }
+                                
+                                // Check for missing or extra fields
+                                List<String> missingFields = new ArrayList<>();
+                                List<String> extraFields = new ArrayList<>();
+                                
+                                for (String field : requiredFields) {
+                                    if (!root.has(field)) {
+                                        missingFields.add(field);
+                                    }
+                                }
+                                
+                                Iterator<String> fieldNames = root.fieldNames();
+                                while (fieldNames.hasNext()) {
+                                    String field = fieldNames.next();
+                                    if (!requiredFields.contains(field)) {
+                                        extraFields.add(field);
+                                    }
+                                }
+                                
+                                // Build error message if there are issues
+                                if (!missingFields.isEmpty() || !extraFields.isEmpty()) {
+                                    StringBuilder errorMessage = new StringBuilder("Invalid request body: ");
+                                    if (!missingFields.isEmpty()) {
+                                        errorMessage.append("Missing required fields: ").append(String.join(", ", missingFields));
+                                    }
+                                    if (!extraFields.isEmpty()) {
+                                        if (!missingFields.isEmpty()) {
+                                            errorMessage.append(". ");
+                                        }
+                                        errorMessage.append("Unexpected fields: ").append(String.join(", ", extraFields));
+                                    }
+                                    
+                                    APIResponse<String> response = APIResponse.error(
+                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                        errorMessage.toString()
+                                    );
+                                    sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                    return true;
+                                }
+                                
+                                // If validation passes, deserialize the object
+                                parameters[0] = mapper.readValue(requestBody, parameterTypes[0]);
+                            } catch (Exception e) {
+                                // Send a proper error response for invalid JSON
+                                APIResponse<String> response = APIResponse.error(
+                                    ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                    "Invalid JSON format. Check the API documentation for the correct request body"
+                                );
+                                sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                return true;
+                            }
                         }
-                        Logger.debug("Successfully executed route method {}", routeMethod.getName());
+
+                        // Invoke the method
+                        routeMethod.invoke(controllerInstance, parameters);
                     } catch (Exception e) {
                         Logger.error("Controller execution failed in {}.{}: {} - {}",
                             controllerName,

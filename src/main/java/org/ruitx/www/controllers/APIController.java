@@ -18,6 +18,6 @@ public class APIController extends Bragi {
 
     @Route(endpoint = API_ENDPOINT + "ping")
     public void ping() {
-        sendJSONResponse(OK, apiService.ping());
+        sendSucessfulResponse(OK, apiService.ping());
     }
 }

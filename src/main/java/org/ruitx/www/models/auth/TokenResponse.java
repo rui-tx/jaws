@@ -1,4 +1,4 @@
-package org.ruitx.www.models.responses;
+package org.ruitx.www.models.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
