@@ -11,10 +11,6 @@ public class AuthRepo {
         this.db = new Mimir();
     }
 
-    public boolean validateToken(String token) {
-        return true;
-    }
-
     public Row getUserByUsername(String username) {
         return db.getRow("SELECT * FROM USER WHERE user = ?", username);
     }

@@ -64,6 +64,13 @@ public class AuthService {
             );
         }
 
+        if (authRepo.getUserByUsername(username) != null) {
+            return APIResponse.error(
+                ResponseCode.CONFLICT.getCodeAndMessage(),
+                "User already exists"
+            );
+        }
+
         String hashedPassword = BCrypt.withDefaults()
                 .hashToString(12, password.toCharArray());
         

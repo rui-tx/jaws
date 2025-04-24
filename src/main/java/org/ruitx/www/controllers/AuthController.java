@@ -2,6 +2,7 @@ package org.ruitx.www.controllers;
 
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.www.models.auth.CreateUserRequest;
 import org.ruitx.www.models.auth.LoginRequest;
 import org.ruitx.www.models.auth.TokenResponse;
 import org.ruitx.www.services.AuthService;
@@ -34,7 +35,7 @@ public class AuthController extends Bragi {
     }
 
     @Route(endpoint = API_ENDPOINT + "create", method = POST)
-    public void createUser(LoginRequest request) {
+    public void createUser(CreateUserRequest request) {
         String username = request.user();
         String password = request.password();
         
