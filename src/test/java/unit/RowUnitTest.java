@@ -40,7 +40,7 @@ public class RowUnitTest {
         data.put("name", "Test User");
         Row row = new Row(data);
 
-        String nameValue = row.getString("name");
+        String nameValue = row.getString("name").get();
         assertEquals("Test User", nameValue, "Expected 'name' to be 'Test User'.");
     }
 
@@ -59,7 +59,7 @@ public class RowUnitTest {
         data.put("id", 1);
         Row row = new Row(data);
 
-        Integer idValue = row.getInt("id");
+        Integer idValue = row.getInt("id").get();
         assertEquals(1, idValue, "Expected 'id' to be 1.");
     }
 

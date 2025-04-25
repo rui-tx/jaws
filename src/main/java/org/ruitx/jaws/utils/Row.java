@@ -1,5 +1,8 @@
 package org.ruitx.jaws.utils;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.Optional;
 
@@ -100,6 +103,66 @@ public record Row(Map<String, Object> data) {
     public boolean isNumeric(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Number;
+    }
+
+    /**
+     * Gets a timestamp as Unix timestamp (seconds since epoch)
+     * @param columnName The name of the column
+     * @return Optional containing the Unix timestamp in seconds
+     */
+    public Optional<Long> getUnixTimestamp(String columnName) {
+        Object value = data.get(columnName);
+        if (value instanceof Long) {
+            return Optional.of((Long) value);
+        }
+        if (value instanceof Integer) {
+            return Optional.of(((Integer) value).longValue());
+        }
+        if (value instanceof String) {
+            try {
+                // Try parsing as ISO 8601 string first
+                LocalDateTime dateTime = LocalDateTime.parse((String) value);
+                return Optional.of(dateTime.atZone(ZoneId.systemDefault()).toEpochSecond());
+            } catch (Exception e) {
+                // If that fails, try parsing as Unix timestamp string
+                try {
+                    return Optional.of(Long.parseLong((String) value));
+                } catch (NumberFormatException nfe) {
+                    return Optional.empty();
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Gets a timestamp as Instant (UTC)
+     * @param columnName The name of the column
+     * @return Optional containing the Instant
+     */
+    public Optional<Instant> getInstant(String columnName) {
+        return getUnixTimestamp(columnName).map(Instant::ofEpochSecond);
+    }
+
+    /**
+     * Gets a timestamp as LocalDateTime in the system's default timezone
+     * @param columnName The name of the column
+     * @return Optional containing the LocalDateTime
+     */
+    public Optional<LocalDateTime> getTimestamp(String columnName) {
+        return getInstant(columnName)
+            .map(instant -> instant.atZone(ZoneId.systemDefault()).toLocalDateTime());
+    }
+
+    /**
+     * Gets a timestamp as LocalDateTime in the specified timezone
+     * @param columnName The name of the column
+     * @param zoneId The timezone to use
+     * @return Optional containing the LocalDateTime
+     */
+    public Optional<LocalDateTime> getTimestamp(String columnName, ZoneId zoneId) {
+        return getInstant(columnName)
+            .map(instant -> instant.atZone(zoneId).toLocalDateTime());
     }
 }
 

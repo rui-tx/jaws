@@ -9,6 +9,7 @@ import org.ruitx.www.models.auth.TokenResponse;
 
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
+import java.util.List;
 import java.util.Optional;
 
 public class AuthService {
@@ -64,5 +65,12 @@ public class AuthService {
         }
 
         return APIResponse.success(CREATED, new TokenResponse(token));
+    }
+
+    public APIResponse<List<User>> listUsers() {
+        return APIResponse.success(OK,
+                authRepo.getAllUsers().stream()
+                        .map(User::defaultView)
+                        .toList());
     }
 }

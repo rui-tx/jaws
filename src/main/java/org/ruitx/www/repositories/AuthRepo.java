@@ -1,6 +1,9 @@
 package org.ruitx.www.repositories;
 
 import java.util.Optional;
+import java.sql.Date;
+import java.time.Instant;
+import java.util.List;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.utils.Row;
@@ -15,18 +18,24 @@ public class AuthRepo {
     }
 
     public Optional<User> getUserByUsername(String username) {
-        Row user = db.getRow("SELECT * FROM USER WHERE user = ?", username);
-        return user != null ? Optional.of(new User(
-                user.getInt("id"),
-                user.get("user").toString(),
-                user.get("password_hash").toString(),
-                user.get("created_at").toString()))
-                : Optional.empty();
+        Row row = db.getRow("SELECT * FROM USER WHERE user = ?", username);
+        if (row == null) {
+            return Optional.empty();
+        }
+        return User.fromRow(row);
+    }
+
+    public List<User> getAllUsers() {
+        List<Row> rows = db.getRows("SELECT * FROM USER ORDER BY created_at DESC");
+        return rows.stream()
+            .map(User::fromRow)
+            .flatMap(Optional::stream)
+            .toList();
     }
 
     public Optional<Integer> createUser(String username, String hashedPassword) {
-        int result = db.executeSql("INSERT INTO USER (user, password_hash) VALUES (?, ?)",
-                username, hashedPassword);
+        int result = db.executeSql("INSERT INTO USER (user, password_hash, created_at) VALUES (?, ?, ?)",
+                username, hashedPassword, Date.from(Instant.now()));
         return result > 0 ? Optional.of(result) : Optional.empty();
     }
 }
