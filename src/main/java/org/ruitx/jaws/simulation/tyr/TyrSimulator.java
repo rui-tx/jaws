@@ -1,10 +1,11 @@
-package org.ruitx.jaws.simulation;
+package org.ruitx.jaws.simulation.tyr;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.ruitx.jaws.components.Tyr;
+import org.ruitx.jaws.simulation.SimulationParticipant;
 import org.tinylog.Logger;
 
 import javax.crypto.SecretKey;
@@ -41,14 +42,20 @@ public class TyrSimulator implements SimulationParticipant {
     private int expiredTokens = 0;
     private boolean isFaulty = false;
     private long lastTokenCreationTime = 0;
-    private static final long TOKEN_CREATION_INTERVAL = TimeUnit.MINUTES.toMillis(5); // Create tokens every 5 minutes
+    // Create tokens every N minutes of simulated time
+    private static final long TOKEN_CREATION_INTERVAL = TimeUnit.HOURS.toMillis(1); // hours in simulated time, converted to real time
     private static final double SUCCESS_RATE = 0.8;
     
     @Override
     public void initialize() {
         try {
-            String secret = JWT_SECRET != null ? JWT_SECRET : DEFAULT_SECRET;
-            signingKey = Keys.hmacShaKeyFor(secret.getBytes());
+            // Wait for JWT_SECRET to be initialized if it's not already
+            if (JWT_SECRET == null || JWT_SECRET.isEmpty()) {
+                Logger.warn("JWT_SECRET not initialized, using default secret for simulation");
+                signingKey = Keys.hmacShaKeyFor(DEFAULT_SECRET.getBytes());
+            } else {
+                signingKey = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
+            }
         } catch (Exception e) {
             Logger.error("Failed to initialize signing key: " + e.getMessage());
             throw new RuntimeException("Failed to initialize signing key", e);
@@ -87,7 +94,13 @@ public class TyrSimulator implements SimulationParticipant {
         }
         
         // Create new tokens periodically
-        if (currentTimeMillis - lastTokenCreationTime >= TOKEN_CREATION_INTERVAL) {
+        long timeSinceLastCreation = currentTimeMillis - lastTokenCreationTime;
+        Logger.debug("Time since last token creation: {}ms (interval: {}ms)", 
+            timeSinceLastCreation, TOKEN_CREATION_INTERVAL);
+            
+        if (timeSinceLastCreation >= TOKEN_CREATION_INTERVAL) {
+            Logger.debug("Creating new tokens at time {} ({}ms since last creation)", 
+                currentTimeMillis, timeSinceLastCreation);
             createRandomTokens();
             lastTokenCreationTime = currentTimeMillis;
         }
@@ -96,13 +109,22 @@ public class TyrSimulator implements SimulationParticipant {
     private void createRandomTokens() {
         // Create 1-3 random tokens
         int numTokens = RANDOM.nextInt(3) + 1;
+        Logger.debug("Creating {} new tokens", numTokens);
+        
         for (int i = 0; i < numTokens; i++) {
             String userId = USERS[RANDOM.nextInt(USERS.length)];
-            // 90% chance of successful login
+            // Use SUCCESS_RATE to determine if login succeeds
             if (RANDOM.nextDouble() < SUCCESS_RATE) {
-                createToken(userId, VALID_PASSWORD);
+                String token = createToken(userId, VALID_PASSWORD);
+                if (token != null) {
+                    Logger.debug("Created successful token for user {}", userId);
+                }
             } else {
-                createToken(userId, "wrongpassword");
+                // Simulate failed login attempt
+                String token = createToken(userId, "wrongpassword");
+                if (token == null) {
+                    Logger.debug("Failed login attempt for user {}", userId);
+                }
             }
         }
     }
@@ -142,7 +164,9 @@ public class TyrSimulator implements SimulationParticipant {
             return null;
         }
         
-        Instant now = Instant.ofEpochMilli(System.currentTimeMillis());
+        // Use the last known simulation time for token creation
+        long currentSimTime = lastTokenCreationTime > 0 ? lastTokenCreationTime : System.currentTimeMillis();
+        Instant now = Instant.ofEpochMilli(currentSimTime);
         Instant expiration = now.plus(TOKEN_EXPIRATION_HOURS, ChronoUnit.HOURS);
         Logger.debug("Creating token for user {} with expiration {}", userId, expiration);
         
@@ -156,6 +180,7 @@ public class TyrSimulator implements SimulationParticipant {
         
         validTokens.put(token, userId);
         tokenExpirations.put(token, expiration.toEpochMilli());
+        // Count all successful token creations as logins
         successfulLogins++;
         Logger.debug("Created token {} with expiration {}", token, expiration);
         
@@ -163,13 +188,20 @@ public class TyrSimulator implements SimulationParticipant {
     }
     
     public boolean isTokenValid(String token) {
-        if (signingKey == null || isFaulty) {
-            Logger.error("Signing key not initialized or system is faulty");
+        if (signingKey == null) {
+            Logger.error("Signing key not initialized");
             return false;
         }
         
         // First check if the token is in our valid tokens map
         if (!validTokens.containsKey(token)) {
+            return false;
+        }
+        
+        // Handle fault injection cases
+        if (isFaulty) {
+            validTokens.remove(token);
+            tokenExpirations.remove(token);
             return false;
         }
         
@@ -180,18 +212,31 @@ public class TyrSimulator implements SimulationParticipant {
                     .parseSignedClaims(token)
                     .getPayload();
             
-            // Check if token is expired
-            boolean isValid = claims.getExpiration().after(Date.from(Instant.now()));
-            if (!isValid) {
-                // If token is expired, remove it from our maps and increment counter
+            // Use the last known simulation time for validation
+            long currentSimTime = lastTokenCreationTime > 0 ? lastTokenCreationTime : System.currentTimeMillis();
+            
+            // Check if token is expired based on our stored expiration time
+            Long expirationTime = tokenExpirations.get(token);
+            if (expirationTime == null || expirationTime <= currentSimTime) {
                 validTokens.remove(token);
                 tokenExpirations.remove(token);
                 expiredTokens++;
+                return false;
             }
-            return isValid;
+            
+            // Also check if the user ID matches
+            String userId = claims.getSubject();
+            String storedUserId = validTokens.get(token);
+            if (!storedUserId.equals(userId)) {
+                validTokens.remove(token);
+                tokenExpirations.remove(token);
+                expiredTokens++;
+                return false;
+            }
+            
+            return true;
         } catch (JwtException e) {
             Logger.error("Error validating token: " + e.getMessage());
-            failedLogins++;
             return false;
         }
     }
@@ -221,21 +266,30 @@ public class TyrSimulator implements SimulationParticipant {
         switch (faultType) {
             case "INVALID_TOKENS":
                 isFaulty = true;
+                // Clear all tokens when system is faulty
+                validTokens.clear();
+                tokenExpirations.clear();
                 break;
             case "EXPIRED_TOKENS":
                 // Set all tokens to expire immediately
-                tokenExpirations.replaceAll((k, v) -> System.currentTimeMillis());
-                // Remove all tokens and count them as expired
-                int expiredCount = validTokens.size();
-                validTokens.clear();
-                tokenExpirations.clear();
-                expiredTokens += expiredCount;
+                tokenExpirations.replaceAll((k, v) -> System.currentTimeMillis() - 1);
+                // Update lastTokenCreationTime to ensure isTokenValid uses current time
+                lastTokenCreationTime = System.currentTimeMillis();
+                // Force validation check to expire tokens
+                for (String token : new HashMap<>(validTokens).keySet()) {
+                    isTokenValid(token);
+                }
                 break;
             case "CORRUPTED_TOKENS":
-                validTokens.replaceAll((k, v) -> k + "_corrupted");
+                // Corrupt the user ID in the token and force validation check
+                validTokens.replaceAll((k, v) -> v + "_corrupted");
+                for (String token : new HashMap<>(validTokens).keySet()) {
+                    isTokenValid(token);
+                }
                 break;
             case "RESET":
                 isFaulty = false;
+                // Don't clear tokens on reset, just allow normal validation
                 break;
         }
     }
