@@ -1,7 +1,7 @@
 package org.ruitx.jaws.configs;
 
-import org.ruitx.www.API;
-import org.ruitx.www.Auth;
+import org.ruitx.www.controllers.AuthController;
+import org.ruitx.www.controllers.APIController;
 
 import java.util.List;
 
@@ -11,7 +11,7 @@ public class RoutesConfig {
     // File paths are not needed here, as they are handled by Yggdrasill
 
     public static final List<Object> ROUTES = List.of(
-            new Auth(),
-            new API()
+            new AuthController(),
+            new APIController()
     );
 }

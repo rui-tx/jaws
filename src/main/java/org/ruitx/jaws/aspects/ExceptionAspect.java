@@ -4,7 +4,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-import org.ruitx.jaws.components.BaseController;
+import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.exceptions.APIException;
 import org.ruitx.jaws.exceptions.APIParsingException;
@@ -62,7 +62,7 @@ public class ExceptionAspect {
 
     private Yggdrasill.RequestHandler getRequestHandler(ProceedingJoinPoint joinPoint) {
         // Check if the target is a BaseController
-        if (joinPoint.getTarget() instanceof BaseController controller) {
+        if (joinPoint.getTarget() instanceof Bragi controller) {
             return controller.getRequestHandler();
         }
         
@@ -81,11 +81,9 @@ public class ExceptionAspect {
             ResponseCode responseCode = determineResponseCode(ex);
             String errorMessage = ex.getMessage();
             
-            APIResponse<String> response = new APIResponse<>(
-                false,
+            APIResponse<String> response = APIResponse.error(
                 responseCode.getCodeAndMessage(),
-                errorMessage,
-                null
+                errorMessage
             );
             
             requestHandler.sendJSONResponse(responseCode, APIHandler.encode(response));
