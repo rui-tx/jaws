@@ -106,40 +106,70 @@ public final class Hermes {
 
         while (matcher.find()) {
             String placeholderContent = matcher.group(1).trim();
-            String escapedContent = escapeDollarSigns(placeholderContent);
-            String commandName = escapedContent.split("\\s*\\(")[0];
+            if (placeholderContent.isEmpty()) {
+                matcher.appendReplacement(result, "{{}}");
+                continue;
+            }
+
+            String[] parts = placeholderContent.split("\\s*\\(", 2);
+            String commandName = parts[0].trim();
             Command commandExecutor = CommandList.LIST.get(commandName);
 
+            String replacement;
             if (commandExecutor != null) {
-                String commandResult = commandExecutor.execute(escapedContent);
-                matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(commandResult)));
+                replacement = commandExecutor.execute(placeholderContent);
             } else {
-                String paramValue = requestParams.get(escapedContent);
+                String paramValue = requestParams.get(placeholderContent);
                 if (paramValue != null) {
-                    matcher.appendReplacement(result, Matcher.quoteReplacement(paramValue));
+                    replacement = paramValue;
                 } else {
-                    if (escapedContent.equals("_BODY_CONTENT_")) {
+                    if (placeholderContent.equals("_BODY_CONTENT_")) {
                         try {
                             synchronized (Hermes.class) {
                                 if (getBodyPath() == null || getBodyPath().isEmpty()) {
                                     setBodyPath(DEFAULT_BODY_PATH);
                                 }
-                                paramValue = processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath()))));
+                                replacement = processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath()))));
                             }
                         } catch (IOException e) {
                             Logger.error("Error reading default body content: " + e.getMessage());
-                            matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
+                            replacement = "{{" + placeholderContent + "}}";
                         }
-                        matcher.appendReplacement(result, Matcher.quoteReplacement(restoreDollarSigns(paramValue)));
                     } else {
-                        matcher.appendReplacement(result, "{{" + placeholderContent + "}}");
+                        replacement = "{{" + placeholderContent + "}}";
                     }
                 }
             }
+            
+            // Use a safe replacement method that doesn't interpret $ as group references
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
 
         matcher.appendTail(result);
         return result.toString();
+    }
+
+    /**
+     * Escape dollar signs in the input string for regex processing.
+     * This method now also handles potential regex group references.
+     */
+    private static String escapeDollarSigns(String input) {
+        if (input == null) {
+            return "";
+        }
+        String escaped = input.replaceAll("\\$(\\d+)", "\\\\\\$$1");
+        return escaped.replaceAll("\\$", "\\\\\\$");
+    }
+
+    /**
+     * Restore escaped dollar signs in the output string.
+     * This method is now only used for command execution results.
+     */
+    private static String restoreDollarSigns(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replaceAll("\\\\\\$", "\\$");
     }
 
     /**
@@ -179,19 +209,5 @@ public final class Hermes {
      */
     public static String renderTemplate(String templatePath) throws IOException {
         return "{{renderPartial(\"" + templatePath + "\")}}";
-    }
-
-    /**
-     * Escape dollar signs in the input string for regex processing.
-     */
-    private static String escapeDollarSigns(String input) {
-        return input.replaceAll("\\$", "\\\\\\$");
-    }
-
-    /**
-     * Restore escaped dollar signs in the output string.
-     */
-    private static String restoreDollarSigns(String input) {
-        return input.replaceAll("\\\\\\$", "\\$");
     }
 }
