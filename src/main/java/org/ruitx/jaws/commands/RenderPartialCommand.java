@@ -26,9 +26,15 @@ public class RenderPartialCommand implements Command {
             file = cmdMatcher.group(1); // Get the actual file name
         }
 
+        // Skip empty or invalid paths
+        if (file == null || file.isEmpty() || file.equals("/") || file.equals(".") || file.equals("..")) {
+            return "";
+        }
+
         Path path = Paths.get(ApplicationConfig.WWW_PATH + file);
-        if (!Files.exists(path)) {
-            Logger.error("Could not find partial file: " + ApplicationConfig.WWW_PATH + file);
+        
+        // Skip if path doesn't exist or is a directory
+        if (!Files.exists(path) || Files.isDirectory(path)) {
             return "";
         }
 
@@ -40,7 +46,7 @@ public class RenderPartialCommand implements Command {
             parsedHTML = restoreDollarSigns(parsedHTML);
 
         } catch (IOException e) {
-            throw new RuntimeException("Error reading partial file: " + file, e);
+            return ""; // Silently return empty string for any IO errors
         }
 
         return parsedHTML;
@@ -60,8 +66,3 @@ public class RenderPartialCommand implements Command {
         return html.replaceAll("\\\\\\$", "\\$"); // Restore the escaped dollar sign
     }
 }
-
-
-
-
-
