@@ -2,6 +2,7 @@ package org.ruitx.jaws.utils.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.utils.Row;
 
 import java.util.List;
@@ -57,6 +58,22 @@ public record User(
             .passwordHash(passwordHash.get())
             .createdAt(createdAt.get())
             .build());
+    }
+
+    /**
+     * Gets all todos for this user.
+     * @param db The Mimir database instance
+     * @return List of todos belonging to this user
+     */
+    public List<Todo> getTodos(Mimir db) {
+        List<Row> rows = db.getRows(
+            "SELECT * FROM TODO WHERE user_id = ? ORDER BY created_at DESC", 
+            this.id
+        );
+        return rows.stream()
+            .map(Todo::fromRow)
+            .flatMap(Optional::stream)
+            .toList();
     }
 
     public static final class Builder {
