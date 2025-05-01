@@ -2,6 +2,9 @@ package org.ruitx.www.services;
 
 import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.jaws.utils.types.Todo;
+import org.ruitx.jaws.utils.types.User;
+import org.ruitx.www.models.api.UserWithTodosView;
+import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.www.repositories.TodoRepo;
 
 import java.util.List;
@@ -11,9 +14,28 @@ import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class TodoService {
     private final TodoRepo todoRepo;
+    private final AuthRepo authRepo;
 
     public TodoService() {
         this.todoRepo = new TodoRepo();
+        this.authRepo = new AuthRepo();
+    }
+
+    /**
+     * Gets a user and their todos combined in a single view
+     * @param username The username to look up
+     * @return APIResponse containing the combined view if successful
+     */
+    public APIResponse<UserWithTodosView> getUserWithTodos(String username) {
+        Optional<User> userOpt = authRepo.getUserByUsername(username);
+        if (userOpt.isEmpty()) {
+            return APIResponse.error(NOT_FOUND, "User not found");
+        }
+
+        User user = userOpt.get();
+        List<Todo> todos = todoRepo.getTodosByUserId(user.id());
+        
+        return APIResponse.success(OK, UserWithTodosView.from(user, todos));
     }
 
     public APIResponse<Todo> createTodo(Integer userId, String content) {
