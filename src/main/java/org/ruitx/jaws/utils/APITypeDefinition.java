@@ -2,7 +2,7 @@ package org.ruitx.jaws.utils;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.ruitx.jaws.utils.types.ExternalTodo;
+import org.ruitx.jaws.utils.types.Post;
 
 import java.util.List;
 
@@ -21,16 +21,16 @@ public class APITypeDefinition {
     private static final ObjectMapper mapper = APIHandler.getMapper();
 
     /**
-     * Type -> ExternalTodo
+     * JavaType -> {@code Post}
      */
-    public static final JavaType EXTERNALTODO = mapper.getTypeFactory()
-            .constructType(ExternalTodo.class);
+    public static final JavaType POST = mapper.getTypeFactory()
+            .constructType(Post.class);
 
     /**
-     * Type -> List < ExternalTodo >
+     * JavaType -> {@code List<Post>}
      */
-    public static final JavaType LIST_EXTERNALTODO = mapper.getTypeFactory()
-            .constructParametricType(List.class, ExternalTodo.class);
+    public static final JavaType LIST_POST = mapper.getTypeFactory()
+            .constructParametricType(List.class, Post.class);
 
     private APITypeDefinition() {
     }

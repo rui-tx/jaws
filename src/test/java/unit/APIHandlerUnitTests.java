@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
-import org.ruitx.jaws.utils.types.ExternalTodo;
+import org.ruitx.jaws.utils.types.Post;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -22,10 +22,10 @@ public class APIHandlerUnitTests {
         APIHandler handler = new APIHandler();
 
         // Create a JavaType for List<TodoJson>
-        JavaType todoListType = mapper.getTypeFactory().constructParametricType(List.class, ExternalTodo.class);
+        JavaType todoListType = mapper.getTypeFactory().constructParametricType(List.class, Post.class);
 
         // This should compile without errors, showing that the method is now generic
-        APIResponse<List<ExternalTodo>> response = handler.callAPI("https://jsonplaceholder.typicode.com/posts", todoListType);
+        APIResponse<List<Post>> response = handler.callAPI("https://jsonplaceholder.typicode.com/posts", todoListType);
 
         // We don't actually need to make the API call, just verify it compiles
         System.out.println("[DEBUG_LOG] Generic callAPI method works with List<TodoJson>");
@@ -37,14 +37,14 @@ public class APIHandlerUnitTests {
         String jsonArray = "[{\"userId\":1,\"id\":1,\"title\":\"Test Title\",\"body\":123}]";
 
         // Create the JavaType for List<TodoJson>
-        JavaType todoListType = mapper.getTypeFactory().constructParametricType(List.class, ExternalTodo.class);
+        JavaType todoListType = mapper.getTypeFactory().constructParametricType(List.class, Post.class);
 
         // Get access to the private parseResponse method using reflection
         Method parseResponseMethod = APIHandler.class.getDeclaredMethod("parseResponse", String.class, JavaType.class);
         parseResponseMethod.setAccessible(true);
 
         // Parse the response
-        APIResponse<List<ExternalTodo>> response = (APIResponse<List<ExternalTodo>>) parseResponseMethod.invoke(new APIHandler(), jsonArray, todoListType);
+        APIResponse<List<Post>> response = (APIResponse<List<Post>>) parseResponseMethod.invoke(new APIHandler(), jsonArray, todoListType);
 
         // Verify the response
         System.out.println("[DEBUG_LOG] Direct JSON Array Response: " + response);
@@ -61,14 +61,14 @@ public class APIHandlerUnitTests {
         String wrappedJson = "{\"success\":true,\"code\":\"200 OK\",\"timestamp\":1234567890,\"info\":\"\",\"data\":[{\"userId\":1,\"id\":1,\"title\":\"Test Title\",\"body\":123}]}";
 
         // Create the JavaType for List<TodoJson>
-        JavaType todoListType = mapper.getTypeFactory().constructParametricType(List.class, ExternalTodo.class);
+        JavaType todoListType = mapper.getTypeFactory().constructParametricType(List.class, Post.class);
 
         // Get access to the private parseResponse method using reflection
         Method parseResponseMethod = APIHandler.class.getDeclaredMethod("parseResponse", String.class, JavaType.class);
         parseResponseMethod.setAccessible(true);
 
         // Parse the response
-        APIResponse<List<ExternalTodo>> response = (APIResponse<List<ExternalTodo>>) parseResponseMethod.invoke(new APIHandler(), wrappedJson, todoListType);
+        APIResponse<List<Post>> response = (APIResponse<List<Post>>) parseResponseMethod.invoke(new APIHandler(), wrappedJson, todoListType);
 
         // Verify the response
         System.out.println("[DEBUG_LOG] Wrapped JSON Response: " + response);

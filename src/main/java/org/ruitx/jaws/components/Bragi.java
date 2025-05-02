@@ -6,13 +6,13 @@ import org.ruitx.jaws.utils.APIHandler;
 import org.ruitx.jaws.utils.APIResponse;
 import org.tinylog.Logger;
 
-import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
+
+import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
 
 /**
  * Base controller class for all controllers.
@@ -24,18 +24,8 @@ public abstract class Bragi {
     protected String bodyHtmlPath;
 
     /**
-     * Set the request handler and body path for the current thread.
-     * @param handler
-     */
-    public void setRequestHandler(Yggdrasill.RequestHandler handler) {
-        requestHandler.set(handler);
-        if (bodyHtmlPath != null) {
-            setBodyPath(bodyHtmlPath);
-        }
-    }
-
-    /**
      * Set the body path for the current thread.
+     *
      * @param bodyPath
      */
     private void setBodyPath(String bodyPath) {
@@ -44,6 +34,7 @@ public abstract class Bragi {
 
     /**
      * Send a JSON success response with no data
+     *
      * @param code Response code
      */
     protected void sendSucessfulResponse(ResponseCode code) {
@@ -53,6 +44,7 @@ public abstract class Bragi {
 
     /**
      * Send a JSON success response with data
+     *
      * @param code Response code
      * @param data Response data (can be null)
      */
@@ -66,8 +58,17 @@ public abstract class Bragi {
         }
     }
 
+    protected void sendSucessfulResponse(String code, Object data) {
+        sendSucessfulResponse(ResponseCode.fromCodeAndMessage(code), null, data);
+    }
+
+    protected void sendSucessfulResponse(String code, String message) {
+        sendSucessfulResponse(ResponseCode.fromCodeAndMessage(code), message, null);
+    }
+
     /**
      * Send a JSON success response with data and info message
+     *
      * @param code Response code
      * @param info Info message
      * @param data Response data (can be null)
@@ -84,7 +85,8 @@ public abstract class Bragi {
 
     /**
      * Send a JSON error response
-     * @param code Error code
+     *
+     * @param code    Error code
      * @param message Error message
      */
     protected void sendErrorResponse(ResponseCode code, String message) {
@@ -100,7 +102,8 @@ public abstract class Bragi {
     /**
      * Send a JSON error response with a code and message
      * The code should be like this a string like this "200 OK"
-     * @param code Error code
+     *
+     * @param code    Error code
      * @param message Error message
      */
     protected void sendErrorResponse(String code, String message) {
@@ -109,9 +112,10 @@ public abstract class Bragi {
 
     /**
      * Send a JSON error response with data
-     * @param code Error code
+     *
+     * @param code    Error code
      * @param message Error message
-     * @param data Response data (can be null)
+     * @param data    Response data (can be null)
      */
     protected void sendErrorResponse(ResponseCode code, String message, Object data) {
         sendJSONResponse(false, code, message, data);
@@ -132,6 +136,7 @@ public abstract class Bragi {
 
     /**
      * Send an HTML response to the client.
+     *
      * @param code
      * @param content
      */
@@ -146,6 +151,7 @@ public abstract class Bragi {
 
     /**
      * Get a path parameter from the request.
+     *
      * @param name
      * @return
      */
@@ -155,6 +161,7 @@ public abstract class Bragi {
 
     /**
      * Get a query parameter from the request.
+     *
      * @param name
      * @return
      */
@@ -164,6 +171,7 @@ public abstract class Bragi {
 
     /**
      * Get a body parameter from the request.
+     *
      * @param name
      * @return
      */
@@ -173,8 +181,9 @@ public abstract class Bragi {
 
     /**
      * Check if the request is an HTMX request.
+     *
      * @return
-     */ 
+     */
     protected boolean isHTMX() {
         return requestHandler.get().isHTMX();
     }
@@ -192,10 +201,23 @@ public abstract class Bragi {
 
     /**
      * Get the request handler for the current thread.
+     *
      * @return The request handler for the current thread
      */
     public Yggdrasill.RequestHandler getRequestHandler() {
         return requestHandler.get();
+    }
+
+    /**
+     * Set the request handler and body path for the current thread.
+     *
+     * @param handler
+     */
+    public void setRequestHandler(Yggdrasill.RequestHandler handler) {
+        requestHandler.set(handler);
+        if (bodyHtmlPath != null) {
+            setBodyPath(bodyHtmlPath);
+        }
     }
 
     protected void addCustomHeader(String name, String value) {
@@ -204,8 +226,9 @@ public abstract class Bragi {
 
     /**
      * Render a template file with parameters.
+     *
      * @param templatePath The path to the template file
-     * @param params The parameters to be used in the template
+     * @param params       The parameters to be used in the template
      * @return The rendered template with parameters replaced
      */
     protected String renderTemplate(String templatePath, Map<String, String> params) {
@@ -220,6 +243,7 @@ public abstract class Bragi {
 
     /**
      * Render a template file without parameters.
+     *
      * @param templatePath The path to the template file
      * @return The rendered template
      */
@@ -229,7 +253,8 @@ public abstract class Bragi {
 
     /**
      * Assemble a full page by combining a base template with a partial template.
-     * @param baseTemplatePath The path to the base template file
+     *
+     * @param baseTemplatePath    The path to the base template file
      * @param partialTemplatePath The path to the partial template file
      * @return The assembled page
      */
@@ -244,8 +269,9 @@ public abstract class Bragi {
 
     /**
      * Assemble a full page by combining a base template with raw content.
+     *
      * @param baseTemplatePath The path to the base template file
-     * @param content The raw content to insert
+     * @param content          The raw content to insert
      * @return The assembled page
      */
     protected String assemblePageWithContent(String baseTemplatePath, String content) {
@@ -259,9 +285,10 @@ public abstract class Bragi {
 
     /**
      * Send a binary response to the client.
-     * @param code the response code
+     *
+     * @param code        the response code
      * @param contentType the content type of the response
-     * @param content the binary content
+     * @param content     the binary content
      */
     protected void sendBinaryResponse(ResponseCode code, String contentType, byte[] content) {
         try {

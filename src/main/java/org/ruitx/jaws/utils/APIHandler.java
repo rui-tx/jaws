@@ -66,11 +66,12 @@ public class APIHandler {
             requestBuilder.header(header.getKey(), header.getValue());
         }
 
-        if (method == RequestType.POST) {
-            requestBuilder.POST(HttpRequest.BodyPublishers.ofString(body != null ? body : ""))
+        switch (method) {
+            case POST, PUT, PATCH -> requestBuilder
+                    .method(method.toString(), HttpRequest.BodyPublishers.ofString(body != null ? body : ""))
                     .header("Content-Type", "application/json");
-        } else {
-            requestBuilder.GET();
+            case DELETE -> requestBuilder.DELETE();
+            default -> requestBuilder.GET();
         }
 
         HttpRequest request = requestBuilder.build();

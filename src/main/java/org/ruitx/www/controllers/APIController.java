@@ -3,15 +3,17 @@ package org.ruitx.www.controllers;
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.utils.APIHandler;
-import org.ruitx.jaws.utils.types.ExternalTodo;
+import org.ruitx.jaws.utils.APIResponse;
+import org.ruitx.jaws.utils.types.Post;
 import org.ruitx.www.services.APIService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
-import static org.ruitx.jaws.utils.APITypeDefinition.LIST_EXTERNALTODO;
+import static org.ruitx.jaws.utils.APITypeDefinition.LIST_POST;
 
 public class APIController extends Bragi {
 
@@ -29,18 +31,32 @@ public class APIController extends Bragi {
         sendSucessfulResponse(OK, apiService.ping());
     }
 
-    @Route(endpoint = API_ENDPOINT + "external")
+    @Route(endpoint = API_ENDPOINT + "posts")
     public void testGetExternalAPI() {
         String url = "https://jsonplaceholder.typicode.com/posts";
-        sendSucessfulResponse(OK, apiHandler.callAPI(url, LIST_EXTERNALTODO).data());
+        APIResponse<List<Post>> response = apiHandler.callAPI(url, LIST_POST);
+
+        if (!response.success()) {
+            sendErrorResponse(response.code(), response.info());
+            return;
+        }
+
+        sendSucessfulResponse(response.code(), response.data());
     }
 
-    @Route(endpoint = API_ENDPOINT + "external", method = POST)
+    @Route(endpoint = API_ENDPOINT + "posts", method = POST)
     public void testPostExternalAPI() {
         String url = "https://jsonplaceholder.typicode.com/posts";
-        ExternalTodo requestBody = new ExternalTodo(1, null, "testTitle", "testBody");
+        Post requestBody = new Post(1, null, "testTitle", "testBody");
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json; charset=UTF-8");
-        sendSucessfulResponse(OK, apiHandler.callAPI(url, POST, headers, requestBody, ExternalTodo.class).data());
+        APIResponse<Post> response = apiHandler.callAPI(url, POST, headers, requestBody, Post.class);
+
+        if (!response.success()) {
+            sendErrorResponse(response.code(), response.info());
+            return;
+        }
+
+        sendSucessfulResponse(response.code(), response.data());
     }
 }
