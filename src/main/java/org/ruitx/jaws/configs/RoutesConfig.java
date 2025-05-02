@@ -2,6 +2,7 @@ package org.ruitx.jaws.configs;
 
 import org.ruitx.www.controllers.AuthController;
 import org.ruitx.www.controllers.APIController;
+import org.ruitx.www.controllers.TodoController;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ public class RoutesConfig {
 
     public static final List<Object> ROUTES = List.of(
             new AuthController(),
-            new APIController()
+            new APIController(),
+            new TodoController()
     );
 }

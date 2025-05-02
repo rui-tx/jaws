@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.ruitx.jaws.strings.ResponseCode;
 
 /**
@@ -14,6 +15,8 @@ import org.ruitx.jaws.strings.ResponseCode;
 public record APIResponse<T>(
         @JsonProperty("success") boolean success,
         @JsonProperty("code") String code,
+
+        @JsonDeserialize(using = TimestampDeserializer.class)
         @JsonProperty("timestamp") long timestamp,
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)

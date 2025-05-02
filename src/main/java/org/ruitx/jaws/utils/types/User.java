@@ -2,6 +2,7 @@ package org.ruitx.jaws.utils.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.utils.Row;
 
 import java.util.List;
@@ -16,24 +17,24 @@ public record User(
         @JsonProperty("created_at") Long createdAt) {
 
     /**
-     * Creates a new User instance with the builder pattern.
-     * @return a new Builder instance
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Returns a view of the user without sensitive information.
+     * Returns a view of the user.
      * This is the default view used for most API responses.
      * @return a new User instance without the password hash
      */
     public User defaultView() {
         return User.builder()
-            .id(id)
-            .user(user)
-            .createdAt(createdAt)
-            .build();
+                .id(id)
+                .user(user)
+                .createdAt(createdAt)
+                .build();
+    }
+
+    /**
+     * Creates a new User instance with the builder pattern.
+     * @return a new Builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
     }
 
     /**
