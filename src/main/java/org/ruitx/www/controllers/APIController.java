@@ -11,7 +11,7 @@ import java.util.Map;
 
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
-import static org.ruitx.jaws.utils.APITypeDefinition.EXTERNALTODO_LIST;
+import static org.ruitx.jaws.utils.APITypeDefinition.LIST_EXTERNALTODO;
 
 public class APIController extends Bragi {
 
@@ -32,15 +32,15 @@ public class APIController extends Bragi {
     @Route(endpoint = API_ENDPOINT + "external")
     public void testGetExternalAPI() {
         String url = "https://jsonplaceholder.typicode.com/posts";
-        sendSucessfulResponse(OK, apiHandler.callAPI(url, EXTERNALTODO_LIST).data());
+        sendSucessfulResponse(OK, apiHandler.callAPI(url, LIST_EXTERNALTODO).data());
     }
 
     @Route(endpoint = API_ENDPOINT + "external", method = POST)
     public void testPostExternalAPI() {
         String url = "https://jsonplaceholder.typicode.com/posts";
-        ExternalTodo externalTodo = new ExternalTodo(1, null, "testTitle", "testBody");
+        ExternalTodo requestBody = new ExternalTodo(1, null, "testTitle", "testBody");
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json; charset=UTF-8");
-        sendSucessfulResponse(OK, apiHandler.callAPI(url, POST, headers, externalTodo, ExternalTodo.class));
+        sendSucessfulResponse(OK, apiHandler.callAPI(url, POST, headers, requestBody, ExternalTodo.class).data());
     }
 }

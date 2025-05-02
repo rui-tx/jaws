@@ -166,6 +166,22 @@ public class APIHandler {
         return callAPI(endpoint, method, headers, jsonBody, responseClass);
     }
 
+    /**
+     * Call an API endpoint with an object body and parse the response.
+     *
+     * @param endpoint     the API endpoint to call.
+     * @param method       the HTTP method (GET, POST, PUT, etc.)
+     * @param headers      the HTTP headers to include in the request
+     * @param body         the request body object for POST/PUT requests
+     * @param responseType the Java type of the response.
+     * @param <T>          the type of the response.
+     * @return the parsed API response.
+     */
+    public <T> APIResponse<T> callAPI(String endpoint, RequestType method, Map<String, String> headers, Object body, JavaType responseType) {
+        String jsonBody = body != null ? encode(body) : null;
+        return callAPI(endpoint, method, headers, jsonBody, responseType);
+    }
+
     public <T> APIResponse<T> callAPI(String endpoint, JavaType type) {
         return callAPI(endpoint, RequestType.GET, null, null, type);
     }
