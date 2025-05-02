@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Optional;
 
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.interfaces.Transactional;
 import org.ruitx.jaws.utils.Row;
 import org.ruitx.jaws.utils.types.Todo;
+import org.tinylog.Logger;
 
 public class TodoRepo {
     private final Mimir db;
@@ -35,51 +37,21 @@ public class TodoRepo {
             .toList();
     }
 
-    /**
-     * Creates a new todo for a user
-     * @param userId The ID of the user who owns this todo
-     * @param content The content of the todo
-     * @return Optional containing the created Todo if successful, empty if failed
-     */
+    @Transactional
     public Optional<Todo> createTodo(Integer userId, String content) {
         try {
-            db.beginTransaction();
-            
             long createdAt = Instant.now().getEpochSecond();
-            int result = db.executeSql(
-                "INSERT INTO TODO (user_id, content, created_at) VALUES (?, ?, ?)",
-                userId, content, createdAt
+            List<Row> inserted = db.executeInsert(
+                    "INSERT INTO TODO (user_id, content, created_at) VALUES (?, ?, ?)",
+                    userId, content, createdAt
             );
-            
-            if (result <= 0) {
-                db.rollbackTransaction();
-                return Optional.empty();
-            }
-            
-            // Get the last inserted ID and fetch the created todo
-            Row row = db.getRow("SELECT * FROM TODO WHERE id = last_insert_rowid()");
-            if (row == null) {
-                db.rollbackTransaction();
-                return Optional.empty();
-            }
-            
-            Optional<Todo> todo = Todo.fromRow(row);
-            if (todo.isEmpty()) {
-                db.rollbackTransaction();
-                return Optional.empty();
-            }
-            
-            db.commitTransaction();
-            return todo;
-            
+            return inserted.isEmpty() ? Optional.empty() : Todo.fromRow(inserted.get(0));
         } catch (Exception e) {
-            try {
-                db.rollbackTransaction();
-            } catch (Exception ignored) {}
-            System.out.println(Arrays.toString(e.getStackTrace()));
+            Logger.error("Failed to create todo: {}", e.getMessage());
             throw new RuntimeException("Failed to create todo", e);
         }
     }
+
 
     public boolean updateTodo(Integer id, String content) {
         return db.executeSql(

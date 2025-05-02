@@ -475,6 +475,9 @@ public class Yggdrasill {
          * @param path the path to the file.
          */
         private void sendFileResponse(Path path) {
+            if (isConnectionClosed()) {
+                return;
+            }
             try {
                 byte[] content = Files.readAllBytes(path);
                 String contentType = Files.probeContentType(path);
@@ -569,6 +572,10 @@ public class Yggdrasill {
          * @param contentLength the length of the content.
          */
         private void sendResponseHeaders(ResponseCode responseCode, String contentType, int contentLength) {
+            if (isConnectionClosed()) {
+                return;
+            }
+
             Hephaestus.Builder builder = new Hephaestus.Builder()
                     .responseType(responseCode.toString())
                     .contentType(contentType)
@@ -596,6 +603,10 @@ public class Yggdrasill {
          * @param body the body content of the response.
          */
         private void sendResponseBody(byte[] body) {
+            if (isConnectionClosed()) {
+                return;
+            }
+
             try {
                 out.write(body);
                 out.flush();
@@ -1019,6 +1030,15 @@ public class Yggdrasill {
          */
         public boolean isHTMX() {
             return headers.containsKey("HX-Request") || headers.containsKey("hx-request");
+        }
+
+        /**
+         * Checks whether the socket connection is closed.
+         *
+         * @return true if the socket is null, closed, or not connected; false otherwise.
+         */
+        public boolean isConnectionClosed() {
+            return socket == null || socket.isClosed() || !socket.isConnected();
         }
 
         /**

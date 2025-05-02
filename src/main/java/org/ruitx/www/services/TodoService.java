@@ -1,5 +1,6 @@
 package org.ruitx.www.services;
 
+import org.ruitx.jaws.exceptions.APIParsingException;
 import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.jaws.utils.types.Todo;
 import org.ruitx.jaws.utils.types.User;
@@ -56,12 +57,19 @@ public class TodoService {
                 .orElseGet(() -> APIResponse.error(INTERNAL_SERVER_ERROR, "Failed to create todo"));
     }
 
-    public APIResponse<List<Todo>> getUserTodos(Integer userId) {
+    public APIResponse<List<Todo>> getUserTodos(String userId) {
         if (userId == null) {
             return APIResponse.error(BAD_REQUEST, "User ID is required");
         }
 
-        List<Todo> todos = todoRepo.getTodosByUserId(userId);
+        int userIdInt;
+        try {
+            userIdInt = Integer.parseInt(userId);
+        } catch (NumberFormatException e) {
+            throw new APIParsingException("Invalid User ID format.", e);
+        }
+
+        List<Todo> todos = todoRepo.getTodosByUserId(userIdInt);
         return APIResponse.success(OK, todos);
     }
 

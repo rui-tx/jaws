@@ -16,13 +16,14 @@ import org.ruitx.jaws.utils.APIResponse;
 import org.tinylog.Logger;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.SocketTimeoutException;
 
 @Aspect
 public class ExceptionAspect {
 
     // Pointcut to match any method in controllers
-    @Pointcut("execution(* org.ruitx.jaws.controllers..*(..))")
+    @Pointcut("execution(* org.ruitx.www.controllers..*(..))")
     public void controllerMethods() {
     }
 
@@ -80,19 +81,29 @@ public class ExceptionAspect {
         try {
             ResponseCode responseCode = determineResponseCode(ex);
             String errorMessage = ex.getMessage();
-            
+
             APIResponse<String> response = APIResponse.error(
-                responseCode.getCodeAndMessage(),
-                errorMessage
+                    responseCode.getCodeAndMessage(),
+                    errorMessage
             );
-            
-            requestHandler.sendJSONResponse(responseCode, APIHandler.encode(response));
+
+            // Only try to send response if connection is still alive
+            if (!requestHandler.isConnectionClosed()) {
+                requestHandler.sendJSONResponse(responseCode, APIHandler.encode(response));
+            }
         } catch (Exception e) {
+            // Log but don't try to send more responses
             Logger.error("Failed to send error response: {}", e.getMessage());
         }
     }
 
     private ResponseCode determineResponseCode(Throwable ex) {
+        //This happens because the controller method is being invoked through reflection
+        // at invokeRouteMethod in Yggrassil, so we get the actual cause from the thrown exception
+        if (ex instanceof InvocationTargetException && ex.getCause() != null) {
+            ex = ex.getCause();
+        }
+
         if (ex instanceof SendRespondException) {
             return ResponseCode.INTERNAL_SERVER_ERROR;
         } else if (ex instanceof APIParsingException) {

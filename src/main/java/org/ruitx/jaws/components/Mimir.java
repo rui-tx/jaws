@@ -9,10 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sql.DataSource;
 import org.sqlite.SQLiteDataSource;
@@ -285,6 +282,78 @@ public class Mimir {
             throw new RuntimeException("Database query failed", e);
         }
     }
+
+    /**
+     * Execute an INSERT statement and return the inserted row(s).
+     *
+     * @param sql    SQL statement string
+     * @param params Parameters for the prepared statement
+     * @return List of inserted Row objects
+     */
+    public List<Row> executeInsert(String sql, Object... params) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                for (int i = 0; i < params.length; i++) {
+                    stmt.setObject(i + 1, params[i]);
+                }
+
+                int affectedRows = stmt.executeUpdate();
+
+                if (affectedRows == 0) {
+                    return List.of();
+                }
+
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        long id = generatedKeys.getLong(1);
+                        Optional<String> tableName = extractInsertTableName(sql);
+                        if (tableName.isEmpty()) {
+                            Logger.error("Failed to extract table name from INSERT statement: {}", sql);
+                            return List.of();
+                        }
+                        return getRows("SELECT * FROM " + tableName.get() + " WHERE rowid = ?", id);
+                    }
+                }
+                return List.of();
+            }
+        } catch (SQLException e) {
+            Logger.error("Error executing insert: {}", e.getMessage());
+            throw new RuntimeException("Database insert failed", e);
+        }
+    }
+
+    /**
+     * Extracts the table name from an SQL INSERT statement.
+     * Only handles simple INSERT INTO statements without schema qualifiers.
+     *
+     * @param sql the SQL INSERT statement
+     * @return Optional containing the table name, or empty if not found or invalid SQL
+     * @throws NullPointerException if sql is null
+     */
+    private Optional<String> extractInsertTableName(String sql) {
+        Objects.requireNonNull(sql, "SQL statement cannot be null");
+        String insertIntoKeyword = "INSERT INTO ";
+        String upperCaseSql = sql.toUpperCase();
+        int insertKeywordIndex = upperCaseSql.indexOf(insertIntoKeyword);
+
+        if (insertKeywordIndex == -1) {
+            return Optional.empty();
+        }
+
+        int tableNameStart = insertKeywordIndex + insertIntoKeyword.length();
+        int tableNameEnd = upperCaseSql.indexOf(" ", tableNameStart);
+
+        if (tableNameEnd == -1) {
+            return Optional.empty();
+        }
+
+        return Optional.of(sql.substring(tableNameStart, tableNameEnd));
+    }
+
+
 
     /**
      * Converts the ResultSet into a list of Row objects.
