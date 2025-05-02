@@ -17,24 +17,24 @@ public record User(
         @JsonProperty("created_at") Long createdAt) {
 
     /**
-     * Creates a new User instance with the builder pattern.
-     * @return a new Builder instance
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Returns a view of the user without sensitive information.
+     * Returns a view of the user.
      * This is the default view used for most API responses.
      * @return a new User instance without the password hash
      */
     public User defaultView() {
         return User.builder()
-            .id(id)
-            .user(user)
-            .createdAt(createdAt)
-            .build();
+                .id(id)
+                .user(user)
+                .createdAt(createdAt)
+                .build();
+    }
+
+    /**
+     * Creates a new User instance with the builder pattern.
+     * @return a new Builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
     }
 
     /**
@@ -58,22 +58,6 @@ public record User(
             .passwordHash(passwordHash.get())
             .createdAt(createdAt.get())
             .build());
-    }
-
-    /**
-     * Gets all todos for this user.
-     * @param db The Mimir database instance
-     * @return List of todos belonging to this user
-     */
-    public List<Todo> getTodos(Mimir db) {
-        List<Row> rows = db.getRows(
-            "SELECT * FROM TODO WHERE user_id = ? ORDER BY created_at DESC", 
-            this.id
-        );
-        return rows.stream()
-            .map(Todo::fromRow)
-            .flatMap(Optional::stream)
-            .toList();
     }
 
     public static final class Builder {

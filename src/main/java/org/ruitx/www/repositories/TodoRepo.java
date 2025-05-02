@@ -1,6 +1,7 @@
 package org.ruitx.www.repositories;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -75,6 +76,7 @@ public class TodoRepo {
             try {
                 db.rollbackTransaction();
             } catch (Exception ignored) {}
+            System.out.println(Arrays.toString(e.getStackTrace()));
             throw new RuntimeException("Failed to create todo", e);
         }
     }

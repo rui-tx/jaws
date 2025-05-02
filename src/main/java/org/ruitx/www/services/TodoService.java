@@ -3,7 +3,7 @@ package org.ruitx.www.services;
 import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.jaws.utils.types.Todo;
 import org.ruitx.jaws.utils.types.User;
-import org.ruitx.www.models.api.UserWithTodosView;
+import org.ruitx.jaws.utils.types.UserView;
 import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.www.repositories.TodoRepo;
 
@@ -26,7 +26,7 @@ public class TodoService {
      * @param username The username to look up
      * @return APIResponse containing the combined view if successful
      */
-    public APIResponse<UserWithTodosView> getUserWithTodos(String username) {
+    public APIResponse<UserView> getUserWithTodos(String username) {
         Optional<User> userOpt = authRepo.getUserByUsername(username);
         if (userOpt.isEmpty()) {
             return APIResponse.error(NOT_FOUND, "User not found");
@@ -35,18 +35,23 @@ public class TodoService {
         User user = userOpt.get();
         List<Todo> todos = todoRepo.getTodosByUserId(user.id());
         
-        return APIResponse.success(OK, UserWithTodosView.from(user, todos));
+        return APIResponse.success(OK, UserView.withTodos(user, todos));
     }
 
-    public APIResponse<Todo> createTodo(Integer userId, String content) {
-        if (userId == null) {
+    public APIResponse<Todo> createTodo(String username, String content) {
+        if (username == null) {
             return APIResponse.error(BAD_REQUEST, "User ID is required");
         }
         if (content == null || content.isBlank()) {
             return APIResponse.error(BAD_REQUEST, "Todo content is required");
         }
 
-        Optional<Todo> todo = todoRepo.createTodo(userId, content);
+        Optional<User> userOpt = authRepo.getUserByUsername(username);
+        if (userOpt.isEmpty()) {
+            return APIResponse.error(BAD_REQUEST, "User not found");
+        }
+
+        Optional<Todo> todo = todoRepo.createTodo(userOpt.get().id(), content);
         return todo.map(t -> APIResponse.success(CREATED, t))
                 .orElseGet(() -> APIResponse.error(INTERNAL_SERVER_ERROR, "Failed to create todo"));
     }
