@@ -2,7 +2,6 @@ package org.ruitx.jaws.components;
 
 import org.tinylog.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +35,7 @@ public class Urd {
 
     /**
      * Sets the time scale for the simulation.
+     *
      * @param timeScale Number of milliseconds of simulation time per millisecond of real time
      */
     public void setTimeScale(long timeScale) {
@@ -45,6 +45,7 @@ public class Urd {
 
     /**
      * Gets the current simulation time in milliseconds.
+     *
      * @return Current simulation time
      */
     public long getSimulationTimeMillis() {
@@ -53,16 +54,17 @@ public class Urd {
 
     /**
      * Advances the simulation time by the specified duration.
+     *
      * @param durationMillis Duration to advance in milliseconds
      */
     public void advanceTime(long durationMillis) {
         long realTimeStart = System.currentTimeMillis();
         simulationTimeMillis += durationMillis;
-        
+
         // If timeScale < 1, we need to wait to slow down simulation
         // If timeScale > 1, simulation runs faster than real time (no waiting)
         if (timeScale < 1 && timeScale > 0) {
-            long realTimeToWait = (long)(durationMillis / (double)timeScale);
+            long realTimeToWait = (long) (durationMillis / (double) timeScale);
             try {
                 Thread.sleep(realTimeToWait);
             } catch (InterruptedException e) {
@@ -70,14 +72,15 @@ public class Urd {
                 Logger.error("Time advancement interrupted: {}", e.getMessage());
             }
         }
-        
+
         Logger.info("Advanced simulation time by {}ms to {}ms", durationMillis, simulationTimeMillis);
     }
 
     /**
      * Registers a new simulation for a component.
+     *
      * @param componentName The name of the component to simulate
-     * @param steps The simulation steps to execute
+     * @param steps         The simulation steps to execute
      */
     public void registerSimulation(String componentName, List<SimulationStep> steps) {
         simulations.put(componentName, steps);
@@ -86,6 +89,7 @@ public class Urd {
 
     /**
      * Runs a simulation for a specific component.
+     *
      * @param componentName The name of the component to simulate
      */
     public void runSimulation(String componentName) {
@@ -108,6 +112,7 @@ public class Urd {
 
     /**
      * Gets the current simulation state.
+     *
      * @return The simulation state map
      */
     public Map<String, Object> getSimulationState() {

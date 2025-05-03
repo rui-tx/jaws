@@ -1,7 +1,7 @@
 package fuzzer;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import org.ruitx.jaws.components.Hermes;
+import org.ruitx.jaws.components.Hermod;
 import org.tinylog.Logger;
 
 import java.io.IOException;
@@ -58,7 +58,7 @@ public class HermesFuzzer {
             }
             
             // Test template processing
-            String result = Hermes.processTemplate(template, queryParams, bodyParams);
+            String result = Hermod.processTemplate(template, queryParams, bodyParams);
             
             // Basic validation of result
             if (result == null) {
@@ -68,7 +68,7 @@ public class HermesFuzzer {
             // Test with file-based template
             Path tempFile = tempTemplatePath.resolve("template" + testCount + ".html");
             Files.writeString(tempFile, template);
-            String fileResult = Hermes.processTemplate(tempFile.toFile());
+            String fileResult = Hermod.processTemplate(tempFile.toFile());
             
             if (fileResult == null) {
                 Logger.error("File-based template processing returned null for input: " + template);

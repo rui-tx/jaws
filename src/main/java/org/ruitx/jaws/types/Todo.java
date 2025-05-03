@@ -1,8 +1,7 @@
-package org.ruitx.jaws.utils.types;
+package org.ruitx.jaws.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.ruitx.jaws.utils.Row;
 
 import java.util.Optional;
 
@@ -15,6 +14,7 @@ public record Todo(
 
     /**
      * Creates a new Todo instance with the builder pattern.
+     *
      * @return a new Builder instance
      */
     public static Builder builder() {
@@ -23,6 +23,7 @@ public record Todo(
 
     /**
      * Creates a Todo instance from a database row.
+     *
      * @param row the database row containing todo data
      * @return an Optional containing the Todo if all required fields are present, empty otherwise
      */
@@ -37,11 +38,11 @@ public record Todo(
         }
 
         return Optional.of(Todo.builder()
-            .id(id.get())
-            .userId(userId.get())
-            .content(content.get())
-            .createdAt(createdAt.get())
-            .build());
+                .id(id.get())
+                .userId(userId.get())
+                .content(content.get())
+                .createdAt(createdAt.get())
+                .build());
     }
 
     public static final class Builder {
@@ -82,6 +83,7 @@ public record Todo(
 
         /**
          * Builds a new Todo instance with validation.
+         *
          * @return a new Todo instance
          * @throws IllegalStateException if required fields are missing or invalid
          */

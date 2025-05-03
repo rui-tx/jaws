@@ -1,4 +1,4 @@
-package org.ruitx.jaws.utils;
+package org.ruitx.jaws.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -7,9 +7,11 @@ import java.time.Instant;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.utils.TimestampDeserializer;
 
 /**
  * APIResponse is a class for representing API responses.
+ *
  * @param <T> the type of the response data.
  */
 public record APIResponse<T>(
@@ -21,10 +23,20 @@ public record APIResponse<T>(
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonProperty("info") String info,
-        
+
         @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonProperty("data") T data
 ) {
+    /**
+     * Constructor with all fields
+     */
+    public APIResponse {
+        // Validate required fields
+        if (code == null || code.isEmpty()) {
+            throw new IllegalArgumentException("Response code cannot be null or empty");
+        }
+    }
+
     /**
      * Creates a success response with data
      */
@@ -56,15 +68,5 @@ public record APIResponse<T>(
 
     public static <T> APIResponse<T> error(ResponseCode code, String message) {
         return new APIResponse<>(false, code.getCodeAndMessage(), Instant.now().getEpochSecond(), message, null);
-    }
-
-    /**
-     * Constructor with all fields
-     */
-    public APIResponse {
-        // Validate required fields
-        if (code == null || code.isEmpty()) {
-            throw new IllegalArgumentException("Response code cannot be null or empty");
-        }
     }
 }

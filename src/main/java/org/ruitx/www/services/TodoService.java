@@ -1,10 +1,10 @@
 package org.ruitx.www.services;
 
 import org.ruitx.jaws.exceptions.APIParsingException;
-import org.ruitx.jaws.utils.APIResponse;
-import org.ruitx.jaws.utils.types.Todo;
-import org.ruitx.jaws.utils.types.User;
-import org.ruitx.jaws.utils.types.UserView;
+import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.Todo;
+import org.ruitx.jaws.types.User;
+import org.ruitx.jaws.types.UserView;
 import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.www.repositories.TodoRepo;
 
@@ -24,6 +24,7 @@ public class TodoService {
 
     /**
      * Gets a user and their todos combined in a single view
+     *
      * @param username The username to look up
      * @return APIResponse containing the combined view if successful
      */
@@ -35,7 +36,7 @@ public class TodoService {
 
         User user = userOpt.get();
         List<Todo> todos = todoRepo.getTodosByUserId(user.id());
-        
+
         return APIResponse.success(OK, UserView.withTodos(user, todos));
     }
 
@@ -107,8 +108,8 @@ public class TodoService {
         }
 
         boolean deleted = todoRepo.deleteTodo(todoId);
-        return deleted ? 
-            APIResponse.success(NO_CONTENT, null) : 
-            APIResponse.error(INTERNAL_SERVER_ERROR, "Failed to delete todo");
+        return deleted ?
+                APIResponse.success(NO_CONTENT, null) :
+                APIResponse.error(INTERNAL_SERVER_ERROR, "Failed to delete todo");
     }
 } 

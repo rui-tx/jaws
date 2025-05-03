@@ -6,8 +6,8 @@ import org.ruitx.www.models.auth.CreateUserRequest;
 import org.ruitx.www.models.auth.LoginRequest;
 import org.ruitx.www.models.auth.TokenResponse;
 import org.ruitx.www.services.AuthService;
-import org.ruitx.jaws.utils.APIResponse;
-import org.ruitx.jaws.utils.types.User;
+import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.User;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.RequestType.POST;

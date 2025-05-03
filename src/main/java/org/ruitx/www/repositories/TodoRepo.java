@@ -1,15 +1,14 @@
 package org.ruitx.www.repositories;
 
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.interfaces.Transactional;
-import org.ruitx.jaws.utils.Row;
-import org.ruitx.jaws.utils.types.Todo;
+import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.types.Todo;
 import org.tinylog.Logger;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 
 public class TodoRepo {
     private final Mimir db;
@@ -28,13 +27,13 @@ public class TodoRepo {
 
     public List<Todo> getTodosByUserId(Integer userId) {
         List<Row> rows = db.getRows(
-            "SELECT * FROM TODO WHERE user_id = ? ORDER BY created_at DESC",
-            userId
+                "SELECT * FROM TODO WHERE user_id = ? ORDER BY created_at DESC",
+                userId
         );
         return rows.stream()
-            .map(Todo::fromRow)
-            .flatMap(Optional::stream)
-            .toList();
+                .map(Todo::fromRow)
+                .flatMap(Optional::stream)
+                .toList();
     }
 
     @Transactional
@@ -55,8 +54,8 @@ public class TodoRepo {
 
     public boolean updateTodo(Integer id, String content) {
         return db.executeSql(
-            "UPDATE TODO SET content = ? WHERE id = ?",
-            content, id
+                "UPDATE TODO SET content = ? WHERE id = ?",
+                content, id
         ) > 0;
     }
 

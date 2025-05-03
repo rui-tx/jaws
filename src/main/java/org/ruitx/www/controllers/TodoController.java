@@ -1,22 +1,15 @@
 package org.ruitx.www.controllers;
 
 import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.exceptions.APIParsingException;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.RequestType;
-import org.ruitx.jaws.strings.ResponseCode;
-import org.ruitx.jaws.utils.APIResponse;
-import org.ruitx.jaws.utils.types.Todo;
-import org.ruitx.jaws.utils.types.UserView;
-import org.ruitx.www.models.auth.LoginRequest;
-import org.ruitx.www.models.auth.TokenResponse;
+import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.Todo;
+import org.ruitx.jaws.types.UserView;
 import org.ruitx.www.models.todo.CreateTodoRequest;
-import org.ruitx.www.services.APIService;
 import org.ruitx.www.services.TodoService;
 
 import java.util.List;
-
-import static org.ruitx.jaws.strings.ResponseCode.OK;
 
 public class TodoController extends Bragi {
 

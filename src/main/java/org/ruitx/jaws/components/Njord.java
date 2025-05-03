@@ -16,7 +16,7 @@ public class Njord {
 
     private Njord() {
     }
-
+    
     public static Njord getInstance() {
         return INSTANCE;
     }

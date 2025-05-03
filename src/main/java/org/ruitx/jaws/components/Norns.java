@@ -17,7 +17,7 @@ public class Norns implements Runnable {
     private Norns() {
         this.tasks = new ConcurrentHashMap<>();
     }
-
+    
     public static synchronized Norns getInstance() {
         if (instance == null) {
             instance = new Norns();

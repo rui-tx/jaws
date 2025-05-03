@@ -21,11 +21,14 @@ import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
  * It provides methods for processing templates with variables, assembling full pages,
  * and rendering template files.
  */
-public final class Hermes {
+public final class Hermod {
 
     private static final String DEFAULT_BODY_PATH = "_body.html";
     private static final ThreadLocal<String> BODY_PATH = ThreadLocal.withInitial(() -> DEFAULT_BODY_PATH);
 
+    private Hermod() {
+    }
+    
     /**
      * Get the body path for the default body template.
      * This method is synchronized to prevent concurrent access.
@@ -125,7 +128,7 @@ public final class Hermes {
                 } else {
                     if (placeholderContent.equals("_BODY_CONTENT_")) {
                         try {
-                            synchronized (Hermes.class) {
+                            synchronized (Hermod.class) {
                                 if (getBodyPath() == null || getBodyPath().isEmpty()) {
                                     setBodyPath(DEFAULT_BODY_PATH);
                                 }
@@ -140,7 +143,7 @@ public final class Hermes {
                     }
                 }
             }
-            
+
             // Use a safe replacement method that doesn't interpret $ as group references
             matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }

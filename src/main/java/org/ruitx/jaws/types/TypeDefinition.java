@@ -1,13 +1,13 @@
-package org.ruitx.jaws.utils;
+package org.ruitx.jaws.types;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.ruitx.jaws.utils.types.Post;
+import org.ruitx.jaws.components.Odin;
 
 import java.util.List;
 
 /**
- * The APITypeDefinition class provides predefined type definitions for use with the API handling system.
+ * The TypeDefinition class provides predefined type definitions for use with the API handling system.
  * These definitions are used to standardize and simplify type declarations for serialization and deserialization
  * of API responses.
  * <p>
@@ -16,9 +16,9 @@ import java.util.List;
  * <p>
  * The class is non-instantiable as it is intended solely for defining reusable type constants.
  */
-public class APITypeDefinition {
+public class TypeDefinition {
 
-    private static final ObjectMapper mapper = APIHandler.getMapper();
+    private static final ObjectMapper mapper = Odin.getMapper();
 
     /**
      * JavaType -> {@code Post}
@@ -32,7 +32,7 @@ public class APITypeDefinition {
     public static final JavaType LIST_POST = mapper.getTypeFactory()
             .constructParametricType(List.class, Post.class);
 
-    private APITypeDefinition() {
+    private TypeDefinition() {
     }
 
 }

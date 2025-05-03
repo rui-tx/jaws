@@ -1,5 +1,6 @@
 package org.ruitx.jaws.components;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.tinylog.Logger;
 
@@ -24,6 +25,15 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
  * </ul>
  */
 public final class Odin {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private Odin() {
+    }
+
+    public static ObjectMapper getMapper() {
+        return objectMapper;
+    }
 
     public static void start() {
         startComponents();

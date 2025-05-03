@@ -74,8 +74,8 @@ curl http://localhost:8080
 - `org.ruitx.jaws.components.Yggdrasill`: Main server class that handles incoming HTTP requests.
     - `Yggdrasill.RequestHandler`: Inner class that processes different types of HTTP requests.
 - `org.ruitx.jaws.components.Heimdall`: A file watcher that monitors changes in the specified directory.
-- `org.ruitx.jaws.components.Hephaestus`: Represents an HTTP response header.
-- `org.ruitx.jaws.components.Hermes`: HTML parser.
+- `org.ruitx.jaws.components.Volundr`: Represents an HTTP response header.
+- `org.ruitx.jaws.components.Hermod`: HTML parser.
 - `org.ruitx.jaws.components.Njord`: Dynamic router that routes requests to controllers.
 - `org.ruitx.jaws.components.Mimir`: Database connector with a couple of functions to improve QoL and DX.
 - `org.ruitx.jaws.components.Tyr`: Component class for JWT handling.
@@ -98,7 +98,7 @@ detected in the console.
 Hephaestus is a class that represents an HTTP response header. It includes functionality to build and convert response
 headers to byte arrays or strings.
 
-### Hermes
+### Hermod
 
 Hermes is a utility class that contains methods for parsing HTML files.
 
