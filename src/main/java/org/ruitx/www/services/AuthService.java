@@ -2,15 +2,15 @@ package org.ruitx.www.services;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.Tyr;
-import org.ruitx.jaws.types.User;
-import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.User;
 import org.ruitx.www.models.auth.TokenResponse;
-
-import static org.ruitx.jaws.strings.ResponseCode.*;
+import org.ruitx.www.repositories.AuthRepo;
 
 import java.util.List;
 import java.util.Optional;
+
+import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class AuthService {
 

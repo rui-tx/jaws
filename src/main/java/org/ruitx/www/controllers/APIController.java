@@ -13,6 +13,7 @@ import java.util.Map;
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
+import static org.ruitx.jaws.strings.ResponseType.JSON;
 import static org.ruitx.jaws.types.TypeDefinition.LIST_POST;
 
 public class APIController extends Bragi {
@@ -24,12 +25,12 @@ public class APIController extends Bragi {
         this.apiService = new APIService();
     }
 
-    @Route(endpoint = API_ENDPOINT + "ping")
+    @Route(endpoint = API_ENDPOINT + "ping", responseType = JSON)
     public void ping() {
         sendSucessfulResponse(OK, apiService.ping());
     }
 
-    @Route(endpoint = API_ENDPOINT + "posts")
+    @Route(endpoint = API_ENDPOINT + "posts", responseType = JSON)
     public void testGetExternalAPI() {
         String url = "https://jsonplaceholder.typicode.com/posts";
         APIResponse<List<Post>> response = callAPI(url, LIST_POST);
@@ -42,7 +43,7 @@ public class APIController extends Bragi {
         sendSucessfulResponse(response.code(), response.data());
     }
 
-    @Route(endpoint = API_ENDPOINT + "posts", method = POST)
+    @Route(endpoint = API_ENDPOINT + "posts", method = POST, responseType = JSON)
     public void testPostExternalAPI() {
         String url = "https://jsonplaceholder.typicode.com/posts";
         Post requestBody = new Post(1, null, "testTitle", "testBody");

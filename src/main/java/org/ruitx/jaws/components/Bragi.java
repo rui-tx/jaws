@@ -177,6 +177,15 @@ public abstract class Bragi {
         }
     }
 
+    protected void sendHTMLResponse(String code, String content) {
+        try {
+            requestHandler.get().sendHTMLResponse(ResponseCode.valueOf(code), content);
+        } catch (Exception e) {
+            Logger.error("Failed to send HTML response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send HTML response", e);
+        }
+    }
+
     /**
      * Get a path parameter from the request.
      *
