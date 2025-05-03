@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667" type="image/x-icon" />
+    <title>Jaws - Backoffice - Log In</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="{{getPathFor("backoffice/css/main.min.css")}}" rel="stylesheet">
+    <link href="{{getPathFor("backoffice/css/login.css")}}" rel="stylesheet">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
+</head>
+<body>
+<div class="columns is-vcentered">
+    <div class="login column is-4 ">
+        <section class="section">
+            <div class="has-text-centered">
+                <img class="login-logo" src="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667">
+            </div>
+
+            <form id="login-form">
+                <div class="field">
+                    <label class="label">Username</label>
+                    <div class="control has-icons-right">
+                        <input class="input" type="text" id="username" name="user">
+                        <span class="icon is-small is-right">
+                    <i class="fa fa-user"></i>
+                  </span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label">Password</label>
+                    <div class="control has-icons-right">
+                        <input class="input" type="password" id="password" name="password">
+                        <span class="icon is-small is-right">
+                    <i class="fa fa-key"></i>
+                  </span>
+                    </div>
+                </div>
+                <div id="error-message" class="has-text-danger has-text-centered" style="display: none;">
+                    Invalid username or password
+                </div>
+                <div class="has-text-centered">
+                    <button type="button" class="button is-vcentered is-primary is-outlined" id="login-button">
+                        <span id="login-text">Login</span>
+                        <span id="login-spinner" style="display: none;">
+                            <i class="fa fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                </div>
+
+            </form>
+            <div class="has-text-centered">
+                <!--<a href=""> Don't you have an account? Sign up now!</a> -->
+            </div>
+        </section>
+    </div>
+
+    <img class="interactive-bg column is-8" src="https://images.unsplash.com/photo-1744762567611-dee68f42ecc9?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
+
+</div>
+
+<script src="{{getPathFor("backoffice/js/htmx.min.js")}}"></script>
+<script>
+    document.getElementById('login-button').addEventListener('click', function() {
+        const loginText = document.getElementById('login-text');
+        const loginSpinner = document.getElementById('login-spinner');
+
+        // Show spinner, hide text
+        loginText.style.display = 'none';
+        loginSpinner.style.display = 'inline-block';
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        // Create the request payload in the expected format
+        const payload = {
+            user: username,
+            password: password
+        };
+
+        // Send a fetch request
+        fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Restore button
+                loginText.style.display = 'inline-block';
+                loginSpinner.style.display = 'none';
+
+                if (data.success && data.data && data.data.token) {
+                    // Store the token in localStorage
+                    localStorage.setItem('auth_token', data.data.token);
+
+                    // Redirect to dashboard
+                    window.location.href = '{{getPathFor("backoffice/index.html")}}';
+                } else {
+                    // Show error message
+                    document.getElementById('error-message').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                // Restore button
+                loginText.style.display = 'inline-block';
+                loginSpinner.style.display = 'none';
+
+                console.error('Error:', error);
+                document.getElementById('error-message').style.display = 'block';
+            });
+    });
+</script>
+</body>
+</html>

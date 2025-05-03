@@ -1,6 +1,7 @@
 package org.ruitx.www.controllers;
 
 import org.ruitx.jaws.components.Bragi;
+import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.User;
@@ -67,6 +68,7 @@ public class AuthController extends Bragi {
         sendSucessfulResponse(OK, response.data());
     }
 
+    @AccessControl(login = true)
     @Route(endpoint = HTML_ENDPOINT + "list", responseType = HTML)
     public void listUsersHTMX() {
         APIResponse<List<User>> response = authService.listUsers();
