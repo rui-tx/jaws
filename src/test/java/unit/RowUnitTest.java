@@ -1,7 +1,7 @@
 package unit;
 
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.utils.Row;
+import org.ruitx.jaws.types.Row;
 
 import java.util.HashMap;
 import java.util.Map;

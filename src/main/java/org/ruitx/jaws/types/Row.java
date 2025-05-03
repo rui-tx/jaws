@@ -1,4 +1,4 @@
-package org.ruitx.jaws.utils;
+package org.ruitx.jaws.types;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -107,6 +107,7 @@ public record Row(Map<String, Object> data) {
 
     /**
      * Gets a timestamp as Unix timestamp (seconds since epoch)
+     *
      * @param columnName The name of the column
      * @return Optional containing the Unix timestamp in seconds
      */
@@ -137,6 +138,7 @@ public record Row(Map<String, Object> data) {
 
     /**
      * Gets a timestamp as Instant (UTC)
+     *
      * @param columnName The name of the column
      * @return Optional containing the Instant
      */
@@ -146,23 +148,25 @@ public record Row(Map<String, Object> data) {
 
     /**
      * Gets a timestamp as LocalDateTime in the system's default timezone
+     *
      * @param columnName The name of the column
      * @return Optional containing the LocalDateTime
      */
     public Optional<LocalDateTime> getTimestamp(String columnName) {
         return getInstant(columnName)
-            .map(instant -> instant.atZone(ZoneId.systemDefault()).toLocalDateTime());
+                .map(instant -> instant.atZone(ZoneId.systemDefault()).toLocalDateTime());
     }
 
     /**
      * Gets a timestamp as LocalDateTime in the specified timezone
+     *
      * @param columnName The name of the column
-     * @param zoneId The timezone to use
+     * @param zoneId     The timezone to use
      * @return Optional containing the LocalDateTime
      */
     public Optional<LocalDateTime> getTimestamp(String columnName, ZoneId zoneId) {
         return getInstant(columnName)
-            .map(instant -> instant.atZone(zoneId).toLocalDateTime());
+                .map(instant -> instant.atZone(zoneId).toLocalDateTime());
     }
 }
 

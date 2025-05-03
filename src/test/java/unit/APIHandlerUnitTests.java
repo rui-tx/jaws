@@ -3,9 +3,10 @@ package unit;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.utils.APIHandler;
-import org.ruitx.jaws.utils.APIResponse;
-import org.ruitx.jaws.utils.types.Post;
+import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.Post;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -14,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class APIHandlerUnitTests {
 
-    private final ObjectMapper mapper = APIHandler.getMapper();
+    private final ObjectMapper mapper = Odin.getMapper();
 
     @Test
     public void testGenericCallAPI() {

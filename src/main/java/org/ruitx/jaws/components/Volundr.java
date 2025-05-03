@@ -7,11 +7,12 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
+import static org.ruitx.jaws.strings.HttpHeaders.*;
 
 /**
- * Hephaestus is a class that represents an HTTP response header.
+ * Völundr is a class that represents an HTTP response header.
  */
-public final class Hephaestus {
+public final class Volundr {
 
     private static final String HTTP_VERSION = "HTTP/1.1";
     private static final String DEFAULT_SERVER = APPLICATION_NAME;
@@ -23,7 +24,7 @@ public final class Hephaestus {
     private final String responseType;
     private final Map<String, String> headers;
 
-    private Hephaestus(Builder builder) {
+    private Volundr(Builder builder) {
         this.responseType = builder.responseType;
         this.headers = builder.headers;
     }
@@ -62,42 +63,42 @@ public final class Hephaestus {
 
         public Builder contentType(String contentType) {
             if (contentType != null && !contentType.trim().isEmpty()) {
-                headers.put("Content-Type", contentType);
+                headers.put(CONTENT_TYPE.getHeaderName(), contentType);
             }
             return this;
         }
 
         public Builder contentLength(String contentLength) {
             if (contentLength != null && !contentLength.trim().isEmpty()) {
-                headers.put("Content-Length", contentLength);
+                headers.put(CONTENT_LENGTH.getHeaderName(), contentLength);
             }
             return this;
         }
 
         public Builder server(String server) {
             if (server != null && !server.trim().isEmpty()) {
-                headers.put("Server", server);
+                headers.put(SERVER.getHeaderName(), server);
             }
             return this;
         }
 
         public Builder date(String date) {
             if (date != null && !date.trim().isEmpty()) {
-                headers.put("Date", date);
+                headers.put(DATE.getHeaderName(), date);
             }
             return this;
         }
 
         public Builder connection(String connection) {
             if (connection != null && !connection.trim().isEmpty()) {
-                headers.put("Connection", connection);
+                headers.put(CONNECTION.getHeaderName(), connection);
             }
             return this;
         }
 
         public Builder cacheControl(String cacheControl) {
             if (cacheControl != null && !cacheControl.trim().isEmpty()) {
-                headers.put("Cache-Control", cacheControl);
+                headers.put(CACHE_CONTROL.getHeaderName(), cacheControl);
             }
             return this;
         }
@@ -107,7 +108,7 @@ public final class Hephaestus {
                     "%s=%s; Max-Age=%d; Path=/; HttpOnly; Secure",
                     cookieName, cookieValue, maxAgeInSeconds
             );
-            return addCustomHeader("Set-Cookie", cookieHeader);
+            return addCustomHeader(SET_COOKIE.getHeaderName(), cookieHeader);
         }
 
         public Builder addCustomHeader(String name, String value) {
@@ -121,26 +122,26 @@ public final class Hephaestus {
             return this;
         }
 
-        public Hephaestus build() {
+        public Volundr build() {
             // Apply default headers only if they haven't been set already
-            if (!headers.containsKey("Cache-Control")) {
-                headers.put("Cache-Control", DEFAULT_CACHE_CONTROL);
+            if (!headers.containsKey(CACHE_CONTROL.getHeaderName())) {
+                headers.put(CACHE_CONTROL.getHeaderName(), DEFAULT_CACHE_CONTROL);
             }
-            if (!headers.containsKey("Connection")) {
-                headers.put("Connection", DEFAULT_CONNECTION);
+            if (!headers.containsKey(CONNECTION.getHeaderName())) {
+                headers.put(CONNECTION.getHeaderName(), DEFAULT_CONNECTION);
             }
-            if (!headers.containsKey("Content-Type")) {
-                headers.put("Content-Type", DEFAULT_CONTENT_TYPE);
+            if (!headers.containsKey(CONTENT_TYPE.getHeaderName())) {
+                headers.put(CONTENT_TYPE.getHeaderName(), DEFAULT_CONTENT_TYPE);
             }
-            if (!headers.containsKey("Date")) {
+            if (!headers.containsKey(DATE.getHeaderName())) {
                 SimpleDateFormat formatter = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
-                headers.put("Date", formatter.format(new Date()));
+                headers.put(DATE.getHeaderName(), formatter.format(new Date()));
             }
-            if (!headers.containsKey("Server")) {
-                headers.put("Server", DEFAULT_SERVER);
+            if (!headers.containsKey(SERVER.getHeaderName())) {
+                headers.put(SERVER.getHeaderName(), DEFAULT_SERVER);
             }
 
-            return new Hephaestus(this);
+            return new Volundr(this);
         }
     }
 }

@@ -1,12 +1,12 @@
-package org.ruitx.jaws.utils.types;
+package org.ruitx.jaws.types;
 
 /**
  * Standard error response model.
  * Used when returning error details to the client.
  */
 public record ErrorResponse(
-    String message,
-    String details
+        String message,
+        String details
 ) {
     /**
      * Creates a simple error response with just code and message.

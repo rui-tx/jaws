@@ -2,13 +2,13 @@ package integration;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Hermes;
+import org.ruitx.jaws.components.Hermod;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class HermesIntegrationTests {
+public class HermodIntegrationTests {
 
     @Test
     public void givenGetPathForCommand_whenDynamicHTMLParsed_thenReturnsExpectedOutput() throws IOException {
@@ -26,7 +26,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.processTemplate(htmlInput);
+        String result = Hermod.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>
@@ -60,7 +60,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.processTemplate(htmlInput);
+        String result = Hermod.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>
@@ -95,7 +95,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.processTemplate(htmlInput);
+        String result = Hermod.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>
@@ -129,7 +129,7 @@ public class HermesIntegrationTests {
                     </html>
                 """;
 
-        String result = Hermes.processTemplate(htmlInput);
+        String result = Hermod.processTemplate(htmlInput);
 
         assertEquals("""
                     <!DOCTYPE html>

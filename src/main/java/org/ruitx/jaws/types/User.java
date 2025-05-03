@@ -1,13 +1,9 @@
-package org.ruitx.jaws.utils.types;
+package org.ruitx.jaws.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.ruitx.jaws.components.Mimir;
-import org.ruitx.jaws.utils.Row;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Objects;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record User(
@@ -17,20 +13,8 @@ public record User(
         @JsonProperty("created_at") Long createdAt) {
 
     /**
-     * Returns a view of the user.
-     * This is the default view used for most API responses.
-     * @return a new User instance without the password hash
-     */
-    public User defaultView() {
-        return User.builder()
-                .id(id)
-                .user(user)
-                .createdAt(createdAt)
-                .build();
-    }
-
-    /**
      * Creates a new User instance with the builder pattern.
+     *
      * @return a new Builder instance
      */
     public static Builder builder() {
@@ -39,6 +23,7 @@ public record User(
 
     /**
      * Creates a User instance from a database row.
+     *
      * @param row the database row containing user data
      * @return an Optional containing the User if all required fields are present, empty otherwise
      */
@@ -53,11 +38,25 @@ public record User(
         }
 
         return Optional.of(User.builder()
-            .id(id.get())
-            .user(usernameOpt.get())
-            .passwordHash(passwordHash.get())
-            .createdAt(createdAt.get())
-            .build());
+                .id(id.get())
+                .user(usernameOpt.get())
+                .passwordHash(passwordHash.get())
+                .createdAt(createdAt.get())
+                .build());
+    }
+
+    /**
+     * Returns a view of the user.
+     * This is the default view used for most API responses.
+     *
+     * @return a new User instance without the password hash
+     */
+    public User defaultView() {
+        return User.builder()
+                .id(id)
+                .user(user)
+                .createdAt(createdAt)
+                .build();
     }
 
     public static final class Builder {
@@ -98,6 +97,7 @@ public record User(
 
         /**
          * Builds a new User instance with validation.
+         *
          * @return a new User instance
          * @throws IllegalStateException if required fields are missing or invalid
          */

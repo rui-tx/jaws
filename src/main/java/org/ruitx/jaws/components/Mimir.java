@@ -1,9 +1,11 @@
 package org.ruitx.jaws.components;
 
 import org.ruitx.jaws.interfaces.SqlFunction;
-import org.ruitx.jaws.utils.Row;
+import org.ruitx.jaws.types.Row;
+import org.sqlite.SQLiteDataSource;
 import org.tinylog.Logger;
 
+import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,16 +13,14 @@ import java.nio.file.Path;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.sql.DataSource;
-import org.sqlite.SQLiteDataSource;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 
 public class Mimir {
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
-    private static DataSource dataSource;
     private static final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
+    private static DataSource dataSource;
     private File db;
 
     public Mimir() {
@@ -76,7 +76,7 @@ public class Mimir {
      * Get a connection from the data source.
      * If we're in a transaction, return the transaction connection.
      * Otherwise, get a new connection from the data source.
-     * 
+     *
      * @return A connection to the database
      * @throws SQLException If the connection fails
      */
@@ -96,7 +96,7 @@ public class Mimir {
 
     /**
      * Begin a transaction.
-     * 
+     *
      * @throws SQLException If the transaction fails
      */
     public void beginTransaction() throws SQLException {
@@ -110,7 +110,7 @@ public class Mimir {
 
     /**
      * Commit a transaction.
-     * 
+     *
      * @throws SQLException If the transaction fails
      */
     public void commitTransaction() throws SQLException {
@@ -128,7 +128,7 @@ public class Mimir {
 
     /**
      * Rollback a transaction.
-     * 
+     *
      * @throws SQLException If the transaction fails
      */
     public void rollbackTransaction() throws SQLException {
@@ -199,7 +199,7 @@ public class Mimir {
         Connection conn = null;
         try {
             conn = getConnection();
-            
+
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 for (int i = 0; i < params.length; i++) {
                     stmt.setObject(i + 1, params[i]);
@@ -224,7 +224,7 @@ public class Mimir {
         Connection conn = null;
         try {
             conn = getConnection();
-            
+
             try (Statement stmt = conn.createStatement()) {
                 boolean result = stmt.execute(sql);
                 Logger.info("SQL executed: {}, result: {}", sql, result);
@@ -246,7 +246,7 @@ public class Mimir {
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
         try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement(); 
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             return action.apply(rs);
         } catch (SQLException e) {
@@ -352,7 +352,6 @@ public class Mimir {
 
         return Optional.of(sql.substring(tableNameStart, tableNameEnd));
     }
-
 
 
     /**

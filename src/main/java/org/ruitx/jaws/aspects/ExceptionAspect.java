@@ -11,8 +11,7 @@ import org.ruitx.jaws.exceptions.APIParsingException;
 import org.ruitx.jaws.exceptions.ConnectionException;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.ResponseCode;
-import org.ruitx.jaws.utils.APIHandler;
-import org.ruitx.jaws.utils.APIResponse;
+import org.ruitx.jaws.types.APIResponse;
 import org.tinylog.Logger;
 
 import java.io.IOException;
@@ -32,7 +31,7 @@ public class ExceptionAspect {
     public void requestHandlerMethods() {
     }
 
-    @Pointcut("execution(* org.ruitx.jaws.utils.APIHandler.*(..))")
+    @Pointcut("execution(* org.ruitx.jaws.components.Bragi.*(..))")
     public void apiHandlerMethods() {
     }
 
@@ -66,14 +65,14 @@ public class ExceptionAspect {
         if (joinPoint.getTarget() instanceof Bragi controller) {
             return controller.getRequestHandler();
         }
-        
+
         // Check method arguments
         for (Object arg : joinPoint.getArgs()) {
             if (arg instanceof Yggdrasill.RequestHandler) {
                 return (Yggdrasill.RequestHandler) arg;
             }
         }
-        
+
         return null;
     }
 
@@ -89,7 +88,7 @@ public class ExceptionAspect {
 
             // Only try to send response if connection is still alive
             if (!requestHandler.isConnectionClosed()) {
-                requestHandler.sendJSONResponse(responseCode, APIHandler.encode(response));
+                requestHandler.sendJSONResponse(responseCode, Bragi.encode(response));
             }
         } catch (Exception e) {
             // Log but don't try to send more responses

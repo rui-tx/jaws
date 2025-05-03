@@ -4,7 +4,7 @@ import io.jsonwebtoken.Jwt;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.ruitx.jaws.utils.Row;
+import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
 import javax.crypto.SecretKey;

@@ -2,7 +2,7 @@ package unit;
 
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.commands.RenderPartialCommand;
-import org.ruitx.jaws.components.Hermes;
+import org.ruitx.jaws.components.Hermod;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -11,7 +11,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.ruitx.jaws.configs.ApplicationConfig.PORT;
 
-public class HermesUnitTests {
+public class HermodUnitTests {
 
     @Test
     public void givenUsernameParameter_whenTemplateProcessed_thenUsernameIsReplaced() throws IOException {
@@ -20,7 +20,7 @@ public class HermesUnitTests {
         Map<String, String> bodyParams = Map.of();
 
         String expected = "<div>Username: JohnDoe</div>";
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }
@@ -32,7 +32,7 @@ public class HermesUnitTests {
         Map<String, String> bodyParams = Map.of();
 
         String expected = "<div>Price: $10.00</div>";
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }
@@ -44,7 +44,7 @@ public class HermesUnitTests {
         Map<String, String> bodyParams = Map.of();
 
         String expected = "<div>Value: $10.00</div>";
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }
@@ -59,7 +59,7 @@ public class HermesUnitTests {
         Map<String, String> bodyParams = Map.of();
 
         String expected = "<div>JohnDoe owes $50 dollars</div>";
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }
@@ -71,7 +71,7 @@ public class HermesUnitTests {
         Map<String, String> bodyParams = Map.of();
 
         String expected = "<div>Hello World</div>";
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }
@@ -83,7 +83,7 @@ public class HermesUnitTests {
         Map<String, String> bodyParams = new LinkedHashMap<>();
 
         String expected = "<div>{{invalid_command(}}</div>";
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }
@@ -102,7 +102,7 @@ public class HermesUnitTests {
                     </article>
                     getServerPort: %s
                 </div></div>""", PORT, PORT);
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }
@@ -114,7 +114,7 @@ public class HermesUnitTests {
         Map<String, String> bodyParams = Map.of("balance", "$75.00");
 
         String expected = "<div>Welcome, JaneDoe! Your balance is $75.00. Btw the jaws port is 15000</div>";
-        String result = Hermes.processTemplate(input, queryParams, bodyParams);
+        String result = Hermod.processTemplate(input, queryParams, bodyParams);
 
         assertEquals(expected, result);
     }

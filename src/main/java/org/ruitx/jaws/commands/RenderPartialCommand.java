@@ -1,9 +1,8 @@
 package org.ruitx.jaws.commands;
 
-import org.ruitx.jaws.components.Hermes;
+import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.interfaces.Command;
-import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +41,7 @@ public class RenderPartialCommand implements Command {
         try {
             String rawHTML = new String(Files.readAllBytes(path));
             rawHTML = escapeDollarSigns(rawHTML); // Escape $ signs in the partial HTML content to avoid regex issues
-            parsedHTML = Hermes.processTemplate(rawHTML);
+            parsedHTML = Hermod.processTemplate(rawHTML);
             parsedHTML = restoreDollarSigns(parsedHTML);
 
         } catch (IOException e) {

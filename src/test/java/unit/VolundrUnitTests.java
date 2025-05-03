@@ -1,14 +1,14 @@
 package unit;
 
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Hephaestus;
+import org.ruitx.jaws.components.Volundr;
 
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
 
-public class HephaestusUnitTests {
+public class VolundrUnitTests {
 
 //    @Test
 //    public void givenOnlyResponseType_whenHeaderToStringIsCalled_thenReturnsCorrectHeader() {
@@ -29,7 +29,7 @@ public class HephaestusUnitTests {
 
     @Test
     public void givenMultipleCustomHeaders_whenHeaderToStringIsCalled_thenReturnsCorrectHeader() {
-        Hephaestus hephaestus = new Hephaestus.Builder()
+        Volundr volundr = new Volundr.Builder()
                 .responseType("200 OK")
                 .contentType("text/html")
                 .contentLength("1234")
@@ -54,7 +54,7 @@ public class HephaestusUnitTests {
                 \r
                 """;
 
-        assertEquals(expectedHeader, hephaestus.headerToString());
+        assertEquals(expectedHeader, volundr.headerToString());
     }
 
 //    @Test
@@ -80,7 +80,7 @@ public class HephaestusUnitTests {
 
     @Test
     public void givenValidResponse_whenHeaderToBytesIsCalled_thenReturnsCorrectByteArray() {
-        Hephaestus hephaestus = new Hephaestus.Builder()
+        Volundr volundr = new Volundr.Builder()
                 .responseType("404 Not Found")
                 .contentType("application/json")
                 .date("Thu, 07 Nov 2024 09:45:43 WET")
@@ -96,13 +96,13 @@ public class HephaestusUnitTests {
                 \r
                 """, APPLICATION_NAME).getBytes();
 
-        assertArrayEquals(expectedBytes, hephaestus.headerToBytes());
+        assertArrayEquals(expectedBytes, volundr.headerToBytes());
     }
 
 
     @Test
     public void givenMultipleHeaders_whenBuilt_thenCorrectHeadersAdded() {
-        Hephaestus hephaestus = new Hephaestus.Builder()
+        Volundr volundr = new Volundr.Builder()
                 .responseType("200 OK")
                 .contentType("application/xml")
                 .date("Thu, 07 Nov 2024 09:45:43 WET")
@@ -120,7 +120,7 @@ public class HephaestusUnitTests {
                 X-My-Header: MyValue\r
                 \r
                 """;
-        assertEquals(expectedHeader, hephaestus.headerToString());
+        assertEquals(expectedHeader, volundr.headerToString());
     }
 
 //    @Test
@@ -146,29 +146,29 @@ public class HephaestusUnitTests {
 
     @Test
     public void givenNoServer_whenBuilderIsUsed_thenDefaultsToMyServer() {
-        Hephaestus hephaestus = new Hephaestus.Builder()
+        Volundr volundr = new Volundr.Builder()
                 .responseType("200 OK")
                 .build();
 
-        assertTrue(hephaestus.headerToString().contains("Server: " + APPLICATION_NAME));
+        assertTrue(volundr.headerToString().contains("Server: " + APPLICATION_NAME));
     }
 
     @Test
     public void givenNoConnection_whenBuilderIsUsed_thenDefaultsToKeepAlive() {
-        Hephaestus hephaestus = new Hephaestus.Builder()
+        Volundr volundr = new Volundr.Builder()
                 .responseType("200 OK")
                 .build();
 
-        assertTrue(hephaestus.headerToString().contains("Connection: keep-alive"));
+        assertTrue(volundr.headerToString().contains("Connection: keep-alive"));
     }
 
     @Test
     public void givenNoCacheControl_whenBuilderIsUsed_thenDefaultsToNoCache() {
-        Hephaestus hephaestus = new Hephaestus.Builder()
+        Volundr volundr = new Volundr.Builder()
                 .responseType("200 OK")
                 .build();
 
-        assertTrue(hephaestus.headerToString().contains("Cache-Control: no-cache"));
+        assertTrue(volundr.headerToString().contains("Cache-Control: no-cache"));
     }
 
 //    @Test
@@ -183,7 +183,7 @@ public class HephaestusUnitTests {
     @Test
     public void givenNullHeaderValue_whenAddCustomHeaderIsUsed_thenThrowsException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            new Hephaestus.Builder().addCustomHeader("X-Null-Header", null);
+            new Volundr.Builder().addCustomHeader("X-Null-Header", null);
         });
         assertEquals("Header value cannot be null or empty", exception.getMessage());
     }
@@ -191,7 +191,7 @@ public class HephaestusUnitTests {
     @Test
     public void givenNullCustomHeader_whenBuilderIsUsed_thenThrowsException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            new Hephaestus.Builder().responseType("200 OK").addCustomHeader("Test-Header", null);
+            new Volundr.Builder().responseType("200 OK").addCustomHeader("Test-Header", null);
         });
         assertEquals("Header value cannot be null or empty", exception.getMessage());
     }
@@ -199,7 +199,7 @@ public class HephaestusUnitTests {
     @Test
     public void givenNullCustomHeaderKey_whenBuilderIsUsed_thenThrowsException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            new Hephaestus.Builder().responseType("200 OK").addCustomHeader(null, "value");
+            new Volundr.Builder().responseType("200 OK").addCustomHeader(null, "value");
         });
         assertEquals("Header name cannot be null or empty", exception.getMessage());
     }
@@ -207,7 +207,7 @@ public class HephaestusUnitTests {
     @Test
     public void givenEmptyResponseType_whenBuilderIsUsed_thenThrowsException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            new Hephaestus.Builder().responseType("");
+            new Volundr.Builder().responseType("");
         });
         assertEquals("Response type cannot be null or empty", exception.getMessage());
     }

@@ -1,5 +1,7 @@
 package org.ruitx.jaws.components;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.exceptions.ConnectionException;
 import org.ruitx.jaws.exceptions.ProcessRequestException;
@@ -9,8 +11,7 @@ import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
-import org.ruitx.jaws.utils.APIHandler;
-import org.ruitx.jaws.utils.APIResponse;
+import org.ruitx.jaws.types.APIResponse;
 import org.tinylog.Logger;
 
 import java.io.BufferedReader;
@@ -28,21 +29,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.Iterator;
 
 import static org.ruitx.jaws.strings.DefaultHTML.*;
+import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
 import static org.ruitx.jaws.strings.RequestType.*;
 import static org.ruitx.jaws.strings.ResponseCode.*;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Yggdrasill represents the main HTTP jaws, handling incoming requests and dispatching them
@@ -222,7 +217,6 @@ public class Yggdrasill {
         /**
          * Initializes input/output streams and processes the request.
          * Reads the request's headers, body, and sends the appropriate response.
-         *
          */
         private void processRequest() {
             initializeStreams();
@@ -234,9 +228,8 @@ public class Yggdrasill {
 
         /**
          * Initializes the input and output streams for the socket.
-         *
          */
-        private void initializeStreams()  {
+        private void initializeStreams() {
             try {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new DataOutputStream(socket.getOutputStream());
@@ -247,7 +240,6 @@ public class Yggdrasill {
 
         /**
          * Reads the HTTP request headers and stores them in the {@link #headers} map.
-         *
          */
         private void readHeaders() {
             String headerLine;
@@ -264,7 +256,6 @@ public class Yggdrasill {
 
         /**
          * Reads the body of the HTTP request (if any).
-         *
          */
         private void readBody() {
             try {
@@ -278,7 +269,6 @@ public class Yggdrasill {
 
         /**
          * Determines the type of HTTP request (e.g., GET, POST, etc.) and sends a response accordingly.
-         *
          */
         private void checkRequestAndSendResponse() {
             String requestType = getRequestType();
@@ -427,7 +417,7 @@ public class Yggdrasill {
             byte[] content = body.getBytes();
             String contentType = "text/html";
 
-            String parsedHTML = Hermes.processTemplate(new String(content));
+            String parsedHTML = Hermod.processTemplate(new String(content));
             parsedHTML += "\n\n";
             sendResponseHeaders(responseCode, contentType, parsedHTML.length());
             sendResponseBody(parsedHTML.getBytes());
@@ -451,8 +441,8 @@ public class Yggdrasill {
          * Sends a binary response with the specified response code and body content.
          *
          * @param responseCode the HTTP response code.
-         * @param contentType the content type of the response.
-         * @param body the body content of the response.
+         * @param contentType  the content type of the response.
+         * @param body         the body content of the response.
          */
         public void sendBinaryResponse(ResponseCode responseCode, String contentType, byte[] body) {
             sendResponseHeaders(responseCode, contentType, body.length);
@@ -483,7 +473,7 @@ public class Yggdrasill {
                 String contentType = Files.probeContentType(path);
 
                 if (contentType.equals("text/html")) {
-                    String parsedHTML = Hermes.processTemplate(new String(content), queryParams, bodyParams);
+                    String parsedHTML = Hermod.processTemplate(new String(content), queryParams, bodyParams);
                     parsedHTML += "\n\n"; // prevents truncation of the last line
                     sendResponseHeaders(OK, contentType, parsedHTML.length());
                     out.write(parsedHTML.getBytes(StandardCharsets.UTF_8));
@@ -492,8 +482,7 @@ public class Yggdrasill {
                     out.write(content);
                 }
                 out.flush();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 throw new ProcessRequestException("Error sending file response", e);
             }
 
@@ -501,7 +490,6 @@ public class Yggdrasill {
 
         /**
          * Sends a 404 Not Found response.
-         *
          */
         private void sendNotFoundResponse() {
             try {
@@ -515,15 +503,13 @@ public class Yggdrasill {
                 }
                 sendResponseHeaders(NOT_FOUND, "text/html", content.length);
                 sendResponseBody(content);
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 throw new ProcessRequestException("Error sending 404 response", e);
             }
         }
 
         /**
          * Sends a 401 Not Found response.
-         *
          */
         private void sendUnauthorizedResponse(ResponseType responseType) {
             byte[] content;
@@ -546,7 +532,7 @@ public class Yggdrasill {
                             UNAUTHORIZED.getCodeAndMessage(),
                             "You are not authorized to access this resource"
                     );
-                    content = APIHandler.encode(res).getBytes();
+                    content = Bragi.encode(res).getBytes();
                     sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
                     sendResponseBody(content);
                 }
@@ -557,7 +543,7 @@ public class Yggdrasill {
                             METHOD_NOT_ALLOWED.getCodeAndMessage(),
                             "The requested response type is invalid"
                     );
-                    content = APIHandler.encode(res).getBytes();
+                    content = Bragi.encode(res).getBytes();
                     sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
                     sendResponseBody(content);
                 }
@@ -576,7 +562,7 @@ public class Yggdrasill {
                 return;
             }
 
-            Hephaestus.Builder builder = new Hephaestus.Builder()
+            Volundr.Builder builder = new Volundr.Builder()
                     .responseType(responseCode.toString())
                     .contentType(contentType)
                     .contentLength(String.valueOf(contentLength));
@@ -588,7 +574,7 @@ public class Yggdrasill {
             }
             builder.build();
 
-            Hephaestus responseHeader = builder.build();
+            Volundr responseHeader = builder.build();
             try {
                 out.write(responseHeader.headerToBytes());
                 out.flush();
@@ -645,11 +631,11 @@ public class Yggdrasill {
          */
         private Map<String, String> extractBodyParameters(String data) {
             // Check if the content type is JSON
-            String contentType = headers.get("Content-Type");
+            String contentType = headers.get(CONTENT_TYPE.getHeaderName());
             if (contentType != null && contentType.contains("application/json")) {
                 return parseJsonBody(data);
             }
-            
+
             // Fall back to form data parsing
             Map<String, String> parsedData = new LinkedHashMap<>();
             String[] pairs = data.split("&");
@@ -664,16 +650,16 @@ public class Yggdrasill {
 
         private Map<String, String> parseJsonBody(String json) {
             try {
-                ObjectMapper mapper = APIHandler.getMapper();
+                ObjectMapper mapper = Odin.getMapper();
                 Map<String, String> result = new LinkedHashMap<>();
                 JsonNode root = mapper.readTree(json);
-                
+
                 // Convert all fields to strings
                 root.fields().forEachRemaining(entry -> {
                     JsonNode value = entry.getValue();
                     result.put(entry.getKey(), value.isTextual() ? value.asText() : value.toString());
                 });
-                
+
                 return result;
             } catch (Exception e) {
                 Logger.error("Failed to parse JSON body: {}", e.getMessage());
@@ -788,7 +774,7 @@ public class Yggdrasill {
             try {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                 Logger.debug("Invoking route method {} in controller {}", routeMethod.getName(), controllerName);
-                
+
                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
                 if (controllerInstance == null) {
                     Logger.error("Failed to get controller instance for {}", controllerName);
@@ -810,50 +796,50 @@ public class Yggdrasill {
 
                         // If there's a parameter and it's a request object, try to deserialize it
                         if (parameterTypes.length > 0) {
-                            String contentType = headers.get("Content-Type");
+                            String contentType = headers.get(CONTENT_TYPE.getHeaderName());
                             String requestBody = body.toString().trim();
-                            
+
                             // Check if Content-Type is missing or not JSON
                             if (contentType == null || !contentType.contains("application/json")) {
                                 APIResponse<String> response = APIResponse.error(
-                                    ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                    "Request body is required. Check the API documentation for the correct request body"
+                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                        "Request body is required. Check the API documentation for the correct request body"
                                 );
-                                sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
                                 return true;
                             }
-                            
+
                             if (requestBody.isEmpty()) {
                                 // Send a proper error response for empty JSON body
                                 APIResponse<String> response = APIResponse.error(
-                                    ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                    "Request body is required. Check the API documentation for the correct request body"
+                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                        "Request body is required. Check the API documentation for the correct request body"
                                 );
-                                sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
                                 return true;
                             }
-                            
+
                             try {
-                                ObjectMapper mapper = APIHandler.getMapper();
+                                ObjectMapper mapper = Odin.getMapper();
                                 JsonNode root = mapper.readTree(requestBody);
-                                
+
                                 // Get the expected fields from the parameter type
                                 Class<?> paramType = parameterTypes[0];
                                 List<String> requiredFields = new ArrayList<>();
                                 for (Field field : paramType.getDeclaredFields()) {
                                     requiredFields.add(field.getName());
                                 }
-                                
+
                                 // Check for missing or extra fields
                                 List<String> missingFields = new ArrayList<>();
                                 List<String> extraFields = new ArrayList<>();
-                                
+
                                 for (String field : requiredFields) {
                                     if (!root.has(field)) {
                                         missingFields.add(field);
                                     }
                                 }
-                                
+
                                 Iterator<String> fieldNames = root.fieldNames();
                                 while (fieldNames.hasNext()) {
                                     String field = fieldNames.next();
@@ -861,7 +847,7 @@ public class Yggdrasill {
                                         extraFields.add(field);
                                     }
                                 }
-                                
+
                                 // Build error message if there are issues
                                 if (!missingFields.isEmpty() || !extraFields.isEmpty()) {
                                     StringBuilder errorMessage = new StringBuilder("Invalid request body: ");
@@ -874,24 +860,24 @@ public class Yggdrasill {
                                         }
                                         errorMessage.append("Unexpected fields: ").append(String.join(", ", extraFields));
                                     }
-                                    
+
                                     APIResponse<String> response = APIResponse.error(
-                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                        errorMessage.toString()
+                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                            errorMessage.toString()
                                     );
-                                    sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                    sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
                                     return true;
                                 }
-                                
+
                                 // If validation passes, deserialize the object
                                 parameters[0] = mapper.readValue(requestBody, parameterTypes[0]);
                             } catch (Exception e) {
                                 // Send a proper error response for invalid JSON
                                 APIResponse<String> response = APIResponse.error(
-                                    ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                    "Invalid JSON format. Check the API documentation for the correct request body"
+                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                        "Invalid JSON format. Check the API documentation for the correct request body"
                                 );
-                                sendJSONResponse(ResponseCode.BAD_REQUEST, APIHandler.encode(response));
+                                sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
                                 return true;
                             }
                         }
@@ -900,37 +886,36 @@ public class Yggdrasill {
                         routeMethod.invoke(controllerInstance, parameters);
                     } catch (Exception e) {
                         Logger.error("Controller execution failed in {}.{}: {} - {}",
-                            controllerName,
-                            routeMethod.getName(),
-                            e.getClass().getSimpleName(),
-                            e.getMessage());
-                        
+                                controllerName,
+                                routeMethod.getName(),
+                                e.getClass().getSimpleName(),
+                                e.getMessage());
+
                         if (e.getCause() != null) {
-                            Logger.error("Caused by: {} - {}", 
-                                e.getCause().getClass().getSimpleName(),
-                                e.getCause().getMessage());
+                            Logger.error("Caused by: {} - {}",
+                                    e.getCause().getClass().getSimpleName(),
+                                    e.getCause().getMessage());
                         }
-                        
+
                         // Try to send error response if possible
-                        if (controllerInstance instanceof Bragi) {
-                            Bragi controller = (Bragi) controllerInstance;
+                        if (controllerInstance instanceof Bragi controller) {
                             Yggdrasill.RequestHandler handler = controller.getRequestHandler();
                             if (handler != null) {
                                 // Create error response with detailed message
-                                String errorMessage = e.getCause() != null ? 
-                                    e.getCause().getMessage() : e.getMessage();
-                                
+                                String errorMessage = e.getCause() != null ?
+                                        e.getCause().getMessage() : e.getMessage();
+
                                 APIResponse<String> response = APIResponse.error(
-                                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                                    errorMessage != null ? errorMessage : "An unexpected error occurred"
+                                        ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+                                        errorMessage != null ? errorMessage : "An unexpected error occurred"
                                 );
-                                
+
                                 // Send error response
                                 handler.sendJSONResponse(
-                                    ResponseCode.INTERNAL_SERVER_ERROR,
-                                    APIHandler.encode(response)
+                                        ResponseCode.INTERNAL_SERVER_ERROR,
+                                        Bragi.encode(response)
                                 );
-                                
+
                                 // Cleanup after sending response
                                 controller.cleanup();
                                 return true;
@@ -944,16 +929,16 @@ public class Yggdrasill {
                 if (controllerInstance instanceof Bragi) {
                     ((Bragi) controllerInstance).cleanup();
                 }
-                
+
                 return true;
             } catch (Exception e) {
-                Logger.error("Failed to handle request: {} - {}", 
-                    e.getClass().getSimpleName(), 
-                    e.getMessage());
+                Logger.error("Failed to handle request: {} - {}",
+                        e.getClass().getSimpleName(),
+                        e.getMessage());
                 if (e.getCause() != null) {
-                    Logger.error("Caused by: {} - {}", 
-                        e.getCause().getClass().getSimpleName(),
-                        e.getCause().getMessage());
+                    Logger.error("Caused by: {} - {}",
+                            e.getCause().getClass().getSimpleName(),
+                            e.getCause().getMessage());
                 }
                 closeSocket();
                 return false;
@@ -1043,7 +1028,6 @@ public class Yggdrasill {
 
         /**
          * Closes the socket connection.
-         *
          */
         private void closeSocket() {
             synchronized (Yggdrasill.class) {
