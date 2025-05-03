@@ -43,7 +43,7 @@ public enum HttpHeaders {
     }
 
     public String getHeaderName() {
-        return headerName.toLowerCase();
+        return headerName;
     }
 
     @Override

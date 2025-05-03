@@ -197,20 +197,41 @@ public class Mimir {
      */
     public int executeSql(String sql, Object... params) {
         Connection conn = null;
+        boolean isTransactionConnection = false;
+
         try {
             conn = getConnection();
+            // Check if this is a transaction-managed connection
+            isTransactionConnection = (transactionConnection.get() == conn);
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            PreparedStatement stmt = null;
+
+            try {
+                stmt = conn.prepareStatement(sql);
                 for (int i = 0; i < params.length; i++) {
                     stmt.setObject(i + 1, params[i]);
                 }
 
-                int result = stmt.executeUpdate();
-                return result;
+                return stmt.executeUpdate();
+            } finally {
+                if (stmt != null) try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing statement: " + e.getMessage());
+                }
             }
         } catch (SQLException e) {
             Logger.error("Error executing prepared update: {}", e.getMessage());
             throw new RuntimeException("Database update failed", e);
+        } finally {
+            // Only close if not a transaction connection
+            if (conn != null && !isTransactionConnection) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing connection: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -222,17 +243,39 @@ public class Mimir {
      */
     public boolean executeSql(String sql) {
         Connection conn = null;
+        boolean isTransactionConnection = false;
+
         try {
             conn = getConnection();
+            // Check if this is a transaction-managed connection
+            isTransactionConnection = (transactionConnection.get() == conn);
 
-            try (Statement stmt = conn.createStatement()) {
+            Statement stmt = null;
+
+            try {
+                stmt = conn.createStatement();
                 boolean result = stmt.execute(sql);
                 Logger.info("SQL executed: {}, result: {}", sql, result);
                 return result;
+            } finally {
+                if (stmt != null) try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing statement: " + e.getMessage());
+                }
             }
         } catch (SQLException e) {
             Logger.error("Error executing SQL: {}", e.getMessage());
             throw new RuntimeException("Database update failed", e);
+        } finally {
+            // Only close if not a transaction connection
+            if (conn != null && !isTransactionConnection) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing connection: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -245,13 +288,46 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            return action.apply(rs);
+        Connection conn = null;
+        boolean isTransactionConnection = false;
+
+        try {
+            conn = getConnection();
+            // Check if this is a transaction-managed connection
+            isTransactionConnection = (transactionConnection.get() == conn);
+
+            Statement stmt = null;
+            ResultSet rs = null;
+
+            try {
+                stmt = conn.createStatement();
+                rs = stmt.executeQuery(sql);
+                return action.apply(rs);
+            } finally {
+                // Close resources in reverse order
+                if (rs != null) try {
+                    rs.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing result set: " + e.getMessage());
+                }
+                if (stmt != null) try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing statement: " + e.getMessage());
+                }
+            }
         } catch (SQLException e) {
             Logger.error("Error executing SQL: " + e.getMessage());
             throw new RuntimeException("Database query failed", e);
+        } finally {
+            // Only close if not a transaction connection
+            if (conn != null && !isTransactionConnection) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing connection: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -266,8 +342,13 @@ public class Mimir {
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action, Object... params) {
         Connection conn = null;
+        boolean isTransactionConnection = false;
+
         try {
             conn = getConnection();
+            // Check if this connection is from a transaction
+            isTransactionConnection = (transactionConnection.get() == conn);
+
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 for (int i = 0; i < params.length; i++) {
                     stmt.setObject(i + 1, params[i]);
@@ -280,6 +361,15 @@ public class Mimir {
         } catch (SQLException e) {
             Logger.error("Error executing prepared query: " + e.getMessage());
             throw new RuntimeException("Database query failed", e);
+        } finally {
+            // Only close the connection if it's not managed by a transaction
+            if (conn != null && !isTransactionConnection) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing connection: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -292,8 +382,12 @@ public class Mimir {
      */
     public List<Row> executeInsert(String sql, Object... params) {
         Connection conn = null;
+        boolean isTransactionConnection = false;
+
         try {
             conn = getConnection();
+            // Check if this is a transaction-managed connection
+            isTransactionConnection = (transactionConnection.get() == conn);
 
             try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 for (int i = 0; i < params.length; i++) {
@@ -322,6 +416,15 @@ public class Mimir {
         } catch (SQLException e) {
             Logger.error("Error executing insert: {}", e.getMessage());
             throw new RuntimeException("Database insert failed", e);
+        } finally {
+            // Only close if not a transaction connection
+            if (conn != null && !isTransactionConnection) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    Logger.error("Error closing connection: " + e.getMessage());
+                }
+            }
         }
     }
 
