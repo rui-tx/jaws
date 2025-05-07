@@ -98,9 +98,10 @@
                 if (data.success && data.data && data.data.token) {
                     // Store the token in localStorage
                     localStorage.setItem('auth_token', data.data.token);
+                    document.cookie = "auth_token=" + data.data.token + "; path=/; SameSite=Strict";
 
                     // Redirect to dashboard
-                    window.location.href = '{{getPathFor("backoffice/index.html")}}';
+                    window.location.href = '{{getPathFor("backoffice/")}}';
                 } else {
                     // Show error message
                     document.getElementById('error-message').style.display = 'block';

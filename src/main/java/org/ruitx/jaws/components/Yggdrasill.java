@@ -1077,5 +1077,14 @@ public class Yggdrasill {
         public void addCustomHeader(String name, String value) {
             customResponseHeaders.put(name, value);
         }
+
+        /**
+         * Retrieves the headers as a map of key-value pairs.
+         *
+         * @return a map containing the headers, where keys are the header names and values are the corresponding header values
+         */
+        public Map<String, String> getHeaders() {
+            return headers;
+        }
     }
 }

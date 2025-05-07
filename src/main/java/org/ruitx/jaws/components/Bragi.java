@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
@@ -61,13 +62,47 @@ public abstract class Bragi {
     }
 
     /**
+     * Set a template variable for the current request context.
+     *
+     * @param name  the variable name
+     * @param value the variable value
+     */
+    protected void setTemplateVariable(String name, String value) {
+        Hermod.setTemplateVariable(name, value);
+    }
+
+    /**
+     * Get a template variable from the current request context.
+     *
+     * @param name the variable name
+     * @return the variable value or null if not found
+     */
+    protected String getTemplateVariable(String name) {
+        return Hermod.getTemplateVariable(name);
+    }
+
+    /**
+     * Remove a template variable from the current request context.
+     *
+     * @param name the variable name
+     */
+    protected void removeTemplateVariable(String name) {
+        Hermod.removeTemplateVariable(name);
+    }
+
+    /**
      * Send a JSON success response with no data
      *
      * @param code Response code
      */
     protected void sendSucessfulResponse(ResponseCode code) {
-        boolean isSuccess = code.toString().startsWith("2"); // 2xx codes are success
-        sendJSONResponse(isSuccess, code, null, null);
+        try {
+            boolean isSuccess = code.toString().startsWith("2"); // 2xx codes are success
+            sendJSONResponse(isSuccess, code, null, null);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
+        }
     }
 
     /**
@@ -83,8 +118,12 @@ public abstract class Bragi {
         } catch (Exception e) {
             Logger.error("Failed to send JSON response: {}", e.getMessage());
             throw new SendRespondException("Failed to send JSON response", e);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
         }
     }
+
 
     protected void sendSucessfulResponse(String code, Object data) {
         sendSucessfulResponse(ResponseCode.fromCodeAndMessage(code), null, data);
@@ -108,6 +147,9 @@ public abstract class Bragi {
         } catch (Exception e) {
             Logger.error("Failed to send JSON response: {}", e.getMessage());
             throw new SendRespondException("Failed to send JSON response", e);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
         }
     }
 
@@ -124,8 +166,12 @@ public abstract class Bragi {
         } catch (Exception e) {
             Logger.error("Failed to send JSON response: {}", e.getMessage());
             throw new SendRespondException("Failed to send JSON response", e);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
         }
     }
+
 
     /**
      * Send a JSON error response with a code and message
@@ -159,6 +205,9 @@ public abstract class Bragi {
         } catch (Exception e) {
             Logger.error("Failed to send JSON response: {}", e.getMessage());
             throw new SendRespondException("Failed to send JSON response", e);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
         }
     }
 
@@ -174,6 +223,9 @@ public abstract class Bragi {
         } catch (Exception e) {
             Logger.error("Failed to send HTML response: {}", e.getMessage());
             throw new SendRespondException("Failed to send HTML response", e);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
         }
     }
 
@@ -183,8 +235,12 @@ public abstract class Bragi {
         } catch (Exception e) {
             Logger.error("Failed to send HTML response: {}", e.getMessage());
             throw new SendRespondException("Failed to send HTML response", e);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
         }
     }
+
 
     /**
      * Get a path parameter from the request.
@@ -231,10 +287,12 @@ public abstract class Bragi {
     protected void cleanup() {
         try {
             requestHandler.remove();
+            Hermod.clearTemplateVariables(); // Also clean up template variables
         } catch (Exception e) {
             Logger.error("Error cleaning up request handler: {}", e.getMessage());
         }
     }
+
 
     /**
      * Get the request handler for the current thread.
@@ -276,6 +334,24 @@ public abstract class Bragi {
             Logger.error("Failed to render template: {}", e.getMessage());
             throw new SendRespondException("Failed to render template", e);
         }
+    }
+
+    public Map<String, String> getHeaders() {
+        return requestHandler.get().getHeaders();
+    }
+
+    public Optional<String> getCookieToken() {
+        String cookieHeader = getHeaders().entrySet().stream()
+                .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
+
+        if (cookieHeader != null) {
+            return Optional.of(cookieHeader.split(";")[0].split("=")[1]);
+        }
+
+        return Optional.empty();
     }
 
     /**
