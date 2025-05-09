@@ -95,10 +95,11 @@
                 loginText.style.display = 'inline-block';
                 loginSpinner.style.display = 'none';
 
-                if (data.success && data.data && data.data.token) {
+                if (data.success && data.data && data.data.access_token) {
                     // Store the token in localStorage
-                    localStorage.setItem('auth_token', data.data.token);
-                    document.cookie = "auth_token=" + data.data.token + "; path=/; SameSite=Strict";
+                    localStorage.setItem('auth_token', data.data.access_token);
+                    localStorage.setItem('refresh_token', data.data.refresh_token);
+                    document.cookie = "auth_token=" + data.data.access_token + "; path=/; SameSite=Strict";
 
                     // Redirect to dashboard
                     window.location.href = '{{getPathFor("backoffice/")}}';

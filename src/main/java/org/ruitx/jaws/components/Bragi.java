@@ -282,6 +282,15 @@ public abstract class Bragi {
     }
 
     /**
+     * Retrieves the IP address of the client making the request.
+     *
+     * @return the client's IP address as a String, or null if the address cannot be determined.
+     */
+    protected String getClientIpAddress() {
+        return requestHandler.get().getClientIpAddress();
+    }
+
+    /**
      * Cleanup the request handler for the current thread.
      */
     protected void cleanup() {

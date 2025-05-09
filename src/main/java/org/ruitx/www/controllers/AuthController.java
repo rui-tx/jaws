@@ -4,17 +4,18 @@ import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.LogoutRequest;
+import org.ruitx.jaws.types.RefreshTokenRequest;
 import org.ruitx.jaws.types.User;
-import org.ruitx.www.models.auth.CreateUserRequest;
 import org.ruitx.www.models.auth.LoginRequest;
 import org.ruitx.www.models.auth.TokenResponse;
 import org.ruitx.www.services.AuthService;
 
 import java.util.List;
+import java.util.Optional;
 
-import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.RequestType.POST;
-import static org.ruitx.jaws.strings.ResponseCode.CREATED;
+import static org.ruitx.jaws.strings.ResponseCode.BAD_REQUEST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.strings.ResponseType.HTML;
 import static org.ruitx.jaws.strings.ResponseType.JSON;
@@ -34,7 +35,16 @@ public class AuthController extends Bragi {
         String username = request.user();
         String password = request.password();
 
-        APIResponse<TokenResponse> response = authService.loginUser(username, password);
+        String userAgent = getHeaders().get("User-Agent");
+        String ipAddress = getClientIpAddress();
+
+        APIResponse<TokenResponse> response = authService.loginUser(
+                username,
+                password,
+                userAgent,
+                ipAddress
+        );
+
         if (!response.success()) {
             sendErrorResponse(response.code(), response.info());
             return;
@@ -43,29 +53,55 @@ public class AuthController extends Bragi {
         sendSucessfulResponse(OK, response.data());
     }
 
-    @Route(endpoint = API_ENDPOINT + "create", method = POST, responseType = JSON)
-    public void createUser(CreateUserRequest request) {
-        String username = request.user();
-        String password = request.password();
-
-        APIResponse<TokenResponse> response = authService.createUser(username, password);
+    @AccessControl(login = true)
+    @Route(endpoint = API_ENDPOINT + "logout", method = POST, responseType = JSON)
+    public void logout(LogoutRequest request) {
+        APIResponse<Void> response = authService.logout(request.refreshToken());
         if (!response.success()) {
             sendErrorResponse(response.code(), response.info());
             return;
         }
 
-        sendSucessfulResponse(CREATED, response.data());
+        sendSucessfulResponse(OK, null);
     }
 
-    @Route(endpoint = API_ENDPOINT + "list", method = GET, responseType = JSON)
-    public void listUsers() {
-        APIResponse<List<User>> response = authService.listUsers();
+    @Route(endpoint = API_ENDPOINT + "refresh", method = POST, responseType = JSON)
+    public void refreshToken(RefreshTokenRequest request) {
+        String refreshToken = request.refreshToken();
+        String userAgent = getHeaders().get("User-Agent");
+        String ipAddress = getClientIpAddress();
+
+        APIResponse<TokenResponse> response = authService.refreshToken(
+                refreshToken,
+                userAgent,
+                ipAddress
+        );
+
         if (!response.success()) {
             sendErrorResponse(response.code(), response.info());
             return;
         }
 
         sendSucessfulResponse(OK, response.data());
+    }
+    
+    @AccessControl(login = true)
+    @Route(endpoint = API_ENDPOINT + "logout-all", method = POST, responseType = JSON)
+    public void logoutAll() {
+        Optional<String> userId = getCookieToken();
+        if (userId.isEmpty()) {
+            sendErrorResponse(BAD_REQUEST, "Could not get user id from cookie");
+            return;
+        }
+
+        APIResponse<Void> response = authService.logoutAll(userId.get());
+
+        if (!response.success()) {
+            sendErrorResponse(response.code(), response.info());
+            return;
+        }
+
+        sendSucessfulResponse(OK, null);
     }
 
     @AccessControl(login = true)

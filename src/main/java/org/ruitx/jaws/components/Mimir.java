@@ -1,7 +1,9 @@
 package org.ruitx.jaws.components;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.interfaces.SqlFunction;
 import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.utils.JawsUtils;
 import org.sqlite.SQLiteDataSource;
 import org.tinylog.Logger;
 
@@ -11,6 +13,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
+import java.sql.Date;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -65,11 +69,23 @@ public class Mimir {
         try (Connection conn = getConnection()) {
             String sql = Files.readString(Path.of(DATABASE_SCHEMA_PATH));
             executeSqlStatements(conn, sql);
+            createDefaultAdminUser();
             Logger.info("Database initialized with " + DATABASE_SCHEMA_PATH);
         } catch (SQLException | IOException e) {
             Logger.error("Error initializing database: " + e.getMessage());
             throw new RuntimeException("Failed to initialize database", e);
         }
+    }
+    
+    private void createDefaultAdminUser() {
+        Optional<String> password = JawsUtils.newPassword();
+        String hashedPassword =
+                BCrypt.withDefaults().hashToString(12, password.orElse("Lee7Pa$$w00rd").toCharArray());
+        executeSql("INSERT INTO USER (user, password_hash, created_at) VALUES (?, ?, ?)",
+                "admin", hashedPassword, Date.from(Instant.now()));
+        Logger.info("A new admin user has been created with username 'admin' and password '"
+                + (password.orElse("Lee7Pa$$w00rd")) + "'");
+        Logger.info("Please save this in a safe place, it will not be shown again.");
     }
 
     /**

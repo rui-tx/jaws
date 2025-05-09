@@ -1,63 +1,118 @@
 package org.ruitx.jaws.components;
 
-import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.ruitx.jaws.types.Row;
+import org.ruitx.www.models.auth.UserSession;
 import org.tinylog.Logger;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.Base64;
+import java.util.Date;
+import java.util.Optional;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
 import static org.ruitx.jaws.configs.ApplicationConfig.JWT_SECRET;
 
 public class Tyr {
+    private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60L; // 15 minutes in seconds
+    private static final long REFRESH_TOKEN_EXPIRATION = 30 * 24 * 60 * 60L; // 30 days in seconds
 
-    /**
-     * Create a JWT token with claims (e.g., user ID, roles, etc.).
-     * This method WILL check if the user exists in the database.
-     *
-     * @param userId   the user ID.
-     * @param password the password.
-     * @return the JWT token.
-     */
-    public static String createToken(String userId, String password) {
+    public static TokenPair createTokenPair(String userId, String userAgent, String ipAddress) {
         Key key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
+        long now = Instant.now().getEpochSecond();
+
+        String accessToken = Jwts.builder()
+                .issuer(APPLICATION_NAME)
+                .subject(userId)
+                .issuedAt(Date.from(Instant.ofEpochSecond(now)))
+                .expiration(Date.from(Instant.ofEpochSecond(now + ACCESS_TOKEN_EXPIRATION)))
+                .signWith(key)
+                .compact();
+
+        String refreshToken = Jwts.builder()
+                .issuer(APPLICATION_NAME)
+                .subject(userId)
+                .issuedAt(Date.from(Instant.ofEpochSecond(now)))
+                .expiration(Date.from(Instant.ofEpochSecond(now + REFRESH_TOKEN_EXPIRATION)))
+                .signWith(key)
+                .compact();
 
         Mimir db = new Mimir();
-        Row user = db.getRow("SELECT * FROM USER WHERE user = ? AND password_hash = ?",
-                userId, password);
-        if (user == null || user.get("user").toString().isEmpty()) {
-            return null;
-        }
+        db.executeSql("""
+                        INSERT INTO USER_SESSION (
+                            user_id, refresh_token, access_token, user_agent, ip_address, 
+                            created_at, expires_at, last_used_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                Integer.parseInt(userId),
+                refreshToken,
+                accessToken,
+                userAgent,
+                ipAddress,
+                now,
+                now + REFRESH_TOKEN_EXPIRATION,
+                now
+        );
 
-        return Jwts.builder()
-                .issuer(APPLICATION_NAME)
-                .subject(userId)
-                .signWith(key)
-                .compact();
+        return new TokenPair(accessToken, refreshToken);
     }
 
-    /**
-     * Create a JWT token with claims (e.g., user ID, roles, etc.).
-     * This method WILL NOT check if the user exists in the database.
-     * It is intended for use cases where the user is already known.
-     *
-     * @param userId the user ID.
-     * @return the JWT token.
-     */
-    public static String createToken(String userId) {
-        Key key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
+    public static Optional<TokenPair> refreshToken(String refreshToken, String userAgent, String ipAddress) {
+        SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
 
-        return Jwts.builder()
-                .issuer(APPLICATION_NAME)
-                .subject(userId)
-                .signWith(key)
-                .compact();
+        try {
+            // Verify refresh token
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(refreshToken)
+                    .getPayload();
+
+            // Get session from database
+            Mimir db = new Mimir();
+            Row sessionRow = db.getRow(
+                    "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
+                    refreshToken
+            );
+
+            Optional<UserSession> session = UserSession.fromRow(sessionRow);
+            if (session.isEmpty()) {
+                return Optional.empty();
+            }
+
+            // Verify user agent and IP if they match the original session
+            UserSession s = session.get();
+            if (!s.userAgent().equals(userAgent) || !s.ipAddress().equals(ipAddress)) {
+                // Potential security breach - invalidate session
+                db.executeSql(
+                        "UPDATE USER_SESSION SET is_active = 0 WHERE refresh_token = ?",
+                        refreshToken
+                );
+                return Optional.empty();
+            }
+
+            // Create new token pair
+            String userId = claims.getSubject();
+            TokenPair newTokens = createTokenPair(userId, userAgent, ipAddress);
+
+            // Invalidate old session
+            db.executeSql(
+                    "UPDATE USER_SESSION SET is_active = 0 WHERE refresh_token = ?",
+                    refreshToken
+            );
+
+            return Optional.of(newTokens);
+
+        } catch (JwtException e) {
+            Logger.error("Error validating refresh token: " + e);
+            return Optional.empty();
+        }
     }
 
     /**
@@ -68,9 +123,8 @@ public class Tyr {
      */
     public static boolean isTokenValid(String token) {
         SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
-        Jwt<?, ?> jwt;
         try {
-            jwt = Jwts.parser()
+            Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parse(token);
@@ -132,6 +186,9 @@ public class Tyr {
         }
 
         return userRole == null ? "" : userRole.toString();
+    }
+
+    public record TokenPair(String accessToken, String refreshToken) {
     }
 }
 

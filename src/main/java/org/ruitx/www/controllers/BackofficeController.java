@@ -2,6 +2,7 @@ package org.ruitx.www.controllers;
 
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.Tyr;
+import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ public class BackofficeController extends Bragi {
         bodyHtmlPath = BODY_HTML_PATH;
     }
 
+    @AccessControl(login = true)
     @Route(endpoint = "/backoffice", method = GET)
     public void renderIndex() {
         if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
@@ -35,6 +37,7 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 
+    @AccessControl(login = true)
     @Route(endpoint = "/backoffice/settings", method = GET)
     public void renderSettings() {
         if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
