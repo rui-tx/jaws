@@ -143,7 +143,7 @@ public class AuthController extends Bragi {
                     .append("</td>")
                     .append("<td class=\"is-actions-cell\">")
                     .append("<div class=\"buttons is-right\">")
-                    .append("<a href=\"/profile/").append(user.id()).append("\" ")
+                    .append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
                     .append("class=\"button is-small is-primary\" type=\"button\">")
                     .append("<span class=\"icon\"><i class=\"mdi mdi-eye\"></i></span>")
                     .append("</a>")

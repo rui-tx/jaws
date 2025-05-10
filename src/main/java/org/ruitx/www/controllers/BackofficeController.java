@@ -5,6 +5,7 @@ import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.User;
+import org.ruitx.jaws.utils.JawsUtils;
 import org.ruitx.www.repositories.AuthRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ public class BackofficeController extends Bragi {
     private static final String BODY_HTML_PATH = "backoffice/_body.html";
     private static final String UNAUTHORIZED_PAGE = "backoffice/partials/unauthorized.html";
     private static final String SETTINGS_PAGE = "backoffice/partials/settings.html";
+    private static final String USER_PROFILE_PAGE = "backoffice/partials/profile.html";
     private static final Logger log = LoggerFactory.getLogger(BackofficeController.class);
 
     private final AuthRepo authRepo;
@@ -36,6 +38,7 @@ public class BackofficeController extends Bragi {
             return;
         }
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
+        setTemplateVariable("userId", Tyr.getUserIdFromJWT(getCookieToken().get()));
         setTemplateVariable(
                 "currentUser",
                 getCookieToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
@@ -49,9 +52,11 @@ public class BackofficeController extends Bragi {
             sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
             return;
         }
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
+        setTemplateVariable("userId", Tyr.getUserIdFromJWT(getCookieToken().get()));
         setTemplateVariable(
                 "currentUser",
-                getCookieToken().isEmpty() ? "-" : Tyr.getUserIdFromJWT(getCookieToken().get()));
+                getCookieToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
 
         if (isHTMX()) {
             sendHTMLResponse(OK, renderTemplate(SETTINGS_PAGE));
@@ -59,5 +64,37 @@ public class BackofficeController extends Bragi {
         }
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, SETTINGS_PAGE));
+    }
+
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice/profile/:id", method = GET)
+    public void renderUserProfile() {
+        String userId = getPathParam("id");
+        if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
+            sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
+            return;
+        }
+
+        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
+        User user = authRepo.getUserById(Long.parseLong(userId)).get();
+
+        setTemplateVariable(
+                "currentUser",
+                getCookieToken().isEmpty() ? "-" : currentUser.firstName() + " " + currentUser.lastName()
+        );
+        setTemplateVariable("userId", userId);
+        setTemplateVariable("username", user.user());
+        setTemplateVariable("userEmail", user.email());
+        setTemplateVariable("userFirstName", user.firstName());
+        setTemplateVariable("userLastName", user.lastName());
+        setTemplateVariable("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
+        //setTemplateVariable("lastLogin", JawsUtils.formatUnixTimestamp(user.lastLogin()));
+        
+        if (isHTMX()) {
+            sendHTMLResponse(OK, renderTemplate(USER_PROFILE_PAGE));
+            return;
+        }
+
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
     }
 }
