@@ -103,6 +103,9 @@ public record User(
         return User.builder()
                 .id(id)
                 .user(user)
+                .email(email)
+                .firstName(firstName)
+                .lastName(lastName)
                 .createdAt(createdAt)
                 .build();
     }

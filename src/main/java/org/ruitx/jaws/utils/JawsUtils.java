@@ -1,12 +1,45 @@
 package org.ruitx.jaws.utils;
 
 import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class JawsUtils {
 
     private JawsUtils() {
+    }
+
+    /**
+     * Formats a given Unix timestamp into a human-readable date string based on the specified format.
+     *
+     * @param unixTimestamp the Unix timestamp to format, expressed in seconds since the epoch
+     * @param format        the date and time format pattern as defined by {@code DateTimeFormatter}
+     * @return a formatted date string based on the given Unix timestamp and format
+     */
+    public static String formatUnixTimestamp(long unixTimestamp, String format) {
+        // Convert to seconds if timestamp is in milliseconds
+        long timestampInSeconds = (String.valueOf(unixTimestamp).length() > 10)
+                ? unixTimestamp / 1000
+                : unixTimestamp;
+
+        Instant instant = Instant.ofEpochSecond(timestampInSeconds);
+        ZonedDateTime zonedDateTime = instant.atZone(ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        return zonedDateTime.format(formatter);
+    }
+
+    /**
+     * Formats a given Unix timestamp into a human-readable date string using the default format.
+     *
+     * @param unixTimestamp the Unix timestamp to format, expressed in seconds since the epoch
+     * @return a formatted date string based on the given Unix timestamp and the default format "yyyy-MM-dd"
+     */
+    public static String formatUnixTimestamp(long unixTimestamp) {
+        return formatUnixTimestamp(unixTimestamp, "yyyy-MM-dd");
     }
 
     /**

@@ -54,6 +54,14 @@ public class AuthRepo {
         return User.fromRow(row);
     }
 
+    public Optional<User> getUserById(Long id) {
+        Row row = db.getRow("SELECT * FROM USER WHERE id = ?", id);
+        if (row == null) {
+            return Optional.empty();
+        }
+        return User.fromRow(row);
+    }
+
     public List<User> getAllUsers() {
         List<Row> rows = db.getRows("SELECT * FROM USER ORDER BY created_at DESC");
         return rows.stream()

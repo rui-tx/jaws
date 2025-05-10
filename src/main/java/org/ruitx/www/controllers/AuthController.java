@@ -7,6 +7,7 @@ import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.LogoutRequest;
 import org.ruitx.jaws.types.RefreshTokenRequest;
 import org.ruitx.jaws.types.User;
+import org.ruitx.jaws.utils.JawsUtils;
 import org.ruitx.www.models.auth.LoginRequest;
 import org.ruitx.www.models.auth.TokenResponse;
 import org.ruitx.www.services.AuthService;
@@ -84,7 +85,7 @@ public class AuthController extends Bragi {
 
         sendSucessfulResponse(OK, response.data());
     }
-    
+
     @AccessControl(login = true)
     @Route(endpoint = API_ENDPOINT + "logout-all", method = POST, responseType = JSON)
     public void logoutAll() {
@@ -118,22 +119,34 @@ public class AuthController extends Bragi {
             html.append("<tr>")
                     .append("<td class=\"is-image-cell\">")
                     .append("<div class=\"image\">")
-                    .append("<img class=\"is-rounded\" src=\"https://avatars.dicebear.com/v2/initials/")
-                    .append(user.user().toLowerCase().replace(" ", "-"))
+                    .append("<img class=\"is-rounded\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F")
+                    //.append(user.user().toLowerCase().replace(" ", "-")) // disable for now
                     .append(".svg\">")
                     .append("</div>")
                     .append("</td>")
-                    .append("<td data-label=\"Name\">").append(user.user()).append("</td>")
+                    .append("<td data-label=\"Name\">")
+                    .append("<p>").append(user.user()).append("</p>")
+                    .append("<p class=\"has-text-grey is-size-7\">")
+                    .append(user.email() != null ? user.email() : "No email")
+                    .append("</p>")
+                    .append("</td>")
+                    .append("<td data-label=\"Full Name\">")
+                    .append(user.firstName() != null ? user.firstName() : "")
+                    .append(" ")
+                    .append(user.lastName() != null ? user.lastName() : "")
+                    .append("</td>")
                     .append("<td data-label=\"Created\">")
                     .append("<small class=\"has-text-grey is-abbr-like\" title=\"")
                     .append(user.createdAt() != null ? user.createdAt() : "N/A")
-                    .append("\">").append(user.createdAt() != null ? user.createdAt() : "N/A").append("</small>")
+                    .append("\">").append(user.createdAt() != null ?
+                            JawsUtils.formatUnixTimestamp(user.createdAt()) : "N/A").append("</small>")
                     .append("</td>")
                     .append("<td class=\"is-actions-cell\">")
                     .append("<div class=\"buttons is-right\">")
-                    .append("<button class=\"button is-small is-primary\" type=\"button\">")
+                    .append("<a href=\"/profile/").append(user.id()).append("\" ")
+                    .append("class=\"button is-small is-primary\" type=\"button\">")
                     .append("<span class=\"icon\"><i class=\"mdi mdi-eye\"></i></span>")
-                    .append("</button>")
+                    .append("</a>")
                     .append("<button class=\"button is-small is-danger jb-modal\" data-target=\"sample-modal\" type=\"button\">")
                     .append("<span class=\"icon\"><i class=\"mdi mdi-trash-can\"></i></span>")
                     .append("</button>")

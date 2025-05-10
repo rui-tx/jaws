@@ -76,13 +76,23 @@ public class Mimir {
             throw new RuntimeException("Failed to initialize database", e);
         }
     }
-    
+
     private void createDefaultAdminUser() {
         Optional<String> password = JawsUtils.newPassword();
+        String email = "admin@jaws.local";
+        String firstName = "John";
+        String lastName = "Doe";
         String hashedPassword =
                 BCrypt.withDefaults().hashToString(12, password.orElse("Lee7Pa$$w00rd").toCharArray());
-        executeSql("INSERT INTO USER (user, password_hash, created_at) VALUES (?, ?, ?)",
-                "admin", hashedPassword, Date.from(Instant.now()));
+        executeSql("INSERT INTO USER (user, password_hash, email, first_name, last_name, is_superuser, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "admin",
+                hashedPassword,
+                email,
+                firstName,
+                lastName,
+                true,
+                Date.from(Instant.now())
+        );
         Logger.info("A new admin user has been created with username 'admin' and password '"
                 + (password.orElse("Lee7Pa$$w00rd")) + "'");
         Logger.info("Please save this in a safe place, it will not be shown again.");

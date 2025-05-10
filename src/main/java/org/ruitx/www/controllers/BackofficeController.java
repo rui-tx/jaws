@@ -4,6 +4,8 @@ import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.types.User;
+import org.ruitx.www.repositories.AuthRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,8 +21,11 @@ public class BackofficeController extends Bragi {
     private static final String SETTINGS_PAGE = "backoffice/partials/settings.html";
     private static final Logger log = LoggerFactory.getLogger(BackofficeController.class);
 
+    private final AuthRepo authRepo;
+
     public BackofficeController() {
         bodyHtmlPath = BODY_HTML_PATH;
+        this.authRepo = new AuthRepo();
     }
 
     @AccessControl(login = true)
@@ -30,10 +35,10 @@ public class BackofficeController extends Bragi {
             sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
             return;
         }
-
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
         setTemplateVariable(
                 "currentUser",
-                getCookieToken().isEmpty() ? "-" : Tyr.getUserIdFromJWT(getCookieToken().get()));
+                getCookieToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 
