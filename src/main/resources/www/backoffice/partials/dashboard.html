@@ -45,9 +45,13 @@
             <a class="card-header-icon"
                hx-get="/api/v1/auth/html/list"
                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-               hx-target="#users-table-body">
+               hx-indicator="#users-spinner"
+               hx-swap="innerHTML transition:true"
+               hx-target="#users-table-body"
+               hx-trigger="click">
                 <span class="icon"><i class="mdi mdi-reload"></i></span>
             </a>
+
         </header>
 
         <div class="card-content">
@@ -65,12 +69,19 @@
                         </thead>
                         <tbody hx-get="/api/v1/auth/html/list"
                                hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                               hx-indicator="#users-spinner"
+                               hx-swap="innerHTML transition:true"
                                hx-trigger="load"
                                id="users-table-body">
                         </tbody>
                     </table>
+
                 </div>
             </div>
+        </div>
+
+        <div class="loading-container htmx-indicator" id="users-spinner">
+            <img class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
         </div>
     </div>
 </section>

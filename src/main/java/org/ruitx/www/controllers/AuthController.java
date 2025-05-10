@@ -113,7 +113,7 @@ public class AuthController extends Bragi {
             sendHTMLResponse(response.code(), "Error loading users");
             return;
         }
-
+        
         StringBuilder html = new StringBuilder();
         for (User user : response.data()) {
             html.append("<tr>")
@@ -143,7 +143,10 @@ public class AuthController extends Bragi {
                     .append("</td>")
                     .append("<td class=\"is-actions-cell\">")
                     .append("<div class=\"buttons is-right\">")
-                    .append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
+                    //.append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
+                    .append("<a  hx-get=\"/backoffice/profile/").append(user.id()).append("\" ")
+                    .append("hx-trigger=\"click\" hx-target=\"#bodytemplate\" hx-target=\"#bodytemplate\" hx-push-url=\"true\" hx-swap=\"outerHTML swap:175ms settle:175ms\"")
+
                     .append("class=\"button is-small is-primary\" type=\"button\">")
                     .append("<span class=\"icon\"><i class=\"mdi mdi-eye\"></i></span>")
                     .append("</a>")
