@@ -26,9 +26,56 @@ public final class Hermod {
     private static final String DEFAULT_BODY_PATH = "_body.html";
     private static final ThreadLocal<String> BODY_PATH = ThreadLocal.withInitial(() -> DEFAULT_BODY_PATH);
 
+    // Global template variables that persist across requests
+    private static final ThreadLocal<Map<String, String>> TEMPLATE_VARIABLES =
+            ThreadLocal.withInitial(HashMap::new);
+
+
     private Hermod() {
     }
-    
+
+    /**
+     * Set a template variable for the current request.
+     *
+     * @param name  the variable name
+     * @param value the variable value
+     */
+    public static void setTemplateVariable(String name, String value) {
+        if (name != null && !name.isEmpty()) {
+            TEMPLATE_VARIABLES.get().put(name, value);
+        }
+    }
+
+    /**
+     * Get a template variable for the current request.
+     *
+     * @param name the variable name
+     * @return the variable value or null if not found
+     */
+    public static String getTemplateVariable(String name) {
+        return TEMPLATE_VARIABLES.get().get(name);
+    }
+
+    /**
+     * Remove a template variable for the current request.
+     *
+     * @param name the variable name
+     */
+    public static void removeTemplateVariable(String name) {
+        TEMPLATE_VARIABLES.get().remove(name);
+    }
+
+    /**
+     * Clear all template variables for the current request.
+     * Should be called at the end of request processing to prevent memory leaks.
+     */
+    public static void clearTemplateVariables() {
+        TEMPLATE_VARIABLES.get().clear();
+        // Important to prevent memory leaks in thread pools
+        TEMPLATE_VARIABLES.remove();
+    }
+
+
     /**
      * Get the body path for the default body template.
      * This method is synchronized to prevent concurrent access.
@@ -122,9 +169,14 @@ public final class Hermod {
             if (commandExecutor != null) {
                 replacement = commandExecutor.execute(placeholderContent);
             } else {
+                // First check request parameters
                 String paramValue = requestParams.get(placeholderContent);
                 if (paramValue != null) {
                     replacement = paramValue;
+                }
+                // Then check thread-local template variables
+                else if (TEMPLATE_VARIABLES.get().containsKey(placeholderContent)) {
+                    replacement = TEMPLATE_VARIABLES.get().get(placeholderContent);
                 } else {
                     if (placeholderContent.equals("_BODY_CONTENT_")) {
                         try {
@@ -151,6 +203,7 @@ public final class Hermod {
         matcher.appendTail(result);
         return result.toString();
     }
+
 
     /**
      * Escape dollar signs in the input string for regex processing.

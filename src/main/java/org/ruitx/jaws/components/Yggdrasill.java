@@ -1009,6 +1009,46 @@ public class Yggdrasill {
         }
 
         /**
+         * Retrieves the client's IP address by checking various headers commonly used
+         * when a client is behind a proxy, or falls back to the remote address of the socket.
+         * The order of preference for determining the IP address is:
+         * - "X-Forwarded-For" header
+         * - "Proxy-Client-IP" header
+         * - "WL-Proxy-Client-IP" header
+         * - Remote address of the socket
+         * If none of these are available, it returns "unknown".
+         *
+         * @return the client's IP address as a String, or "unknown" if the IP cannot be determined
+         */
+        public String getClientIpAddress() {
+            // First check the X-Forwarded-For header (for clients behind a proxy)
+            String forwardedFor = headers.get("X-Forwarded-For");
+            if (forwardedFor != null && !forwardedFor.isEmpty()) {
+                // Get the first IP if there are multiple
+                return forwardedFor.split(",")[0].trim();
+            }
+
+            // Then check the Proxy-Client-IP header
+            String proxyClientIp = headers.get("Proxy-Client-IP");
+            if (proxyClientIp != null && !proxyClientIp.isEmpty()) {
+                return proxyClientIp;
+            }
+
+            // Then check the WL-Proxy-Client-IP header
+            String wlProxyClientIp = headers.get("WL-Proxy-Client-IP");
+            if (wlProxyClientIp != null && !wlProxyClientIp.isEmpty()) {
+                return wlProxyClientIp;
+            }
+
+            // Finally, get the remote address from the socket
+            if (socket != null && socket.getInetAddress() != null) {
+                return socket.getInetAddress().getHostAddress();
+            }
+
+            return "unknown";
+        }
+
+        /**
          * Check if the current request is made by HTMX.
          *
          * @return true if the request is made by HTMX, false otherwise.
@@ -1076,6 +1116,15 @@ public class Yggdrasill {
          */
         public void addCustomHeader(String name, String value) {
             customResponseHeaders.put(name, value);
+        }
+
+        /**
+         * Retrieves the headers as a map of key-value pairs.
+         *
+         * @return a map containing the headers, where keys are the header names and values are the corresponding header values
+         */
+        public Map<String, String> getHeaders() {
+            return headers;
         }
     }
 }

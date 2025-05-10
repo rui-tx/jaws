@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html class="has-aside-left has-aside-mobile-transition has-navbar-fixed-top has-aside-expanded" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="IE=edge" http-equiv="X-UA-Compatible">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>Jaws Backoffice</title>
+
+    <!-- Bulma is included -->
+    <link href="{{getPathFor("backoffice/css/main.min.css")}}" rel="stylesheet">
+
+
+    <!-- Fonts -->
+    <link href="https://fonts.gstatic.com" rel="dns-prefetch">
+    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="app">
+    <nav class="navbar is-fixed-top" id="navbar-main">
+        <div class="navbar-brand">
+            <a class="navbar-item is-hidden-desktop jb-aside-mobile-toggle">
+                <span class="icon"><i class="mdi mdi-forwardburger mdi-24px"></i></span>
+            </a>
+
+        </div>
+        <div class="navbar-brand is-right">
+            <a class="navbar-item is-hidden-desktop jb-navbar-menu-toggle" data-target="navbar-menu">
+                <span class="icon"><i class="mdi mdi-dots-vertical"></i></span>
+            </a>
+        </div>
+        <div class="navbar-menu fadeIn animated faster" id="navbar-menu">
+            <div class="navbar-end">
+                <div class="navbar-item has-dropdown has-dropdown-with-icons has-divider has-user-avatar is-hoverable">
+                    <a class="navbar-link is-arrowless">
+                        <div class="is-user-avatar">
+                            <img alt="{{currentUser}}" src="https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg">
+                        </div>
+                        <div class="is-user-name"><span>{{currentUser}}</span></div>
+                        <span class="icon"><i class="mdi mdi-chevron-down"></i></span>
+                    </a>
+                    <div class="navbar-dropdown">
+                        <a class="navbar-item" href="#">
+                            <span class="icon"><i class="mdi mdi-account"></i></span>
+                            <span>My Profile</span>
+                        </a>
+                        <a hx-get="/backoffice/settings" hx-trigger="click" hx-target="#bodytemplate" hx-push-url="true"
+                           class="navbar-item">
+                            <span class="icon"><i class="mdi mdi-settings"></i></span>
+                            <span>Settings</span>
+                        </a>
+                        <hr class="navbar-divider">
+                        <a class="navbar-item">
+                            <span class="icon"><i class="mdi mdi-logout"></i></span>
+                            <span>Log Out</span>
+                        </a>
+                    </div>
+                </div>
+                <a class="navbar-item has-divider is-desktop-icon-only"
+                   href="https://github.com/rui-tx/jaws/blob/main/README.md"
+                   title="About">
+                    <span class="icon"><i class="mdi mdi-help-circle-outline"></i></span>
+                    <span>About</span>
+                </a>
+                <a class="navbar-item is-desktop-icon-only" title="Log out">
+                    <span class="icon"><i class="mdi mdi-logout"></i></span>
+                    <span>Log out</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    <aside class="aside is-placed-left is-expanded">
+        <div class="aside-tools">
+            <div class="aside-tools-label">
+                <span><b>Jaws</b> Backoffice</span>
+            </div>
+        </div>
+        <div class="menu is-menu-main">
+            <p class="menu-label">General</p>
+            <ul class="menu-list">
+                <li>
+                    <a class="is-active router-link-active has-icon" href="/backoffice">
+                        <span class="icon"><i class="mdi mdi-desktop-mac"></i></span>
+                        <span class="menu-item-label">Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a hx-get="/backoffice/settings" hx-trigger="click" hx-target="#bodytemplate" hx-push-url="true"
+                       class="is-active router-link-active has-icon">
+                        <span class="icon"><i class="mdi mdi-settings"></i></span>
+                        <span class="menu-item-label">Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <div id="bodytemplate" >
+    {{_BODY_CONTENT_}}
+    </div>
+
+    </section>
+    <footer class="footer">
+        <div class="container-fluid">
+            <div class="level">
+                <div class="level-left">
+                    <div class="level-item">
+                        © 2025, Jaws
+                    </div>
+                    <div class="level-item">
+                        <a href="https://github.com/rui-tx/jaws" style="height: 20px">
+
+                        </a>
+                    </div>
+                </div>
+                <div class="level-right">
+                    <div class="level-item">
+                        <div class="logo">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<div class="modal" id="sample-modal">
+    <div class="modal-background jb-modal-close"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Confirm action</p>
+            <button aria-label="close" class="delete jb-modal-close"></button>
+        </header>
+        <section class="modal-card-body">
+            <p>This will permanently delete <b>Some Object</b></p>
+            <p>This is sample modal</p>
+        </section>
+        <footer class="modal-card-foot">
+            <button class="button jb-modal-close">Cancel</button>
+            <button class="button is-danger jb-modal-close">Delete</button>
+        </footer>
+    </div>
+    <button aria-label="close" class="modal-close is-large jb-modal-close"></button>
+</div>
+
+<!-- Scripts -->
+<script src="{{getPathFor("backoffice/js/main.min.js")}}" type="text/javascript"></script>
+<script src="{{getPathFor("backoffice/js/htmx.min.js")}}"></script>
+<script src="{{getPathFor("backoffice/js/auth.js")}}"></script>
+
+<!-- Icons below are for demo only. Feel free to use any icon pack. Docs: https://bulma.io/documentation/elements/icon/ -->
+<link href="https://cdn.materialdesignicons.com/4.9.95/css/materialdesignicons.min.css" rel="stylesheet">
+</body>
+</html>

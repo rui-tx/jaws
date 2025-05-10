@@ -1,9 +1,9 @@
 package org.ruitx.www.services;
 
-import org.ruitx.www.models.api.PingResponse;
+import org.ruitx.jaws.types.PingResponse;
 
 public class APIService {
-    
+
     public APIService() {
     }
 

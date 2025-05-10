@@ -2,6 +2,7 @@ package org.ruitx.jaws.components;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.configs.ApplicationConfig;
+import org.ruitx.www.services.AuthService;
 import org.tinylog.Logger;
 
 import java.nio.file.Paths;
@@ -9,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
@@ -85,7 +87,12 @@ public final class Odin {
     // Norns manages scheduled tasks
     private static Thread createNorns() {
         Norns norns = Norns.getInstance();
-        //norns.registerTask("example", () -> new ExampleService().runMe(), 1, TimeUnit.HOURS);
+        norns.registerTask(
+                "clean-old-sessions",
+                () -> new AuthService().cleanOldSessions(),
+                30,
+                TimeUnit.MINUTES
+        );
         return new Thread(norns, "norns");
     }
 
@@ -96,5 +103,4 @@ public final class Odin {
             executor.shutdown();
         }));
     }
-
 }

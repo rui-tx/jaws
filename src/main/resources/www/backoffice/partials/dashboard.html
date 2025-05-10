@@ -1,0 +1,76 @@
+<section class="section is-title-bar">
+    <div class="level">
+        <div class="level-left">
+            <div class="level-item">
+                <ul>
+                    <li>{{currentUser}}</li>
+                    <li>Dashboard</li>
+                </ul>
+            </div>
+        </div>
+        <div class="level-right">
+            <div class="level-item">
+                <div class="buttons is-right">
+                    <a class="button is-primary" href="https://github.com/rui-tx/jaws"
+                       target="_blank">
+                        <span class="icon"><i class="mdi mdi-github-circle"></i></span>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="hero is-hero-bar">
+    <div class="hero-body">
+        <div class="level">
+            <div class="level-left">
+                <div class="level-item"><h1 class="title">
+                    Dashboard
+                </h1></div>
+            </div>
+            <div class="level-right" style="display: none;">
+                <div class="level-item"></div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="section is-main-section">
+    <div class="card has-table has-mobile-sort-spaced">
+        <header class="card-header">
+            <p class="card-header-title">
+                <span class="icon"><i class="mdi mdi-account-multiple"></i></span>
+                Users
+            </p>
+            <a class="card-header-icon"
+               hx-get="/api/v1/auth/html/list"
+               hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+               hx-target="#users-table-body">
+                <span class="icon"><i class="mdi mdi-reload"></i></span>
+            </a>
+        </header>
+
+        <div class="card-content">
+            <div class="b-table has-pagination">
+                <div class="table-wrapper has-mobile-cards">
+                    <table class="table is-fullwidth is-striped is-hoverable is-sortable is-fullwidth">
+                        <thead>
+                        <tr>
+                            <th></th>
+                            <th>Username/Email</th>
+                            <th>Full Name</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody hx-get="/api/v1/auth/html/list"
+                               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                               hx-trigger="load"
+                               id="users-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

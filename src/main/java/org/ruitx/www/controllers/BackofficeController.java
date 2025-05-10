@@ -1,0 +1,63 @@
+package org.ruitx.www.controllers;
+
+import org.ruitx.jaws.components.Bragi;
+import org.ruitx.jaws.components.Tyr;
+import org.ruitx.jaws.interfaces.AccessControl;
+import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.types.User;
+import org.ruitx.www.repositories.AuthRepo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.ruitx.jaws.strings.RequestType.GET;
+import static org.ruitx.jaws.strings.ResponseCode.OK;
+
+public class BackofficeController extends Bragi {
+
+
+    private static final String BASE_HTML_PATH = "backoffice/index.html";
+    private static final String BODY_HTML_PATH = "backoffice/_body.html";
+    private static final String UNAUTHORIZED_PAGE = "backoffice/partials/unauthorized.html";
+    private static final String SETTINGS_PAGE = "backoffice/partials/settings.html";
+    private static final Logger log = LoggerFactory.getLogger(BackofficeController.class);
+
+    private final AuthRepo authRepo;
+
+    public BackofficeController() {
+        bodyHtmlPath = BODY_HTML_PATH;
+        this.authRepo = new AuthRepo();
+    }
+
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice", method = GET)
+    public void renderIndex() {
+        if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
+            sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
+            return;
+        }
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
+        setTemplateVariable(
+                "currentUser",
+                getCookieToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
+    }
+
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice/settings", method = GET)
+    public void renderSettings() {
+        if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
+            sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
+            return;
+        }
+        setTemplateVariable(
+                "currentUser",
+                getCookieToken().isEmpty() ? "-" : Tyr.getUserIdFromJWT(getCookieToken().get()));
+
+        if (isHTMX()) {
+            sendHTMLResponse(OK, renderTemplate(SETTINGS_PAGE));
+            return;
+        }
+
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, SETTINGS_PAGE));
+    }
+}
