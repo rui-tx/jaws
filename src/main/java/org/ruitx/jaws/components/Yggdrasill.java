@@ -207,6 +207,15 @@ public class Yggdrasill {
         }
 
         /**
+         * Retrieves the current token value from the underlying token representation.
+         *
+         * @return the current token value as a String
+         */
+        public String getCurrentTokenValue() {
+            return currentToken.get();
+        }
+
+        /**
          * Runs the request handling process, including reading headers, body, and sending a response.
          */
         @Override
@@ -748,7 +757,11 @@ public class Yggdrasill {
             if (routeMethod.isAnnotationPresent(AccessControl.class)) {
                 AccessControl auth = routeMethod.getAnnotation(AccessControl.class);
                 if (auth.login()) {
-                    if (currentToken.get() == null || !Tyr.isTokenValid(currentToken.get())) {
+                    if (currentToken.get() == null) {
+                        if (getHeaders().get("Cookie") == null && getHeaders().get("cookie") == null) {
+                            return false;
+                        }
+                    } else if (!Tyr.isTokenValid(currentToken.get())) {
                         return false;
                     }
                     String userId = Tyr.getUserIdFromJWT(currentToken.get());

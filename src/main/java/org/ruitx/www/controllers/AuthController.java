@@ -89,7 +89,7 @@ public class AuthController extends Bragi {
     @AccessControl(login = true)
     @Route(endpoint = API_ENDPOINT + "logout-all", method = POST, responseType = JSON)
     public void logoutAll() {
-        Optional<String> userId = getCookieToken();
+        Optional<String> userId = getCookieToken(); // <-- change this for get token from yggdrassil
         if (userId.isEmpty()) {
             sendErrorResponse(BAD_REQUEST, "Could not get user id from cookie");
             return;

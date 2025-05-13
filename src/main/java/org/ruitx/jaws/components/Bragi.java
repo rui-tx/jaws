@@ -71,6 +71,12 @@ public abstract class Bragi {
         Hermod.setTemplateVariable(name, value);
     }
 
+    protected void setContext(Map<String, String> context) {
+        for (Map.Entry<String, String> entry : context.entrySet()) {
+            Hermod.setTemplateVariable(entry.getKey(), entry.getValue());
+        }
+    }
+
     /**
      * Get a template variable from the current request context.
      *

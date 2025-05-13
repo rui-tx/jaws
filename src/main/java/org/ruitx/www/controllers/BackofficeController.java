@@ -10,6 +10,9 @@ import org.ruitx.www.repositories.AuthRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 
@@ -33,30 +36,22 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true)
     @Route(endpoint = "/backoffice", method = GET)
     public void renderIndex() {
-        if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
-            sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
-            return;
-        }
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
-        setTemplateVariable("userId", Tyr.getUserIdFromJWT(getCookieToken().get()));
+        String token = getRequestHandler().getCurrentTokenValue();
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(token))).get();
+        setTemplateVariable("userId", Tyr.getUserIdFromJWT(token));
         setTemplateVariable(
-                "currentUser",
-                getCookieToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+                "currentUser", token.isEmpty() ? "-" : user.firstName() + " " + user.lastName());
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 
     @AccessControl(login = true)
     @Route(endpoint = "/backoffice/settings", method = GET)
     public void renderSettings() {
-        if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
-            sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
-            return;
-        }
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
-        setTemplateVariable("userId", Tyr.getUserIdFromJWT(getCookieToken().get()));
+        String token = getRequestHandler().getCurrentTokenValue();
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(token))).get();
+        setTemplateVariable("userId", Tyr.getUserIdFromJWT(token));
         setTemplateVariable(
-                "currentUser",
-                getCookieToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+                "currentUser", token.isEmpty() ? "-" : user.firstName() + " " + user.lastName());
 
         if (isHTMX()) {
             sendHTMLResponse(OK, renderTemplate(SETTINGS_PAGE));
@@ -70,26 +65,19 @@ public class BackofficeController extends Bragi {
     @Route(endpoint = "/backoffice/profile/:id", method = GET)
     public void renderUserProfile() {
         String userId = getPathParam("id");
-        if (getCookieToken().isEmpty() || !Tyr.isTokenValid(getCookieToken().get())) {
-            sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, UNAUTHORIZED_PAGE));
-            return;
-        }
-
-        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCookieToken().get()))).get();
+        String token = getRequestHandler().getCurrentTokenValue();
+        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(token))).get();
         User user = authRepo.getUserById(Long.parseLong(userId)).get();
 
-        setTemplateVariable(
-                "currentUser",
-                getCookieToken().isEmpty() ? "-" : currentUser.firstName() + " " + currentUser.lastName()
-        );
-        setTemplateVariable("userId", userId);
-        setTemplateVariable("username", user.user());
-        setTemplateVariable("userEmail", user.email());
-        setTemplateVariable("userFirstName", user.firstName());
-        setTemplateVariable("userLastName", user.lastName());
-        setTemplateVariable("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
-        //setTemplateVariable("lastLogin", JawsUtils.formatUnixTimestamp(user.lastLogin()));
-        
+        Map<String, String> context = new HashMap<>();
+        context.put("currentUser", token.isEmpty() ? "-" : currentUser.firstName() + " " + currentUser.lastName());
+        context.put("userId", userId);
+        context.put("username", user.user());
+        context.put("userEmail", user.email());
+        context.put("userFirstName", user.firstName());
+        context.put("userLastName", user.lastName());
+        context.put("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
+        setContext(context);
         if (isHTMX()) {
             sendHTMLResponse(OK, renderTemplate(USER_PROFILE_PAGE));
             return;
