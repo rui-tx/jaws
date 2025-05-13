@@ -13,7 +13,6 @@ import org.ruitx.www.models.auth.TokenResponse;
 import org.ruitx.www.services.AuthService;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.BAD_REQUEST;
@@ -89,13 +88,13 @@ public class AuthController extends Bragi {
     @AccessControl(login = true)
     @Route(endpoint = API_ENDPOINT + "logout-all", method = POST, responseType = JSON)
     public void logoutAll() {
-        Optional<String> userId = getCookieToken(); // <-- change this for get token from yggdrassil
+        String userId = getCurrentToken();
         if (userId.isEmpty()) {
             sendErrorResponse(BAD_REQUEST, "Could not get user id from cookie");
             return;
         }
 
-        APIResponse<Void> response = authService.logoutAll(userId.get());
+        APIResponse<Void> response = authService.logoutAll(userId);
 
         if (!response.success()) {
             sendErrorResponse(response.code(), response.info());

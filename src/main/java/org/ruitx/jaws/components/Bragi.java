@@ -20,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
@@ -71,6 +70,14 @@ public abstract class Bragi {
         Hermod.setTemplateVariable(name, value);
     }
 
+    /**
+     * Updates the template variables using the provided context map. Each entry in
+     * the context map is set as a template variable.
+     *
+     * @param context a map containing key-value pairs where the key represents the
+     *                template variable name and the value represents the associated
+     *                variable value to be set.
+     */
     protected void setContext(Map<String, String> context) {
         for (Map.Entry<String, String> entry : context.entrySet()) {
             Hermod.setTemplateVariable(entry.getKey(), entry.getValue());
@@ -94,6 +101,16 @@ public abstract class Bragi {
      */
     protected void removeTemplateVariable(String name) {
         Hermod.removeTemplateVariable(name);
+    }
+
+    /**
+     * Retrieves the current token by attempting to fetch it from cookies.
+     *
+     * @return the current token as a String if present in cookies,
+     * or null if no token is available.
+     */
+    protected String getCurrentToken() {
+        return getRequestHandler().getCurrentToken() == null ? "" : getRequestHandler().getCurrentToken();
     }
 
     /**
@@ -130,11 +147,22 @@ public abstract class Bragi {
         }
     }
 
-
+    /**
+     * Sends a successful response with the provided response code and data.
+     *
+     * @param code The response code represented as a string.
+     * @param data The data to be included in the response.
+     */
     protected void sendSucessfulResponse(String code, Object data) {
         sendSucessfulResponse(ResponseCode.fromCodeAndMessage(code), null, data);
     }
 
+    /**
+     * Sends a successful response with the specified response code and message.
+     *
+     * @param code    the response code indicating the status of the operation
+     * @param message the message providing additional information about the response
+     */
     protected void sendSucessfulResponse(String code, String message) {
         sendSucessfulResponse(ResponseCode.fromCodeAndMessage(code), message, null);
     }
@@ -177,7 +205,6 @@ public abstract class Bragi {
             Hermod.clearTemplateVariables();
         }
     }
-
 
     /**
      * Send a JSON error response with a code and message
@@ -246,7 +273,6 @@ public abstract class Bragi {
             Hermod.clearTemplateVariables();
         }
     }
-
 
     /**
      * Get a path parameter from the request.
@@ -355,19 +381,19 @@ public abstract class Bragi {
         return requestHandler.get().getHeaders();
     }
 
-    public Optional<String> getCookieToken() {
-        String cookieHeader = getHeaders().entrySet().stream()
-                .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElse(null);
-
-        if (cookieHeader != null) {
-            return Optional.of(cookieHeader.split(";")[0].split("=")[1]);
-        }
-
-        return Optional.empty();
-    }
+//    public Optional<String> getCookieToken() {
+//        String cookieHeader = getHeaders().entrySet().stream()
+//                .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
+//                .map(Map.Entry::getValue)
+//                .findFirst()
+//                .orElse(null);
+//
+//        if (cookieHeader != null) {
+//            return Optional.of(cookieHeader.split(";")[0].split("=")[1]);
+//        }
+//
+//        return Optional.empty();
+//    }
 
     /**
      * Render a template file without parameters.

@@ -120,7 +120,9 @@ public class Yggdrasill {
                 clientSocket.setSoTimeout((int) ApplicationConfig.TIMEOUT);
                 threadPool.submit(new RequestHandler(clientSocket, resourcesPath));
                 ThreadPoolExecutor executor = (ThreadPoolExecutor) threadPool;
-                currentConnections = executor.getActiveCount();
+                synchronized (Yggdrasill.class) {
+                    currentConnections = executor.getActiveCount();
+                }
             } catch (SocketTimeoutException e) {
                 throw new ConnectionException("Socket timeout while waiting for connection", e);
             } catch (IllegalBlockingModeException e) {
@@ -139,8 +141,6 @@ public class Yggdrasill {
      */
     public static class RequestHandler implements Runnable {
 
-        private static final ThreadLocal<String> currentToken = new ThreadLocal<>();
-
         private final Socket socket;
         private final String resourcesPath;
         private final Map<String, String> headers = new LinkedHashMap<>();
@@ -149,6 +149,7 @@ public class Yggdrasill {
         private Map<String, String> queryParams = new LinkedHashMap<>();
         private Map<String, String> bodyParams = new LinkedHashMap<>();
         private Map<String, String> pathParams = new LinkedHashMap<>();
+        private String currentToken;
         private BufferedReader in;
         private DataOutputStream out;
 
@@ -161,58 +162,6 @@ public class Yggdrasill {
         public RequestHandler(Socket socket, String resourcesPath) {
             this.socket = socket;
             this.resourcesPath = resourcesPath;
-        }
-
-        /**
-         * Retrieves the current token from the request headers.
-         *
-         * @return the current token, or null if no token is found.
-         */
-        public static String getCurrentToken() {
-            return currentToken.get();
-        }
-
-        /**
-         * Extracts the current token from the request headers and stores it in a thread-local variable.
-         *
-         * @param headers the request headers.
-         */
-        private static void extractAndStoreToken(Map<String, String> headers) {
-            if (headers == null) return;
-
-            String authHeader = headers.entrySet().stream()
-                    .filter(entry -> "Authorization".equalsIgnoreCase(entry.getKey()))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(null);
-
-            if (authHeader != null) {
-                String token = authHeader.substring(7);
-                currentToken.set(token);
-                return;
-            }
-
-            // TODO: Refactor this if statement, it shouldn't be just "Cookie", but "Cookie token=" or something
-            // tries to extract the token from the Cookie header
-            String cookieHeader = headers.entrySet().stream()
-                    .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(null);
-
-            if (cookieHeader != null) {
-                String token = cookieHeader.split(";")[0].split("=")[1];
-                currentToken.set(token);
-            }
-        }
-
-        /**
-         * Retrieves the current token value from the underlying token representation.
-         *
-         * @return the current token value as a String
-         */
-        public String getCurrentTokenValue() {
-            return currentToken.get();
         }
 
         /**
@@ -459,16 +408,6 @@ public class Yggdrasill {
         }
 
         /**
-         * Returns the path for the static resource corresponding to the endpoint.
-         *
-         * @param endPoint the endpoint of the request.
-         * @return the path to the corresponding static resource.
-         */
-        private Path getResourcePath(String endPoint) {
-            return endPoint.equals("/") ? Paths.get(resourcesPath + "/index.html") : Paths.get(resourcesPath + endPoint);
-        }
-
-        /**
          * Sends a file response for the specified path.
          *
          * @param path the path to the file.
@@ -629,7 +568,11 @@ public class Yggdrasill {
          * @return true if the key is a valid request type, false otherwise.
          */
         private boolean isValidRequestType(String key) {
-            return key.equals("GET") || key.equals("POST") || key.equals("PUT") || key.equals("PATCH") || key.equals("DELETE");
+            return key.equals(GET.name())
+                    || key.equals(POST.name())
+                    || key.equals(PUT.name())
+                    || key.equals(PATCH.name())
+                    || key.equals(DELETE.name());
         }
 
         /**
@@ -705,6 +648,38 @@ public class Yggdrasill {
         }
 
         /**
+         * Extracts the current token from the request headers and stores it in a thread-local variable.
+         *
+         * @param headers the request headers.
+         */
+        private void extractAndStoreToken(Map<String, String> headers) {
+            if (headers == null) return;
+
+            String authHeader = headers.entrySet().stream()
+                    .filter(entry -> "Authorization".equalsIgnoreCase(entry.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(null);
+
+            if (authHeader != null) {
+                this.currentToken = authHeader.substring(7);
+                return;
+            }
+
+            // TODO: Refactor this if statement, it shouldn't be just "Cookie", but "Cookie token=" or something
+            // tries to extract the token from the Cookie header
+            String cookieHeader = headers.entrySet().stream()
+                    .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(null);
+
+            if (cookieHeader != null) {
+                this.currentToken = cookieHeader.split(";")[0].split("=")[1];
+            }
+        }
+
+        /**
          * Finds a dynamic route for the given endpoint and HTTP method.
          *
          * @param endPoint the endpoint to match.
@@ -757,15 +732,15 @@ public class Yggdrasill {
             if (routeMethod.isAnnotationPresent(AccessControl.class)) {
                 AccessControl auth = routeMethod.getAnnotation(AccessControl.class);
                 if (auth.login()) {
-                    if (currentToken.get() == null) {
+                    if (currentToken == null) {
                         if (getHeaders().get("Cookie") == null && getHeaders().get("cookie") == null) {
                             return false;
                         }
-                    } else if (!Tyr.isTokenValid(currentToken.get())) {
+                    } else if (!Tyr.isTokenValid(currentToken)) {
                         return false;
                     }
-                    String userId = Tyr.getUserIdFromJWT(currentToken.get());
-                    String userRole = Tyr.getUserRoleFromJWT(currentToken.get());
+                    String userId = Tyr.getUserIdFromJWT(currentToken);
+                    String userRole = Tyr.getUserRoleFromJWT(currentToken);
 
                     // Check if the user's role is sufficient for this endpoint
                     // Roles does nothing at the moment
@@ -795,8 +770,8 @@ public class Yggdrasill {
                 }
 
                 // Set request handler if the controller extends BaseController
-                if (controllerInstance instanceof Bragi) {
-                    ((Bragi) controllerInstance).setRequestHandler(this);
+                if (controllerInstance instanceof Bragi bragi) {
+                    bragi.setRequestHandler(this);
                     Logger.debug("Set request handler for controller {}", controllerName);
                 }
 
@@ -968,7 +943,7 @@ public class Yggdrasill {
         private Map<String, String> matchRoutePattern(String routePattern, String endPoint) {
             Map<String, String> params = new LinkedHashMap<>();
 
-            // Split the route pattern and the endpoint into parts (e.g., "/todo/:id" becomes ["todo", ":id"])
+            // Split the route pattern and the endpoint into parts (e.g., "/user/:id" becomes ["user", ":id"])
             String[] routeParts = routePattern.split("/");
             String[] endpointParts = endPoint.split("/");
 
@@ -1086,12 +1061,31 @@ public class Yggdrasill {
             synchronized (Yggdrasill.class) {
                 currentConnections--;
             }
-            currentToken.remove();
+            //currentToken.remove();
             try {
                 socket.close();
             } catch (IOException e) {
                 throw new ProcessRequestException("Error closing socket", e);
             }
+        }
+
+        /**
+         * Returns the path for the static resource corresponding to the endpoint.
+         *
+         * @param endPoint the endpoint of the request.
+         * @return the path to the corresponding static resource.
+         */
+        private Path getResourcePath(String endPoint) {
+            return endPoint.equals("/") ? Paths.get(resourcesPath + "/index.html") : Paths.get(resourcesPath + endPoint);
+        }
+
+        /**
+         * Retrieves the current token from the request headers.
+         *
+         * @return the current token, or null if no token is found.
+         */
+        public String getCurrentToken() {
+            return this.currentToken;
         }
 
         /**

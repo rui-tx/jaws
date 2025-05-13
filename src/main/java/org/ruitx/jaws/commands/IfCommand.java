@@ -1,7 +1,6 @@
 package org.ruitx.jaws.commands;
 
 import org.ruitx.jaws.components.Tyr;
-import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Command;
 import org.tinylog.Logger;
 
@@ -68,7 +67,7 @@ public class IfCommand implements Command {
     }
 
     private boolean evaluateCondition(String condition) {
-        String token = Yggdrasill.RequestHandler.getCurrentToken();
+        String token = "broken"; //Yggdrasill.RequestHandler.getCurrentToken();
         //Logger.info("Evaluating condition: " + condition + " with token: " + (token != null));
 
         // Remove any whitespace and optional parentheses

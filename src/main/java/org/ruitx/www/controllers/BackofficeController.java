@@ -36,22 +36,25 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true)
     @Route(endpoint = "/backoffice", method = GET)
     public void renderIndex() {
-        String token = getRequestHandler().getCurrentTokenValue();
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(token))).get();
-        setTemplateVariable("userId", Tyr.getUserIdFromJWT(token));
-        setTemplateVariable(
-                "currentUser", token.isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+
+        Map<String, String> context = new HashMap<>();
+        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
+        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        setContext(context);
+
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 
     @AccessControl(login = true)
     @Route(endpoint = "/backoffice/settings", method = GET)
     public void renderSettings() {
-        String token = getRequestHandler().getCurrentTokenValue();
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(token))).get();
-        setTemplateVariable("userId", Tyr.getUserIdFromJWT(token));
-        setTemplateVariable(
-                "currentUser", token.isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+
+        Map<String, String> context = new HashMap<>();
+        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
+        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        setContext(context);
 
         if (isHTMX()) {
             sendHTMLResponse(OK, renderTemplate(SETTINGS_PAGE));
@@ -65,12 +68,12 @@ public class BackofficeController extends Bragi {
     @Route(endpoint = "/backoffice/profile/:id", method = GET)
     public void renderUserProfile() {
         String userId = getPathParam("id");
-        String token = getRequestHandler().getCurrentTokenValue();
-        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(token))).get();
+        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
         User user = authRepo.getUserById(Long.parseLong(userId)).get();
 
         Map<String, String> context = new HashMap<>();
-        context.put("currentUser", token.isEmpty() ? "-" : currentUser.firstName() + " " + currentUser.lastName());
+        context.put("currentUser", getCurrentToken().isEmpty() ?
+                "-" : currentUser.firstName() + " " + currentUser.lastName());
         context.put("userId", userId);
         context.put("username", user.user());
         context.put("userEmail", user.email());
@@ -78,6 +81,7 @@ public class BackofficeController extends Bragi {
         context.put("userLastName", user.lastName());
         context.put("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
         setContext(context);
+
         if (isHTMX()) {
             sendHTMLResponse(OK, renderTemplate(USER_PROFILE_PAGE));
             return;
