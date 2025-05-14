@@ -20,7 +20,7 @@ import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
 import static org.ruitx.jaws.configs.ApplicationConfig.JWT_SECRET;
 
 public class Tyr {
-    private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60L; // 15 minutes in seconds
+    private static final long ACCESS_TOKEN_EXPIRATION = 6 * 60 * 60L; // 6 hours in seconds
     private static final long REFRESH_TOKEN_EXPIRATION = 30 * 24 * 60 * 60L; // 30 days in seconds
 
     public static TokenPair createTokenPair(String userId, String userAgent, String ipAddress) {

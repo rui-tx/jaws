@@ -1,0 +1,101 @@
+<section class="section is-title-bar">
+    <div class="level">
+        <div class="level-left">
+            <div class="level-item">
+                <ul>
+                    <li>{{currentUser}}</li>
+                    <li>Users</li>
+                </ul>
+            </div>
+        </div>
+        <div class="level-right">
+            <div class="buttons is-right">
+                <button class="button is-primary jb-modal" data-target="create-account-modal" id="save-profile">
+                    <span class="icon"><i class="mdi mdi-content-save"></i></span>
+                    <span>New user</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="hero is-hero-bar">
+    <div class="hero-body">
+        <div class="level">
+            <div class="level-left">
+                <div class="level-item"><h1 class="title">
+                    Users
+                </h1></div>
+            </div>
+            <div class="level-right" style="display: none;">
+                <div class="level-item"></div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="section is-main-section">
+    <div class="card has-table has-mobile-sort-spaced">
+        <header class="card-header">
+            <p class="card-header-title">
+                <span class="icon"><i class="mdi mdi-account-multiple"></i></span>
+                Users
+            </p>
+            <a class="card-header-icon"
+               hx-get="/htmx/backoffice/users"
+               hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+               hx-indicator="#users-spinner"
+               hx-swap="innerHTML transition:true"
+               hx-target="#users-table-body"
+               hx-trigger="click">
+                <span class="icon"><i class="mdi mdi-reload"></i></span>
+            </a>
+
+        </header>
+
+        <div class="card-content">
+            <div class="b-table has-pagination">
+                <div class="table-wrapper has-mobile-cards">
+                    <table class="table is-fullwidth is-striped is-hoverable is-sortable is-fullwidth">
+                        <thead>
+                        <tr>
+                            <th></th>
+                            <th>Username/Email</th>
+                            <th>Full Name</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody hx-get="/htmx/backoffice/users"
+                               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                               hx-indicator="#users-spinner"
+                               hx-swap="innerHTML transition:true"
+                               hx-trigger="load"
+                               id="users-table-body">
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+        <div class="loading-container htmx-indicator" id="users-spinner">
+            <img class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
+        </div>
+    </div>
+</section>
+
+<!-- Create Account Modal -->
+<div class="modal" id="create-account-modal">
+    <div class="modal-background jb-modal-close"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Create Account</p>
+            <button aria-label="close" class="delete jb-modal-close"></button>
+        </header>
+        <section class="modal-card-body">
+            <p class="has-text-success">Let's create a new user account</p>
+        </section>
+        <footer class="modal-card-foot">
+            <button class="button jb-modal-close">Cancel</button>
+            <button class="button is-success" id="confirm-delete">Create Account</button>
+        </footer>
+    </div>
+</div>

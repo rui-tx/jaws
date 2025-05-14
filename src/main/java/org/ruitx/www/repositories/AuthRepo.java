@@ -46,6 +46,14 @@ public class AuthRepo {
         );
     }
 
+    public void updateLastLogin(Integer userId) {
+        db.executeSql(
+                "UPDATE USER SET last_login = ? WHERE id = ?",
+                Date.from(Instant.now()),
+                userId
+        );
+    }
+
     public Optional<User> getUserByUsername(String username) {
         Row row = db.getRow("SELECT * FROM USER WHERE user = ?", username);
         if (row == null) {

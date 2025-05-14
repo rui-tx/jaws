@@ -65,6 +65,7 @@ public class AuthService {
                 ipAddress
         );
 
+        authRepo.updateLastLogin(user.get().id());
         return APIResponse.success(OK, TokenResponse.fromTokenPair(tokenPair));
     }
 
