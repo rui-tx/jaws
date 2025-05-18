@@ -1,7 +1,7 @@
 <div id="base-controller">
     <article>
         <h3>Base Controller</h3>
-        <p>JAWS now includes a <strong><code>BaseController</code></strong> class that provides a foundation for all controllers. This class simplifies request handling and provides common functionality for all controllers.</p>
+        <p>JAWS includes <strong><code>Bragi</code></strong>, a class that provides a foundation for all controllers. This class simplifies request handling and provides common functionality for all controllers.</p>
 
         <h4>1. Key Features</h4>
         <ul>
@@ -14,10 +14,10 @@
         </ul>
 
         <h4>2. Request Handler Management</h4>
-        <p>The <strong><code>BaseController</code></strong> uses a thread-local <strong><code>RequestHandler</code></strong> to ensure thread safety and proper request handling. The request handler is automatically set and cleaned up for each request.</p>
+        <p><strong><code>Bragi</code></strong> uses a thread-local <strong><code>RequestHandler</code></strong> to ensure thread safety and proper request handling. The request handler is automatically set and cleaned up for each request.</p>
 
         <h4>3. Common Methods</h4>
-        <p>The <strong><code>BaseController</code></strong> provides the following common methods:</p>
+        <p><strong><code>Bragi</code></strong> provides the following common methods:</p>
         <ul>
             <li><strong><code>sendHTMLResponse(code, content)</code></strong>: Send an HTML response</li>
             <li><strong><code>sendJSONResponse(code, data)</code></strong>: Send a JSON response</li>
@@ -30,18 +30,25 @@
             <li><strong><code>renderTemplate(templatePath)</code></strong>: Render a template file without parameters</li>
             <li><strong><code>assemblePage(baseTemplatePath, partialTemplatePath)</code></strong>: Assemble a full page by combining a base template with a partial template</li>
             <li><strong><code>assemblePageWithContent(baseTemplatePath, content)</code></strong>: Assemble a full page by combining a base template with raw content</li>
+            <li><strong><code>setContext(context)</code></strong>: Sets the context for the HTML dynamic values</li>
+            <li><strong><code>callApi()</code></strong>: Calls external API with automatic type conversion</li>
         </ul>
 
         <h4>4. Usage Example</h4>
-        <p>To create a new controller, extend the <strong><code>BaseController</code></strong> class:</p>
-        <pre><code>public class MyController extends BaseController {
-    @Route(endpoint = "/my-endpoint", method = GET)
-    public void handleRequest() throws IOException {
-        // Example using template rendering
-        Map<String, String> params = new HashMap<>();
-        params.put("title", "My Page");
-        String content = renderTemplate("partials/_content.html", params);
-        sendHTMLResponse(OK, assemblePageWithContent("base.html", content));
+        <p>To create a new controller, extend the <strong><code>Bragi</code></strong> class:
+        </p><pre><code>
+public class BackofficeController extends Bragi {
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice", method = GET)
+    public void renderIndex() {
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+
+        Map<String, String> context = new HashMap<>();
+        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
+        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        setContext(context);
+
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
     }
 }</code></pre>
 
@@ -54,15 +61,6 @@
         </ul>
         <p>These methods make it easy to create dynamic pages by combining templates and injecting variables.</p>
 
-        <h4>6. Benefits</h4>
-        <ul>
-            <li>Reduced code duplication</li>
-            <li>Consistent request handling</li>
-            <li>Thread-safe request processing</li>
-            <li>Simplified controller implementation</li>
-            <li>Automatic cleanup of resources</li>
-        </ul>
-
-        <aside>The <strong><code>BaseController</code></strong> automatically handles the cleanup of request handlers after each request, ensuring proper resource management.</aside>
+        <aside><strong><code>Bragi</code></strong> automatically handles the cleanup of request handlers after each request, ensuring proper resource management.</aside>
     </article>
 </div> 

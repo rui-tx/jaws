@@ -3,16 +3,23 @@
         <h3>Placeholders</h3>
         <p>You can use placeholders in the HTML file to display dynamic information. Placeholders are enclosed in
             double curly braces and are replaced with the actual value when the HTML file is parsed.</p>
-        <p>For example, you can use the placeholder <strong><code>{/{ getServerPort }/}</code></strong> (without the
-            bars) to display
-            the server port.</p>
 
         <h4>Placeholders List</h4>
         <ul>
             <li><strong><code>renderPartial("partial/header.html")</code></strong>: render a partial HTML file.</li>
             <li><strong><code>getPathFor("file.txt")</code></strong>: display the path for a file.</li>
-            <li><strong><code>getServerPort</code></strong>: display the server port.</li>
-            <li><strong><code>getCurrentConnections</code></strong>: display the current number of connections.</li>
+            <li><strong><code>{{variable}}</code></strong>: display the variable set in the <strong>context</strong> at
+                the controller
+                level.
+            </li>
         </ul>
+
+        <h4>Context</h4>
+        Context can be used at the controller level to pass data to the HTML when rendered. For example, to pass a
+        variable to the HTML, you can do the following:
+        <pre><code>context.put("variable", "value");</code></pre>
+        Then, in the HTML file, you can use the variable like this:
+        <pre><code>{{variable}}</code></pre>
+
     </article>
 </div>
