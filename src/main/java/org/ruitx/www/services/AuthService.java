@@ -4,6 +4,7 @@ import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.User;
+import org.ruitx.jaws.types.UserCreateRequest;
 import org.ruitx.www.models.auth.TokenResponse;
 import org.ruitx.www.repositories.AuthRepo;
 
@@ -20,29 +21,28 @@ public class AuthService {
         this.authRepo = new AuthRepo();
     }
 
-//    public APIResponse<TokenResponse> createUser(String username, String password) {
-//        if (username == null || password == null) {
-//            return APIResponse.error(BAD_REQUEST, "User / password is missing");
-//        }
-//
-//        Optional<User> user = authRepo.getUserByUsername(username.toLowerCase());
-//        if (user.isPresent()) {
-//            return APIResponse.error(CONFLICT, "User already exists");
-//        }
-//
-//        String hashedPassword = BCrypt.withDefaults().hashToString(12, password.toCharArray());
-//        Optional<Integer> result = authRepo.createUser(username, hashedPassword);
-//        if (result.isEmpty()) {
-//            return APIResponse.error(INTERNAL_SERVER_ERROR, "Cannot create user. Contact support");
-//        }
-//
-//        String token = Tyr.createToken(username);
-//        if (token == null) {
-//            return APIResponse.error(UNAUTHORIZED, "Token creation failed");
-//        }
-//
-//        return APIResponse.success(CREATED, new TokenResponse(token));
-//    }
+    public APIResponse<String> createUser(UserCreateRequest request) {
+        if (UserCreateRequest.isValid(request).isPresent()) {
+            return APIResponse.error(BAD_REQUEST, UserCreateRequest.isValid(request).get());
+        }
+
+        Optional<User> user = authRepo.getUserByUsername(request.username().toLowerCase());
+        if (user.isPresent()) {
+            return APIResponse.error(CONFLICT, "User already exists");
+        }
+
+        Optional<Integer> result = authRepo.createUser(
+                request.username(),
+                BCrypt.withDefaults().hashToString(12, request.password().toCharArray()),
+                request.firstName(),
+                request.lastName());
+
+        if (result.isEmpty()) {
+            return APIResponse.error(INTERNAL_SERVER_ERROR, "Cannot create user. Check the logs for more details");
+        }
+
+        return APIResponse.success(CREATED, "User created successfully!");
+    }
 
     public APIResponse<TokenResponse> loginUser(String username, String password, String userAgent, String ipAddress) {
         if (username == null || password == null) {

@@ -18,9 +18,12 @@ public class AuthRepo {
         this.db = new Mimir();
     }
 
-    public Optional<Integer> createUser(String username, String hashedPassword) {
-        int result = db.executeSql("INSERT INTO USER (user, password_hash, created_at) VALUES (?, ?, ?)",
-                username, hashedPassword, Date.from(Instant.now()));
+    public Optional<Integer> createUser(String username,
+                                        String hashedPassword,
+                                        String firstName,
+                                        String lastName) {
+        int result = db.executeSql("INSERT INTO USER (user, password_hash, first_name, last_name, created_at) VALUES (?, ?, ?, ?, ?)",
+                username, hashedPassword, firstName, lastName, Date.from(Instant.now()));
         return result > 0 ? Optional.of(result) : Optional.empty();
     }
 

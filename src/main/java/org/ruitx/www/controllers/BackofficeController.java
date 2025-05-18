@@ -4,6 +4,7 @@ import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.User;
 import org.ruitx.jaws.types.UserCreateRequest;
@@ -80,6 +81,19 @@ public class BackofficeController extends Bragi {
     }
 
     @AccessControl(login = true)
+    @Route(endpoint = "/backoffice/users", method = POST)
+    public void listUsersHTMX(UserCreateRequest request) {
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+        if (!user.user().equals("admin")) {
+            sendHTMLResponse(FORBIDDEN, "You are not authorized to create users");
+            return;
+        }
+
+        APIResponse<String> response = authService.createUser(request);
+        sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
+    }
+
+    @AccessControl(login = true)
     @Route(endpoint = "/backoffice/profile/:id", method = GET)
     public void renderUserProfile() {
         String userId = getPathParam("id");
@@ -91,11 +105,13 @@ public class BackofficeController extends Bragi {
                 "-" : currentUser.firstName() + " " + currentUser.lastName());
         context.put("userId", userId);
         context.put("username", user.user());
-        context.put("userEmail", user.email());
-        context.put("userFirstName", user.firstName());
-        context.put("userLastName", user.lastName());
+        context.put("userEmail", user.email() == null ? "" : user.email());
+        context.put("userFirstName", user.firstName() == null ? "" : user.firstName());
+        context.put("userLastName", user.lastName() == null ? "" : user.lastName());
         context.put("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
-        context.put("lastLogin", JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
+        context.put("lastLogin", user.lastLogin() == null
+                ? "Never logged in" :
+                JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
@@ -157,15 +173,6 @@ public class BackofficeController extends Bragi {
         }
 
         sendHTMLResponse(OK, html.toString());
-    }
-
-    @AccessControl(login = true)
-    @Route(endpoint = "/backoffice/users", method = POST)
-    public void listUsersHTMX(UserCreateRequest request) {
-
-        log.info("Received request to create user: {}", request);
-
-        sendHTMLResponse(CREATED, "<p>User created successfully!</p>");
     }
 
 }

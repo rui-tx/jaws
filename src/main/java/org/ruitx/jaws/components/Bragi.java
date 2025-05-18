@@ -232,8 +232,13 @@ public abstract class Bragi {
      * Internal method to send JSON response
      */
     private void sendJSONResponse(boolean success, ResponseCode code, String info, Object data) {
+        APIResponse<Object> response;
         try {
-            APIResponse<Object> response = APIResponse.success(code.getCodeAndMessage(), info, data);
+            if (success) {
+                response = APIResponse.success(code.getCodeAndMessage(), info, data);
+            } else {
+                response = APIResponse.error(code.getCodeAndMessage(), info);
+            }
             requestHandler.get().sendJSONResponse(code, encode(response));
         } catch (Exception e) {
             Logger.error("Failed to send JSON response: {}", e.getMessage());
