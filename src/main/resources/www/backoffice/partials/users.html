@@ -10,9 +10,8 @@
         </div>
         <div class="level-right">
             <div class="buttons is-right">
-                <button class="button is-primary jb-modal" data-target="create-account-modal" id="save-profile">
-                    <span class="icon"><i class="mdi mdi-content-save"></i></span>
-                    <span>New user</span>
+                <button class="button is-primary jb-modal" data-target="create-user-modal">
+                    <span class="icon"><i class="mdi mdi-account-plus"></i></span> <span>New user</span>
                 </button>
             </div>
         </div>
@@ -23,7 +22,7 @@
         <div class="level">
             <div class="level-left">
                 <div class="level-item"><h1 class="title">
-                    Users
+                    Users Management
                 </h1></div>
             </div>
             <div class="level-right" style="display: none;">
@@ -41,14 +40,13 @@
             </p>
             <a class="card-header-icon"
                hx-get="/htmx/backoffice/users"
-               hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
                hx-indicator="#users-spinner"
                hx-swap="innerHTML transition:true"
                hx-target="#users-table-body"
-               hx-trigger="click">
+               hx-trigger="click, load from:#create-user-modal afterSubmit" title="Refresh users list">
                 <span class="icon"><i class="mdi mdi-reload"></i></span>
             </a>
-
         </header>
 
         <div class="card-content">
@@ -72,30 +70,147 @@
                                id="users-table-body">
                         </tbody>
                     </table>
-
                 </div>
             </div>
         </div>
         <div class="loading-container htmx-indicator" id="users-spinner">
-            <img class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
+            <img alt="Loading..." class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
         </div>
     </div>
 </section>
 
-<!-- Create Account Modal -->
-<div class="modal" id="create-account-modal">
+<div class="modal" id="create-user-modal">
     <div class="modal-background jb-modal-close"></div>
     <div class="modal-card">
         <header class="modal-card-head">
-            <p class="modal-card-title">Create Account</p>
+            <p class="modal-card-title">Create New User</p>
             <button aria-label="close" class="delete jb-modal-close"></button>
         </header>
         <section class="modal-card-body">
-            <p class="has-text-success">Let's create a new user account</p>
+            <form id="create-user-form">
+                <div class="field">
+                    <label class="label" for="new-username">Username</label>
+                    <div class="control has-icons-left">
+                        <input class="input" id="new-username" name="username" placeholder="e.g. user" required>
+                        <span class="icon is-small is-left">
+                <i class="mdi mdi-email"></i>
+            </span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="new-first-name">First Name</label>
+                    <div class="control has-icons-left">
+                        <input class="input" id="new-first-name" name="firstName" placeholder="e.g. Alex" required
+                               type="text">
+                        <span class="icon is-small is-left">
+                <i class="mdi mdi-account"></i>
+            </span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="new-last-name">Last Name</label>
+                    <div class="control has-icons-left">
+                        <input class="input" id="new-last-name" name="lastName" placeholder="e.g. Smith" required
+                               type="text">
+                        <span class="icon is-small is-left">
+                <i class="mdi mdi-account"></i>
+            </span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="new-password">Password</label>
+                    <div class="control has-icons-left">
+                        <input class="input" id="new-password" minlength="8" name="password"
+                               placeholder="Min. 8 characters"
+                               required type="password">
+                        <span class="icon is-small is-left">
+                <i class="mdi mdi-lock"></i>
+            </span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="new-password-confirmation">Confirm Password</label>
+                    <div class="control has-icons-left">
+                        <input class="input" id="new-password-confirmation" minlength="8" name="password_confirmation"
+                               placeholder="Retype password" required type="password">
+                        <span class="icon is-small is-left">
+                <i class="mdi mdi-lock-check"></i>
+            </span>
+                    </div>
+                </div>
+                <div class="mt-3 content" id="create-user-message"></div>
+                <div class="loading-container" id="create-user-spinner"
+                     style="position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); display: none;">
+                    <img alt="Submitting..." class="loading-spinner is-small" src="https://htmx.org/img/bars.svg"/>
+                </div>
+
+                <footer class="modal-card-foot">
+                    <button class="button jb-modal-close">Cancel</button>
+                    <button class="button is-success" type="submit">Create User</button>
+                </footer>
+            </form>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const createUserForm = document.getElementById('create-user-form');
+                    const createUserMessage = document.getElementById('create-user-message');
+                    const createUserSpinner = document.getElementById('create-user-spinner');
+
+                    if (createUserForm) {
+                        createUserForm.addEventListener('submit', function (event) {
+                            event.preventDefault();
+
+                            createUserSpinner.style.display = 'block'; // Show the spinner
+
+                            const form = this;
+                            const formData = new FormData(form);
+                            const data = {
+                                username: formData.get('username'),
+                                firstName: formData.get('firstName'),
+                                lastName: formData.get('lastName'),
+                                password: formData.get('password'),
+                                passwordConfirmation: formData.get('password_confirmation')
+                            };
+
+                            console.log(JSON.stringify(data));
+
+                            fetch('/backoffice/users', {  // Use fetch instead of htmx.ajax
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : ''
+                                },
+                                body: JSON.stringify(data)
+                            })
+                                .then(response => {
+                                    createUserSpinner.style.display = 'none'; // Hide spinner
+                                    if (!response.ok) {
+                                        return response.text().then(text => {
+                                            throw new Error(text)
+                                        });
+                                    }
+                                    return response.text();
+                                })
+                                .then(data => {
+                                    createUserMessage.innerHTML = data; // Update message
+                                    // Clear the form.
+                                    form.reset();
+
+                                })
+                                .catch(error => {
+                                    createUserSpinner.style.display = 'none'; // Hide spinner on error too
+                                    createUserMessage.innerHTML = `<div class="notification is-danger">${error}</div>`;
+                                });
+                        });
+                    }
+                });
+            </script>
+
         </section>
-        <footer class="modal-card-foot">
-            <button class="button jb-modal-close">Cancel</button>
-            <button class="button is-success" id="confirm-delete">Create Account</button>
-        </footer>
+
     </div>
 </div>

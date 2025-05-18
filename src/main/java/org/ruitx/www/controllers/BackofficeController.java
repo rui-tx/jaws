@@ -6,6 +6,7 @@ import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.User;
+import org.ruitx.jaws.types.UserCreateRequest;
 import org.ruitx.jaws.utils.JawsUtils;
 import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.www.services.AuthService;
@@ -17,8 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
-import static org.ruitx.jaws.strings.ResponseCode.METHOD_NOT_ALLOWED;
-import static org.ruitx.jaws.strings.ResponseCode.OK;
+import static org.ruitx.jaws.strings.RequestType.POST;
+import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class BackofficeController extends Bragi {
 
@@ -157,4 +158,14 @@ public class BackofficeController extends Bragi {
 
         sendHTMLResponse(OK, html.toString());
     }
+
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice/users", method = POST)
+    public void listUsersHTMX(UserCreateRequest request) {
+
+        log.info("Received request to create user: {}", request);
+
+        sendHTMLResponse(CREATED, "<p>User created successfully!</p>");
+    }
+
 }
