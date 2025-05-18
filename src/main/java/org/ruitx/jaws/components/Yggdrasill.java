@@ -470,7 +470,18 @@ public class Yggdrasill {
                         return;
                     }
 
-                    content = HTML_401_UNAUTHORIZED.getBytes();
+                    Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_401);
+                    if (Files.exists(path)) {
+                        try {
+                            content = Files.readAllBytes(path);
+                        } catch (IOException e) {
+                            throw new ProcessRequestException("Error sending 401 response", e);
+                        }
+                    } else {
+                        Logger.warn("Could not find 401 page, using hard coded default");
+                        content = HTML_401_UNAUTHORIZED.getBytes();
+                    }
+
                     sendResponseHeaders(UNAUTHORIZED, "text/html", content.length);
                     sendResponseBody(content);
                 }

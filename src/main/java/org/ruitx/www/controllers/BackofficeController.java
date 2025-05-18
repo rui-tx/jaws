@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
+import static org.ruitx.jaws.strings.ResponseCode.METHOD_NOT_ALLOWED;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 
 public class BackofficeController extends Bragi {
@@ -24,7 +25,6 @@ public class BackofficeController extends Bragi {
 
     private static final String BASE_HTML_PATH = "backoffice/index.html";
     private static final String BODY_HTML_PATH = "backoffice/_body.html";
-    private static final String UNAUTHORIZED_PAGE = "backoffice/partials/unauthorized.html";
     private static final String SETTINGS_PAGE = "backoffice/partials/settings.html";
     private static final String USERS_PAGE = "backoffice/partials/users.html";
     private static final String USER_PROFILE_PAGE = "backoffice/partials/profile.html";
@@ -62,11 +62,6 @@ public class BackofficeController extends Bragi {
         context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
         setContext(context);
 
-        if (isHTMX()) {
-            sendHTMLResponse(OK, renderTemplate(SETTINGS_PAGE));
-            return;
-        }
-
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, SETTINGS_PAGE));
     }
 
@@ -80,17 +75,39 @@ public class BackofficeController extends Bragi {
         context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
         setContext(context);
 
-        if (isHTMX()) {
-            sendHTMLResponse(OK, renderTemplate(USERS_PAGE));
-            return;
-        }
-
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USERS_PAGE));
+    }
+
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice/profile/:id", method = GET)
+    public void renderUserProfile() {
+        String userId = getPathParam("id");
+        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+        User user = authRepo.getUserById(Long.parseLong(userId)).get();
+
+        Map<String, String> context = new HashMap<>();
+        context.put("currentUser", getCurrentToken().isEmpty() ?
+                "-" : currentUser.firstName() + " " + currentUser.lastName());
+        context.put("userId", userId);
+        context.put("username", user.user());
+        context.put("userEmail", user.email());
+        context.put("userFirstName", user.firstName());
+        context.put("userLastName", user.lastName());
+        context.put("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
+        context.put("lastLogin", JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
+        setContext(context);
+
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
     }
 
     @AccessControl(login = true)
     @Route(endpoint = "/htmx/backoffice/users", method = GET)
     public void listUsersHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+
         APIResponse<List<User>> response = authService.listUsers();
         if (!response.success()) {
             sendHTMLResponse(response.code(), "Error loading users");
@@ -126,10 +143,7 @@ public class BackofficeController extends Bragi {
                     .append("</td>")
                     .append("<td class=\"is-actions-cell\">")
                     .append("<div class=\"buttons is-right\">")
-                    //.append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
-                    .append("<a  hx-get=\"/backoffice/profile/").append(user.id()).append("\" ")
-                    .append("hx-trigger=\"click\" hx-target=\"#bodytemplate\" hx-target=\"#bodytemplate\" hx-push-url=\"true\" hx-swap=\"innerHTML swap:175ms settle:175ms\"")
-
+                    .append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
                     .append("class=\"button is-small is-primary\" type=\"button\">")
                     .append("<span class=\"icon\"><i class=\"mdi mdi-eye\"></i></span>")
                     .append("</a>")
@@ -142,32 +156,5 @@ public class BackofficeController extends Bragi {
         }
 
         sendHTMLResponse(OK, html.toString());
-    }
-
-    @AccessControl(login = true)
-    @Route(endpoint = "/backoffice/profile/:id", method = GET)
-    public void renderUserProfile() {
-        String userId = getPathParam("id");
-        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
-        User user = authRepo.getUserById(Long.parseLong(userId)).get();
-
-        Map<String, String> context = new HashMap<>();
-        context.put("currentUser", getCurrentToken().isEmpty() ?
-                "-" : currentUser.firstName() + " " + currentUser.lastName());
-        context.put("userId", userId);
-        context.put("username", user.user());
-        context.put("userEmail", user.email());
-        context.put("userFirstName", user.firstName());
-        context.put("userLastName", user.lastName());
-        context.put("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
-        context.put("lastLogin", JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
-        setContext(context);
-
-        if (isHTMX()) {
-            sendHTMLResponse(OK, renderTemplate(USER_PROFILE_PAGE));
-            return;
-        }
-
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
     }
 }

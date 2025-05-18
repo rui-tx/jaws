@@ -14,6 +14,7 @@ public class ApplicationConfig {
     public static final String DEFAULT_URL = "http://localhost:" + DEFAULT_PORT + "/";
     public static final String DEFAULT_WWW_PATH = "src/main/resources/www/";
     public static final long TIMEOUT = 1000L * 10L; // 10 seconds
+    public static final String DEFAULT_CUSTOM_PAGE_PATH_401 = DEFAULT_WWW_PATH + "/401.html";
     public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = DEFAULT_WWW_PATH + "/404.html";
     public static final String DEFAULT_DATABASE_PATH = "src/main/resources/db.db";
     public static final String DEFAULT_DATABASE_SCHEMA_PATH = "src/main/resources/sql/create_schema_v1.sql";
@@ -22,6 +23,7 @@ public class ApplicationConfig {
     public static final String URL;
     public static final int PORT;
     public static final String WWW_PATH;
+    public static final String CUSTOM_PAGE_PATH_401;
     public static final String CUSTOM_PAGE_PATH_404;
     public static final String DATABASE_PATH;
     public static final String DATABASE_SCHEMA_PATH;
@@ -41,6 +43,7 @@ public class ApplicationConfig {
         PORT = getPortValue();
         URL = getUrlValue();
         WWW_PATH = getWwwPathValue();
+        CUSTOM_PAGE_PATH_401 = getCustomPagePath401Value();
         CUSTOM_PAGE_PATH_404 = getCustomPagePath404Value();
         DATABASE_PATH = getDatabasePathValue();
         DATABASE_SCHEMA_PATH = getDatabaseSchemaPathValue();
@@ -78,6 +81,13 @@ public class ApplicationConfig {
 
     private static String getWwwPathValue() {
         return getConfigValue("WWWPATH", "www.path", DEFAULT_WWW_PATH);
+    }
+
+    private static String getCustomPagePath401Value() {
+        return getConfigValue(
+                "CUSTOM_PAGE_PATH_401",
+                "custom.page.path.401",
+                DEFAULT_CUSTOM_PAGE_PATH_401);
     }
 
     private static String getCustomPagePath404Value() {

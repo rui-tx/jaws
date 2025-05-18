@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
     <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link rel="icon" href="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667" type="image/x-icon" />
     <title>Jaws Backoffice</title>
 
     <!-- Bulma is included -->
@@ -39,20 +40,11 @@
                         <span class="icon"><i class="mdi mdi-chevron-down"></i></span>
                     </a>
                     <div class="navbar-dropdown">
-                        <a hx-get="/backoffice/profile/{{userId}}"
-                           hx-trigger="click"
-                           hx-target="#bodytemplate"
-                           hx-push-url="true"
-                           hx-swap="innerHTML swap:175ms settle:175ms"
-                           class="navbar-item">
+                        <a href="/backoffice/profile/{{userId}}" class="navbar-item">
                             <span class="icon"><i class="mdi mdi-account"></i></span>
                             <span>My Profile</span>
                         </a>
-                        <a hx-get="/backoffice/settings"
-                           hx-trigger="click"
-                           hx-target="#bodytemplate"
-                           hx-push-url="true"
-                           hx-swap="innerHTML swap:175ms settle:175ms"
+                        <a href="/backoffice/settings"
                            class="navbar-item">
                             <span class="icon"><i class="mdi mdi-settings"></i></span>
                             <span>Settings</span>
@@ -93,22 +85,14 @@
                     </a>
                 </li>
                 <li>
-                    <a hx-get="/backoffice/users"
-                       hx-trigger="click"
-                       hx-target="#bodytemplate"
-                       hx-push-url="true"
-                       hx-swap="innerHTML swap:175ms settle:175ms"
+                    <a href="/backoffice/users"
                        class="router-link-active has-icon">
                         <span class="icon"><i class="mdi mdi-account-multiple"></i></span>
                         <span class="menu-item-label">Users</span>
                     </a>
                 </li>
                 <li>
-                    <a hx-get="/backoffice/settings"
-                       hx-trigger="click"
-                       hx-target="#bodytemplate"
-                       hx-push-url="true"
-                       hx-swap="innerHTML swap:175ms settle:175ms"
+                    <a href="/backoffice/settings"
                        class="router-link-active has-icon">
                         <span class="icon"><i class="mdi mdi-settings"></i></span>
                         <span class="menu-item-label">Settings</span>
