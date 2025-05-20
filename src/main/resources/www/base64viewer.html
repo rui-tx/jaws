@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base64 File Viewer</title>
+    <link href="css/style.css" rel="stylesheet">
+    <style>
+        .container { max-width: 600px; margin: 2em auto; background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+        textarea { width: 100%; min-height: 120px; font-family: monospace; margin-bottom: 1em; }
+        button { padding: 0.5em 1.5em; font-size: 1em; }
+        .preview { margin-top: 2em; }
+        .error { color: #b00; margin-top: 1em; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Base64 Viewer</h1>
+    <textarea id="b64input" placeholder="Paste base64 string here..."></textarea>
+    <br>
+    <button onclick="handleBase64()">Preview/Download</button>
+    <div id="error" class="error"></div>
+    <div id="preview" class="preview"></div>
+</div>
+<script>
+function handleBase64() {
+    const input = document.getElementById('b64input').value.trim();
+    const preview = document.getElementById('preview');
+    const error = document.getElementById('error');
+    preview.innerHTML = '';
+    error.textContent = '';
+    if (!input) {
+        error.textContent = 'Please enter a base64 string.';
+        return;
+    }
+    // Try to detect data URL prefix
+    let b64 = input;
+    let mime = '';
+    const dataUrlMatch = input.match(/^data:([\w\-\.\/]+);base64,(.*)$/);
+    if (dataUrlMatch) {
+        mime = dataUrlMatch[1];
+        b64 = dataUrlMatch[2];
+    }
+    try {
+        // Decode base64 to binary
+        const byteChars = atob(b64);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) {
+            byteNumbers[i] = byteChars.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        // Try to guess mime if not provided
+        if (!mime) {
+            mime = guessMime(byteArray) || 'application/octet-stream';
+        }
+        const blob = new Blob([byteArray], {type: mime});
+        const url = URL.createObjectURL(blob);
+        // Try to preview
+        if (mime.startsWith('image/')) {
+            preview.innerHTML = `<img src="${url}" alt="Image preview" style="max-width:100%;max-height:400px;"/>`;
+        } else if (mime === 'application/pdf') {
+            preview.innerHTML = `<embed src="${url}" type="application/pdf" width="100%" height="500px"/>`;
+        } else if (mime.startsWith('text/')) {
+            // Read as text
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = `<pre style='white-space:pre-wrap;word-break:break-all;'>${escapeHtml(e.target.result)}</pre>`;
+            };
+            reader.readAsText(blob);
+            return;
+        } else {
+            // Not displayable, trigger download
+            triggerDownload(blob, 'file');
+            preview.innerHTML = '<em>File downloaded (not displayable).</em>';
+        }
+    } catch (e) {
+        error.textContent = 'Invalid base64 string or file could not be processed.';
+    }
+}
+function triggerDownload(blob, filename) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }, 100);
+}
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+// Simple mime guesser for common types
+function guessMime(bytes) {
+    if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return 'application/pdf'; // %PDF
+    if (bytes[0] === 0xFF && bytes[1] === 0xD8) return 'image/jpeg';
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return 'image/png';
+    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image/gif';
+    if (bytes[0] === 0x42 && bytes[1] === 0x4D) return 'image/bmp';
+    if (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2A && bytes[3] === 0x00) return 'image/tiff';
+    if (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04) return 'application/zip';
+    if (bytes[0] === 0x1F && bytes[1] === 0x8B) return 'application/gzip';
+    if (bytes[0] === 0x7B && bytes[bytes.length-1] === 0x7D) return 'application/json';
+    if (bytes[0] === 0x3C && bytes[1] === 0x3F && bytes[2] === 0x78 && bytes[3] === 0x6D) return 'text/xml';
+    if (bytes[0] === 0x54 && bytes[1] === 0x68 && bytes[2] === 0x69 && bytes[3] === 0x73) return 'text/plain'; // 'This' (for .txt)
+    return null;
+}
+</script>
+</body>
+</html> 

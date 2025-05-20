@@ -8,6 +8,7 @@ import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.User;
 import org.ruitx.jaws.types.UserCreateRequest;
+import org.ruitx.jaws.types.UserUpdateRequest;
 import org.ruitx.jaws.utils.JawsUtils;
 import org.ruitx.www.repositories.AuthRepo;
 import org.ruitx.www.services.AuthService;
@@ -20,10 +21,10 @@ import java.util.Map;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.RequestType.POST;
+import static org.ruitx.jaws.strings.RequestType.PATCH;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class BackofficeController extends Bragi {
-
 
     private static final String BASE_HTML_PATH = "backoffice/index.html";
     private static final String BODY_HTML_PATH = "backoffice/_body.html";
@@ -101,8 +102,8 @@ public class BackofficeController extends Bragi {
         User user = authRepo.getUserById(Long.parseLong(userId)).get();
 
         Map<String, String> context = new HashMap<>();
-        context.put("currentUser", getCurrentToken().isEmpty() ?
-                "-" : currentUser.firstName() + " " + currentUser.lastName());
+        context.put("currentUser",
+                getCurrentToken().isEmpty() ? "-" : currentUser.firstName() + " " + currentUser.lastName());
         context.put("userId", userId);
         context.put("username", user.user());
         context.put("userEmail", user.email() == null ? "" : user.email());
@@ -110,11 +111,24 @@ public class BackofficeController extends Bragi {
         context.put("userLastName", user.lastName() == null ? "" : user.lastName());
         context.put("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
         context.put("lastLogin", user.lastLogin() == null
-                ? "Never logged in" :
-                JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
+                ? "Never logged in"
+                : JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
+    }
+
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice/profile/:id", method = PATCH)
+    public void updateUserProfile(UserUpdateRequest request) {
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+        
+        if (!user.user().equals("admin")) {
+            sendHTMLResponse(FORBIDDEN, "You are not authorized to create users");
+            return;
+        }
+        APIResponse<String> response = authService.updateUser(user.id(), request);
+        sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
     }
 
     @AccessControl(login = true)
@@ -137,7 +151,7 @@ public class BackofficeController extends Bragi {
                     .append("<td class=\"is-image-cell\">")
                     .append("<div class=\"image\">")
                     .append("<img class=\"is-rounded\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F")
-                    //.append(user.user().toLowerCase().replace(" ", "-")) // disable for now
+                    // .append(user.user().toLowerCase().replace(" ", "-")) // disable for now
                     .append(".svg\">")
                     .append("</div>")
                     .append("</td>")
@@ -155,8 +169,9 @@ public class BackofficeController extends Bragi {
                     .append("<td data-label=\"Created\">")
                     .append("<small class=\"has-text-grey is-abbr-like\" title=\"")
                     .append(user.createdAt() != null ? user.createdAt() : "N/A")
-                    .append("\">").append(user.createdAt() != null ?
-                            JawsUtils.formatUnixTimestamp(user.createdAt()) : "N/A").append("</small>")
+                    .append("\">")
+                    .append(user.createdAt() != null ? JawsUtils.formatUnixTimestamp(user.createdAt()) : "N/A")
+                    .append("</small>")
                     .append("</td>")
                     .append("<td class=\"is-actions-cell\">")
                     .append("<div class=\"buttons is-right\">")

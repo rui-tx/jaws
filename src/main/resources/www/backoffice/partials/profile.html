@@ -40,55 +40,17 @@
                     </p>
                 </header>
                 <div class="card-content">
-                    <form>
-                        <div class="field is-horizontal">
-                            <div class="field-label is-normal"><label class="label">Avatar</label></div>
-                            <div class="field-body">
-                                <div class="field">
-                                    <div class="field file">
-                                        <div class="image is-128x128">
-                                            <img alt="Avatar"
-                                                 class="is-rounded"
-                                                 src="https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg">
-                                        </div>
-                                        <label class="file-label">
-                                            <input class="file-input" name="avatar" type="file">
-                                            <span class="file-cta">
-                                                <span class="file-icon">
-                                                    <i class="mdi mdi-upload"></i>
-                                                </span>
-                                                <span class="file-label">Change Avatar</span>
-                                            </span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="field is-horizontal">
-                            <div class="field-label is-normal"><label class="label">Username</label></div>
-                            <div class="field-body">
-                                <div class="field">
-                                    <div class="control">
-                                        <input class="input" name="username" required type="text" value="{{username}}">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
+                    <form id="profile-form">
                         <div class="field is-horizontal">
                             <div class="field-label is-normal"><label class="label">Email</label></div>
                             <div class="field-body">
                                 <div class="field">
                                     <div class="control">
-                                        <input class="input" name="email" required type="email" value="{{userEmail}}">
+                                        <input class="input" name="email" type="email" value="{{userEmail}}">
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <hr>
-
                         <div class="field is-horizontal">
                             <div class="field-label is-normal"><label class="label">First Name</label></div>
                             <div class="field-body">
@@ -99,7 +61,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="field is-horizontal">
                             <div class="field-label is-normal"><label class="label">Last Name</label></div>
                             <div class="field-body">
@@ -110,36 +71,19 @@
                                 </div>
                             </div>
                         </div>
-
-
-                        <hr>
-
                         <div class="field is-horizontal">
-                            <div class="field-label is-normal">
-                                <label class="label">New Password</label>
-                            </div>
+                            <div class="field-label is-normal"><label class="label">New Password</label></div>
                             <div class="field-body">
                                 <div class="field">
                                     <div class="control">
-                                        <input class="input" name="newPassword" type="password">
+                                        <input class="input" name="password" type="password">
                                     </div>
                                     <p class="help">Leave blank to keep current password</p>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="field is-horizontal">
-                            <div class="field-label is-normal">
-                                <label class="label">Confirm Password</label>
-                            </div>
-                            <div class="field-body">
-                                <div class="field">
-                                    <div class="control">
-                                        <input class="input" name="confirmPassword" type="password">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <div id="profile-message"></div>
+                        <!-- Add more fields as needed, matching UserUpdateRequest -->
                     </form>
                 </div>
             </div>
@@ -159,9 +103,11 @@
                         <div class="control">
                             <div class="select is-fullwidth">
                                 <select name="status">
-                                    <option value="active" {{#if status == 'active'}}selected{{/if}}>Active</option>
-                                    <option value="suspended" {{#if status == 'suspended'}}selected{{/if}}>Suspended</option>
-                                    <option value="inactive" {{#if status == 'inactive'}}selected{{/if}}>Inactive</option>
+                                    <option value="active" {{#if status=='active' }}selected{{/if}}>Active</option>
+                                    <option value="suspended" {{#if status=='suspended' }}selected{{/if}}>Suspended
+                                    </option>
+                                    <option value="inactive" {{#if status=='inactive' }}selected{{/if}}>Inactive
+                                    </option>
                                 </select>
                             </div>
                         </div>
@@ -181,7 +127,6 @@
                         </div>
                     </div>
 
-
                     <hr>
 
                     <div class="field">
@@ -195,6 +140,8 @@
                 </div>
             </div>
         </div>
+
+        
     </div>
 </section>
 
@@ -216,3 +163,57 @@
         </footer>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const saveProfileBtn = document.getElementById('save-profile');
+        const profileForm = document.getElementById('profile-form');
+        const profileMessage = document.getElementById('profile-message');
+    
+        if (saveProfileBtn && profileForm) {
+            saveProfileBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+    
+                const formData = new FormData(profileForm);
+                const data = {
+                    email: formData.get('email'),
+                    firstName: formData.get('firstName'),
+                    lastName: formData.get('lastName'),
+                    password: formData.get('password'),
+                    // Add other fields as needed, matching UserUpdateRequest
+                };
+    
+                // Remove empty fields
+                Object.keys(data).forEach(key => {
+                    if (data[key] === "" || data[key] === null) {
+                        delete data[key];
+                    }
+                });
+    
+                // Get userId from template variable
+                const userId = "{{userId}}"; // Replace with your actual userId variable if needed
+    
+                fetch(`/backoffice/profile/${userId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : ''
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text) });
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    profileMessage.innerHTML = `<div class="notification is-success">Profile updated!</div>`;
+                })
+                .catch(error => {
+                    profileMessage.innerHTML = `<div class="notification is-danger">${error}</div>`;
+                });
+            });
+        }
+    });
+    </script>

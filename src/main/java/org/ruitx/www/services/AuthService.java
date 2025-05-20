@@ -5,6 +5,7 @@ import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.User;
 import org.ruitx.jaws.types.UserCreateRequest;
+import org.ruitx.jaws.types.UserUpdateRequest;
 import org.ruitx.www.models.auth.TokenResponse;
 import org.ruitx.www.repositories.AuthRepo;
 
@@ -44,6 +45,50 @@ public class AuthService {
         return APIResponse.success(CREATED, "User created successfully!");
     }
 
+    public APIResponse<String> updateUser(Integer userId, UserUpdateRequest updateRequest) {
+        Optional<User> userOpt = authRepo.getUserById(userId);
+        if (userOpt.isEmpty()) {
+            return APIResponse.error(NOT_FOUND, "User not found");
+        }
+        User currentUser = userOpt.get();
+
+        // Hash password if present
+        String passwordHash = updateRequest.password() != null
+                ? BCrypt.withDefaults().hashToString(12, updateRequest.password().toCharArray())
+                : currentUser.passwordHash();
+
+        User updatedUser = User.builder()
+                .id(currentUser.id())
+                .user(currentUser.user())
+                .passwordHash(passwordHash)
+                .email(updateRequest.email() != null ? updateRequest.email() : currentUser.email())
+                .firstName(updateRequest.firstName() != null ? updateRequest.firstName() : currentUser.firstName())
+                .lastName(updateRequest.lastName() != null ? updateRequest.lastName() : currentUser.lastName())
+                .birthdate(updateRequest.birthdate() != null ? updateRequest.birthdate() : currentUser.birthdate())
+                .gender(updateRequest.gender() != null ? updateRequest.gender() : currentUser.gender())
+                .phoneNumber(
+                        updateRequest.phoneNumber() != null ? updateRequest.phoneNumber() : currentUser.phoneNumber())
+                .profilePicture(updateRequest.profilePicture() != null ? updateRequest.profilePicture()
+                        : currentUser.profilePicture())
+                .bio(updateRequest.bio() != null ? updateRequest.bio() : currentUser.bio())
+                .location(updateRequest.location() != null ? updateRequest.location() : currentUser.location())
+                .website(updateRequest.website() != null ? updateRequest.website() : currentUser.website())
+                .isActive(updateRequest.isActive() != null ? updateRequest.isActive() : currentUser.isActive())
+                .isSuperuser(
+                        updateRequest.isSuperuser() != null ? updateRequest.isSuperuser() : currentUser.isSuperuser())
+                .lockoutUntil(updateRequest.lockoutUntil() != null ? updateRequest.lockoutUntil()
+                        : currentUser.lockoutUntil())
+                .createdAt(currentUser.createdAt())
+                .updatedAt(System.currentTimeMillis())
+                .build();
+
+        Optional<Integer> result = authRepo.updateUser(updatedUser);
+        return result.isEmpty()
+                ? APIResponse.error(INTERNAL_SERVER_ERROR, "Error updating the user")
+                : APIResponse.success(NO_CONTENT, "User updated sucessfully");
+
+    }
+
     public APIResponse<TokenResponse> loginUser(String username, String password, String userAgent, String ipAddress) {
         if (username == null || password == null) {
             return APIResponse.error(BAD_REQUEST, "User / password is missing");
@@ -62,8 +107,7 @@ public class AuthService {
         Tyr.TokenPair tokenPair = Tyr.createTokenPair(
                 user.get().id().toString(),
                 userAgent,
-                ipAddress
-        );
+                ipAddress);
 
         authRepo.updateLastLogin(user.get().id());
         return APIResponse.success(OK, TokenResponse.fromTokenPair(tokenPair));

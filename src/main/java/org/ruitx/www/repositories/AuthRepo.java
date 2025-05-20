@@ -27,6 +27,45 @@ public class AuthRepo {
         return result > 0 ? Optional.of(result) : Optional.empty();
     }
 
+    public Optional<Integer> updateUser(User user) {
+        int result =  db.executeSql(
+            """
+            UPDATE USER SET
+                    password_hash = ?,
+                    email = ?,
+                    first_name = ?,
+                    last_name = ?,
+                    birthdate = ?,
+                    gender = ?,
+                    phone_number = ?,
+                    profile_picture = ?,
+                    bio = ?,
+                    location = ?,
+                    website = ?,
+                    is_active = ?,
+                    is_superuser = ?,
+                    lockout_until = ?
+            WHERE id = ?
+            """,
+                user.passwordHash(),
+                user.email(),
+                user.firstName(),
+                user.lastName(),
+                user.birthdate(),
+                user.gender(),
+                user.phoneNumber(),
+                user.profilePicture(),
+                user.bio(),
+                user.location(),
+                user.website(),
+                user.isActive(),
+                user.isSuperuser(),
+                user.lockoutUntil()
+        );
+
+        return result > 0 ? Optional.of(result) : Optional.empty();
+    }
+
     public Optional<UserSession> findActiveSessionByRefreshToken(String refreshToken) {
         Row result = db.getRow(
                 "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
@@ -71,6 +110,10 @@ public class AuthRepo {
             return Optional.empty();
         }
         return User.fromRow(row);
+    }
+
+    public Optional<User> getUserById(Integer id) {
+        return getUserById(id.longValue());
     }
 
     public List<User> getAllUsers() {
