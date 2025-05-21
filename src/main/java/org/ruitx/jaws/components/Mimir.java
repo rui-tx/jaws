@@ -233,6 +233,14 @@ public class Mimir {
             PreparedStatement stmt = null;
 
             try {
+                // Parameter count check (simple heuristic)
+                int expectedParams = sql.length() - sql.replace("?", "").length();
+                if (expectedParams != params.length) {
+                    Logger.warn("Parameter count mismatch! SQL: {} expects {} params, but got {}", sql, expectedParams, params.length);
+                }
+                // Uncomment for verbose SQL logging in development
+                // Logger.info("Executing SQL: {}\nParams: {}", sql, Arrays.toString(params));
+
                 stmt = conn.prepareStatement(sql);
                 for (int i = 0; i < params.length; i++) {
                     stmt.setObject(i + 1, params[i]);
@@ -247,7 +255,8 @@ public class Mimir {
                 }
             }
         } catch (SQLException e) {
-            Logger.error("Error executing prepared update: {}", e.getMessage());
+            Logger.error("Error executing prepared update: {}\nSQL: {}\nParams: {}", e.getMessage(), sql, java.util.Arrays.toString(params));
+            e.printStackTrace();
             throw new RuntimeException("Database update failed", e);
         } finally {
             // Only close if not a transaction connection

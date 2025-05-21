@@ -824,16 +824,16 @@ public class Yggdrasill {
 
                                 // Get the expected fields from the parameter type
                                 Class<?> paramType = parameterTypes[0];
-                                List<String> requiredFields = new ArrayList<>();
+                                List<String> expectedFields = new ArrayList<>();
                                 for (Field field : paramType.getDeclaredFields()) {
-                                    requiredFields.add(field.getName());
+                                    expectedFields.add(field.getName());
                                 }
 
                                 // Check for missing or extra fields
                                 List<String> missingFields = new ArrayList<>();
                                 List<String> extraFields = new ArrayList<>();
 
-                                for (String field : requiredFields) {
+                                for (String field : expectedFields) {
                                     if (!root.has(field)) {
                                         missingFields.add(field);
                                     }
@@ -842,19 +842,28 @@ public class Yggdrasill {
                                 Iterator<String> fieldNames = root.fieldNames();
                                 while (fieldNames.hasNext()) {
                                     String field = fieldNames.next();
-                                    if (!requiredFields.contains(field)) {
+                                    if (!expectedFields.contains(field)) {
                                         extraFields.add(field);
                                     }
                                 }
 
-                                // Build error message if there are issues
-                                if (!missingFields.isEmpty() || !extraFields.isEmpty()) {
+                                // Only enforce missing fields for POST/PUT, not PATCH
+                                boolean isPatch = false;
+                                String requestType = headers.keySet().stream()
+                                        .filter(this::isValidRequestType)
+                                        .findFirst()
+                                        .orElse("INVALID");
+                                if (requestType.equalsIgnoreCase("PATCH")) {
+                                    isPatch = true;
+                                }
+
+                                if ((!isPatch && !missingFields.isEmpty()) || !extraFields.isEmpty()) {
                                     StringBuilder errorMessage = new StringBuilder("Invalid request body: ");
-                                    if (!missingFields.isEmpty()) {
+                                    if (!isPatch && !missingFields.isEmpty()) {
                                         errorMessage.append("Missing required fields: ").append(String.join(", ", missingFields));
                                     }
                                     if (!extraFields.isEmpty()) {
-                                        if (!missingFields.isEmpty()) {
+                                        if (!isPatch && !missingFields.isEmpty()) {
                                             errorMessage.append(". ");
                                         }
                                         errorMessage.append("Unexpected fields: ").append(String.join(", ", extraFields));

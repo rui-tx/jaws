@@ -44,7 +44,8 @@ public class AuthRepo {
                     website = ?,
                     is_active = ?,
                     is_superuser = ?,
-                    lockout_until = ?
+                    lockout_until = ?,
+                    updated_at = ?
             WHERE id = ?
             """,
                 user.passwordHash(),
@@ -60,7 +61,9 @@ public class AuthRepo {
                 user.website(),
                 user.isActive(),
                 user.isSuperuser(),
-                user.lockoutUntil()
+                user.lockoutUntil(),
+                Date.from(Instant.now()),
+                user.id()
         );
 
         return result > 0 ? Optional.of(result) : Optional.empty();

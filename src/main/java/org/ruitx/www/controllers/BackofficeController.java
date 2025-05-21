@@ -50,6 +50,9 @@ public class BackofficeController extends Bragi {
         Map<String, String> context = new HashMap<>();
         context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
         context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
+                ? user.profilePicture()
+                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
@@ -63,6 +66,9 @@ public class BackofficeController extends Bragi {
         Map<String, String> context = new HashMap<>();
         context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
         context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
+                ? user.profilePicture()
+                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, SETTINGS_PAGE));
@@ -76,6 +82,9 @@ public class BackofficeController extends Bragi {
         Map<String, String> context = new HashMap<>();
         context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
         context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
+                ? user.profilePicture()
+                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USERS_PAGE));
@@ -104,12 +113,25 @@ public class BackofficeController extends Bragi {
         Map<String, String> context = new HashMap<>();
         context.put("currentUser",
                 getCurrentToken().isEmpty() ? "-" : currentUser.firstName() + " " + currentUser.lastName());
+        context.put("profilePicture", currentUser.profilePicture() != null && !currentUser.profilePicture().isEmpty()
+                ? currentUser.profilePicture()
+                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+
         context.put("userId", userId);
         context.put("username", user.user());
         context.put("userEmail", user.email() == null ? "" : user.email());
         context.put("userFirstName", user.firstName() == null ? "" : user.firstName());
         context.put("userLastName", user.lastName() == null ? "" : user.lastName());
+        context.put("phoneNumber", user.phoneNumber() == null ? "" : user.phoneNumber());
+        context.put("birthdate",
+                user.birthdate() == null ? "" : JawsUtils.formatUnixTimestamp(user.birthdate(), "yyyy-MM-dd"));
+        context.put("gender", user.gender() == null ? "" : user.gender());
+        context.put("location", user.location() == null ? "" : user.location());
+        context.put("website", user.website() == null ? "" : user.website());
+        context.put("bio", user.bio() == null ? "" : user.bio());
+        context.put("userProfilePicture", user.profilePicture() == null ? "" : user.profilePicture());
         context.put("createdAt", JawsUtils.formatUnixTimestamp(user.createdAt()));
+        context.put("updatedAt", user.updatedAt() == null ? "" : JawsUtils.formatUnixTimestamp(user.updatedAt()));
         context.put("lastLogin", user.lastLogin() == null
                 ? "Never logged in"
                 : JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
@@ -122,12 +144,13 @@ public class BackofficeController extends Bragi {
     @Route(endpoint = "/backoffice/profile/:id", method = PATCH)
     public void updateUserProfile(UserUpdateRequest request) {
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
-        
+
         if (!user.user().equals("admin")) {
             sendHTMLResponse(FORBIDDEN, "You are not authorized to create users");
             return;
         }
-        APIResponse<String> response = authService.updateUser(user.id(), request);
+        APIResponse<String> response = authService
+                .updateUser(Integer.parseInt(getPathParam("id")), request);
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
     }
 
@@ -147,12 +170,15 @@ public class BackofficeController extends Bragi {
 
         StringBuilder html = new StringBuilder();
         for (User user : response.data()) {
+
             html.append("<tr>")
                     .append("<td class=\"is-image-cell\">")
                     .append("<div class=\"image\">")
-                    .append("<img class=\"is-rounded\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F")
+                    .append(user.profilePicture() != null && !user.profilePicture().isEmpty()
+                            ? "<img class=\"is-rounded\" src=\"" + user.profilePicture() + "\">"
+                            : "<img class=\"is-rounded\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg\">")
                     // .append(user.user().toLowerCase().replace(" ", "-")) // disable for now
-                    .append(".svg\">")
+                    // .append(".svg\">")
                     .append("</div>")
                     .append("</td>")
                     .append("<td data-label=\"Name\">")

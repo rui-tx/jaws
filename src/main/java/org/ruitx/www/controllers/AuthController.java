@@ -118,9 +118,9 @@ public class AuthController extends Bragi {
             html.append("<tr>")
                     .append("<td class=\"is-image-cell\">")
                     .append("<div class=\"image\">")
-                    .append("<img class=\"is-rounded\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F")
-                    //.append(user.user().toLowerCase().replace(" ", "-")) // disable for now
-                    .append(".svg\">")
+                    .append(user.profilePicture() != null && !user.profilePicture().isEmpty()
+                            ? "<img class=\"is-rounded\" src=\"" + user.profilePicture() + "\">"
+                            : "<img class=\"is-rounded\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg\">")
                     .append("</div>")
                     .append("</td>")
                     .append("<td data-label=\"Name\">")

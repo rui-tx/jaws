@@ -106,6 +106,7 @@ public record User(
                 .email(email)
                 .firstName(firstName)
                 .lastName(lastName)
+                .profilePicture(profilePicture) 
                 .createdAt(createdAt)
                 .build();
     }

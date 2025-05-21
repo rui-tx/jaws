@@ -30,7 +30,9 @@
     </div>
 </section>
 <section class="section is-main-section">
-    <div class="tile is-ancestor">
+    <div class="tile is-ancestor is-vertical">
+
+        <!-- Basic Information -->
         <div class="tile is-parent">
             <div class="card tile is-child">
                 <header class="card-header">
@@ -41,6 +43,17 @@
                 </header>
                 <div class="card-content">
                     <form id="profile-form">
+                        <div class="field is-horizontal">
+                            <div class="field-label is-normal"><label class="label">Username</label></div>
+                            <div class="field-body">
+                                <div class="field">
+                                    <div class="control">
+                                        <input class="input" name="username" type="text" value="{{username}}" disabled
+                                            readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="field is-horizontal">
                             <div class="field-label is-normal"><label class="label">Email</label></div>
                             <div class="field-body">
@@ -71,77 +84,288 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="field is-horizontal">
-                            <div class="field-label is-normal"><label class="label">New Password</label></div>
-                            <div class="field-body">
-                                <div class="field">
-                                    <div class="control">
-                                        <input class="input" name="password" type="password">
-                                    </div>
-                                    <p class="help">Leave blank to keep current password</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security -->
+    <div class="tile is-parent">
+        <div class="card tile is-child">
+            <header class="card-header">
+                <p class="card-header-title">
+                    <span class="icon"><i class="mdi mdi-lock"></i></span>
+                    Security
+                </p>
+            </header>
+            <div class="card-content">
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">New Password</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input" name="password" type="password">
+                            </div>
+                            <p class="help">Leave blank to keep current password</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">Last Login</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input" name="lastLogin" type="text" value="{{lastLogin}}" disabled
+                                    readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">Failed Login Attempts</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input" name="failedLoginAttempts" type="number"
+                                    value="{{failedLoginAttempts}}" disabled readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">Lockout Until</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input" name="lockoutUntil" type="datetime-local" value="{{lockoutUntil}}"
+                                    disabled readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personal Details -->
+    <div class="tile is-parent">
+        <div class="card tile is-child">
+            <header class="card-header">
+                <p class="card-header-title">
+                    <span class="icon"><i class="mdi mdi-account-details"></i></span>
+                    Personal Details
+                </p>
+            </header>
+            <div class="card-content">
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">Birthdate</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input" name="birthdate" type="date" value="{{birthdate}}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">Gender</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select name="gender">
+                                        <option value="">Select gender</option>
+                                        <option value="male" {{#if gender=='male' }}selected{{/if}}>Male</option>
+                                        <option value="female" {{#if gender=='female' }}selected{{/if}}>Female</option>
+                                        <option value="other" {{#if gender=='other' }}selected{{/if}}>Other</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
-                        <div id="profile-message"></div>
-                        <!-- Add more fields as needed, matching UserUpdateRequest -->
+                    </div>
+                </div>
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">Phone Number</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input" name="phoneNumber" type="tel" value="{{phoneNumber}}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="tile is-parent">
+        <div class="card tile is-child">
+            <header class="card-header">
+                <p class="card-header-title">
+                    <span class="icon"><i class="mdi mdi-account"></i></span>
+                    Profile
+                </p>
+            </header>
+            <div class="card-content">
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal"><label class="label">Profile Picture URL</label></div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input" name="profilePicture" id="profile-picture-url" type="text" value="{{profilePicture}}">
+                            </div>
+                            <figure class="image is-128x128 mt-2">
+                                <img id="profile-picture-preview" src="{{userProfilePicture}}" alt="Profile Picture Preview" style="object-fit:cover;">
+                            </figure>
+                        </div>
+                    </div>
+                </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Bio</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <textarea class="textarea" name="bio">{{bio}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location & Web -->
+        <div class="tile is-parent">
+            <div class="card tile is-child">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        <span class="icon"><i class="mdi mdi-map-marker"></i></span>
+                        Location & Web
+                    </p>
+                </header>
+                <div class="card-content">
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Location</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input" name="location" type="text" value="{{location}}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Website</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input" name="website" type="url" value="{{website}}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Status -->
+        <div class="tile is-parent">
+            <div class="card tile is-child">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        <span class="icon"><i class="mdi mdi-account-check"></i></span>
+                        Account Status
+                    </p>
+                </header>
+                <div class="card-content">
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Account Status</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select name="status" disabled>
+                                            <option value="active" {{#if status=='active' }}selected{{/if}}>Active
+                                            </option>
+                                            <option value="suspended" {{#if status=='suspended' }}selected{{/if}}>
+                                                Suspended</option>
+                                            <option value="inactive" {{#if status=='inactive' }}selected{{/if}}>Inactive
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Is Active</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select name="isActive" disabled readonly>
+                                            <option value="1" {{#if isActive==1}}selected{{/if}}>Yes</option>
+                                            <option value="0" {{#if isActive==0}}selected{{/if}}>No</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Is Superuser</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select name="isSuperuser" disabled readonly>
+                                            <option value="1" {{#if isSuperuser==1}}selected{{/if}}>Yes</option>
+                                            <option value="0" {{#if isSuperuser==0}}selected{{/if}}>No</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Created At</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input" name="createdAt" type="text" value="{{createdAt}}" disabled
+                                        readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal"><label class="label">Updated At</label></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input" name="updatedAt" type="text" value="{{updatedAt}}" disabled
+                                        readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="profile-message"></div>
+                    <!-- Add more fields as needed, matching UserUpdateRequest -->
                     </form>
                 </div>
             </div>
         </div>
+    </div>
+</section>
 
-        <div class="tile is-parent is-4">
-            <div class="card tile is-child">
-                <header class="card-header">
-                    <p class="card-header-title">
-                        <span class="icon"><i class="mdi mdi-account-details"></i></span>
-                        Status
-                    </p>
-                </header>
-                <div class="card-content">
-                    <div class="field">
-                        <label class="label">Account Status</label>
-                        <div class="control">
-                            <div class="select is-fullwidth">
-                                <select name="status">
-                                    <option value="active" {{#if status=='active' }}selected{{/if}}>Active</option>
-                                    <option value="suspended" {{#if status=='suspended' }}selected{{/if}}>Suspended
-                                    </option>
-                                    <option value="inactive" {{#if status=='inactive' }}selected{{/if}}>Inactive
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label class="label">Created At</label>
-                        <div class="control">
-                            <input class="input" disabled readonly type="text" value="{{createdAt}}">
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label class="label">Last Login</label>
-                        <div class="control">
-                            <input class="input" disabled readonly type="text" value="{{lastLogin}}">
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <div class="field">
-                        <div class="control">
-                            <button class="button is-danger is-fullwidth jb-modal" data-target="delete-account-modal">
-                                <span class="icon"><i class="mdi mdi-account-remove"></i></span>
-                                <span>Delete Account</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
+<!-- Save Button (sticky at bottom for mobile, optional) -->
+<section class="section">
+    <div class="buttons is-right">
+        <button class="button is-primary" id="save-profile-bottom">
+            <span class="icon"><i class="mdi mdi-content-save"></i></span>
+            <span>Save Changes</span>
+        </button>
     </div>
 </section>
 
@@ -167,40 +391,57 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const saveProfileBtn = document.getElementById('save-profile');
+        const saveProfileBtnBottom = document.getElementById('save-profile-bottom');
         const profileForm = document.getElementById('profile-form');
         const profileMessage = document.getElementById('profile-message');
-    
-        if (saveProfileBtn && profileForm) {
-            saveProfileBtn.addEventListener('click', function (event) {
-                event.preventDefault();
-    
-                const formData = new FormData(profileForm);
-                const data = {
-                    email: formData.get('email'),
-                    firstName: formData.get('firstName'),
-                    lastName: formData.get('lastName'),
-                    password: formData.get('password'),
-                    // Add other fields as needed, matching UserUpdateRequest
-                };
-    
-                // Remove empty fields
-                Object.keys(data).forEach(key => {
-                    if (data[key] === "" || data[key] === null) {
-                        delete data[key];
-                    }
-                });
-    
-                // Get userId from template variable
-                const userId = "{{userId}}"; // Replace with your actual userId variable if needed
-    
-                fetch(`/backoffice/profile/${userId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : ''
-                    },
-                    body: JSON.stringify(data)
-                })
+
+        function collectFormData(form) {
+            const formData = new FormData(form);
+            const data = {
+                email: formData.get('email'),
+                firstName: formData.get('firstName'),
+                lastName: formData.get('lastName'),
+                password: formData.get('password'),
+                birthdate: formData.get('birthdate'),
+                gender: formData.get('gender'),
+                phoneNumber: formData.get('phoneNumber'),
+                profilePicture: formData.get('profilePicture'),
+                bio: formData.get('bio'),
+                location: formData.get('location'),
+                website: formData.get('website'),
+                isActive: formData.get('isActive'),
+                isSuperuser: formData.get('isSuperuser'),
+                lockoutUntil: formData.get('lockoutUntil'),
+                failedLoginAttempts: formData.get('failedLoginAttempts'),
+                // status is not in UserUpdateRequest, but you can send it if your backend supports it
+            };
+
+            // Remove empty fields
+            Object.keys(data).forEach(key => {
+                if (data[key] === "" || data[key] === null) {
+                    delete data[key];
+                }
+            });
+
+            return data;
+        }
+
+        function saveProfile(event) {
+            event.preventDefault();
+
+            const data = collectFormData(profileForm);
+
+            // Get userId from template variable
+            const userId = "{{userId}}";
+
+            fetch(`/backoffice/profile/${userId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : ''
+                },
+                body: JSON.stringify(data)
+            })
                 .then(response => {
                     if (!response.ok) {
                         return response.text().then(text => { throw new Error(text) });
@@ -213,7 +454,22 @@
                 .catch(error => {
                     profileMessage.innerHTML = `<div class="notification is-danger">${error}</div>`;
                 });
+        }
+
+        if (saveProfileBtn && profileForm) {
+            saveProfileBtn.addEventListener('click', saveProfile);
+        }
+        if (saveProfileBtnBottom && profileForm) {
+            saveProfileBtnBottom.addEventListener('click', saveProfile);
+        }
+
+        // Profile picture preview logic
+        const profilePictureInput = document.getElementById('profile-picture-url');
+        const profilePicturePreview = document.getElementById('profile-picture-preview');
+        if (profilePictureInput && profilePicturePreview) {
+            profilePictureInput.addEventListener('input', function () {
+                profilePicturePreview.src = profilePictureInput.value || 'https://via.placeholder.com/128?text=No+Image';
             });
         }
     });
-    </script>
+</script>
