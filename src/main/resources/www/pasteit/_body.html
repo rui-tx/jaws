@@ -1,0 +1,166 @@
+<h1>pasteit</h1>
+
+<form id="paste-form">
+    <textarea 
+        id="paste-content" 
+        name="content" 
+        placeholder="paste here..."
+        autofocus></textarea>
+    
+    <div class="actions">
+        <button type="submit">paste</button>
+        <button type="button" onclick="clearContent()">clear</button>
+    </div>
+</form>
+
+<div id="result" class="result">
+    <input type="text" id="share-url" readonly onclick="this.select()">
+    <button onclick="copyToClipboard()">copy link</button>
+</div>
+
+<!--
+<div class="help">
+    tip: you can also drag & drop files or paste images from clipboard
+</div>
+-->
+
+<script>
+// Drag and drop functionality
+let dragCounter = 0;
+
+document.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    dragCounter++;
+    document.getElementById('drag-overlay').style.display = 'flex';
+});
+
+document.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) {
+        document.getElementById('drag-overlay').style.display = 'none';
+    }
+});
+
+document.addEventListener('dragover', function(e) {
+    e.preventDefault();
+});
+
+document.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dragCounter = 0;
+    document.getElementById('drag-overlay').style.display = 'none';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (file.type.startsWith('text/')) {
+                document.getElementById('paste-content').value = e.target.result;
+            } else {
+                // For binary files, you'd typically upload directly
+                alert('Binary file detected: ' + file.name + '\nThis would be uploaded directly in a real implementation.');
+            }
+        };
+        if (file.type.startsWith('text/')) {
+            reader.readAsText(file);
+        }
+    }
+});
+
+// Clipboard paste for images
+document.addEventListener('paste', function(e) {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            alert('Image pasted: ' + blob.type + '\nThis would be uploaded directly in a real implementation.');
+            break;
+        }
+    }
+});
+
+// Form submission
+document.getElementById('paste-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const content = document.getElementById('paste-content').value.trim();
+    if (!content) {
+        alert('nothing to paste');
+        return;
+    }
+    
+    // Disable form during submission
+    const submitButton = document.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    submitButton.textContent = 'creating...';
+    submitButton.disabled = true;
+    
+    // Create paste via API
+    fetch('/api/v1/pasteit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            content: content,
+            title: null,
+            language: null,
+            expiresInHours: null,
+            isPrivate: false,
+            password: null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // The paste ID is in the info field due to method overloading in the API
+            const pasteId = data.info;
+            const shareUrl = `${window.location.origin}/pasteit/${pasteId}`;
+            
+            document.getElementById('share-url').value = shareUrl;
+            document.getElementById('result').style.display = 'block';
+            
+            // Auto-select the URL
+            setTimeout(() => {
+                document.getElementById('share-url').select();
+            }, 100);
+        } else {
+            alert('Error creating paste: ' + data.info);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create paste. Please try again.');
+    })
+    .finally(() => {
+        // Re-enable form
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
+    });
+});
+
+function clearContent() {
+    document.getElementById('paste-content').value = '';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('paste-content').focus();
+}
+
+function copyToClipboard() {
+    const shareUrl = document.getElementById('share-url');
+    shareUrl.select();
+    document.execCommand('copy');
+    
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = 'copied!';
+    
+    setTimeout(() => {
+        button.textContent = originalText;
+    }, 1500);
+}
+
+// Focus textarea on page load
+document.getElementById('paste-content').focus();
+</script>

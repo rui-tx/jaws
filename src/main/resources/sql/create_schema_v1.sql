@@ -43,3 +43,25 @@ CREATE TABLE IF NOT EXISTS USER_SESSION
 CREATE INDEX IF NOT EXISTS idx_user_session_refresh_token ON USER_SESSION (refresh_token);
 CREATE INDEX IF NOT EXISTS idx_user_session_access_token ON USER_SESSION (access_token);
 
+CREATE TABLE IF NOT EXISTS PASTE
+(
+    id              TEXT    PRIMARY KEY,  -- Short unique ID for the paste
+    content         TEXT    NOT NULL,     -- The actual paste content
+    title           TEXT,                 -- Optional title
+    language        TEXT,                 -- Programming language for syntax highlighting
+    expires_at      INTEGER,              -- Expiration timestamp (null for no expiration)
+    view_count      INTEGER DEFAULT 0,    -- Number of times viewed
+    is_private      INTEGER DEFAULT 0,    -- 0 = public, 1 = private
+    password_hash   TEXT,                 -- Optional password protection
+    user_id         INTEGER,              -- Optional user who created it
+    ip_address      TEXT,                 -- IP address of creator
+    user_agent      TEXT,                 -- User agent of creator
+    created_at      INTEGER NOT NULL,     -- Creation timestamp
+    updated_at      INTEGER,              -- Last update timestamp
+    FOREIGN KEY (user_id) REFERENCES USER (id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_paste_created_at ON PASTE (created_at);
+CREATE INDEX IF NOT EXISTS idx_paste_expires_at ON PASTE (expires_at);
+CREATE INDEX IF NOT EXISTS idx_paste_user_id ON PASTE (user_id);
+
