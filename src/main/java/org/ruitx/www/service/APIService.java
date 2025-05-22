@@ -1,6 +1,6 @@
-package org.ruitx.www.services;
+package org.ruitx.www.service;
 
-import org.ruitx.jaws.types.PingResponse;
+import org.ruitx.www.dto.api.PingResponse;
 
 public class APIService {
 

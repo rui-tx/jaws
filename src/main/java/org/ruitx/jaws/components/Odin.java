@@ -2,7 +2,7 @@ package org.ruitx.jaws.components;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.www.services.AuthService;
+import org.ruitx.www.service.AuthService;
 import org.tinylog.Logger;
 
 import java.nio.file.Paths;

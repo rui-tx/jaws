@@ -1,13 +1,13 @@
-package org.ruitx.www.services;
+package org.ruitx.www.service;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.types.User;
-import org.ruitx.jaws.types.UserCreateRequest;
-import org.ruitx.jaws.types.UserUpdateRequest;
-import org.ruitx.www.models.auth.TokenResponse;
-import org.ruitx.www.repositories.AuthRepo;
+import org.ruitx.www.dto.auth.LoginResponse;
+import org.ruitx.www.dto.auth.UserCreateRequest;
+import org.ruitx.www.dto.auth.UserUpdateRequest;
+import org.ruitx.www.model.auth.User;
+import org.ruitx.www.repository.AuthRepo;
 
 import java.util.List;
 import java.util.Optional;
@@ -89,7 +89,7 @@ public class AuthService {
 
     }
 
-    public APIResponse<TokenResponse> loginUser(String username, String password, String userAgent, String ipAddress) {
+    public APIResponse<LoginResponse> loginUser(String username, String password, String userAgent, String ipAddress) {
         if (username == null || password == null) {
             return APIResponse.error(BAD_REQUEST, "User / password is missing");
         }
@@ -110,16 +110,16 @@ public class AuthService {
                 ipAddress);
 
         authRepo.updateLastLogin(user.get().id());
-        return APIResponse.success(OK, TokenResponse.fromTokenPair(tokenPair));
+        return APIResponse.success(OK, LoginResponse.fromTokenPair(tokenPair));
     }
 
-    public APIResponse<TokenResponse> refreshToken(String refreshToken, String userAgent, String ipAddress) {
+    public APIResponse<LoginResponse> refreshToken(String refreshToken, String userAgent, String ipAddress) {
         Optional<Tyr.TokenPair> newTokens = Tyr.refreshToken(refreshToken, userAgent, ipAddress);
         if (newTokens.isEmpty()) {
             return APIResponse.error(UNAUTHORIZED, "Invalid or expired refresh token");
         }
 
-        return APIResponse.success(OK, TokenResponse.fromTokenPair(newTokens.get()));
+        return APIResponse.success(OK, LoginResponse.fromTokenPair(newTokens.get()));
     }
 
     public APIResponse<Void> logout(String refreshToken) {

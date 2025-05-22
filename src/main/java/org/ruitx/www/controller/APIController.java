@@ -1,10 +1,10 @@
-package org.ruitx.www.controllers;
+package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.types.Post;
-import org.ruitx.www.services.APIService;
+import org.ruitx.www.dto.api.Post;
+import org.ruitx.www.service.APIService;
 
 import java.util.HashMap;
 import java.util.List;

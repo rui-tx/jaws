@@ -3,6 +3,7 @@ package org.ruitx.jaws.types;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.www.dto.api.Post;
 
 import java.util.List;
 

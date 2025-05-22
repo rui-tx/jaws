@@ -1,4 +1,4 @@
-package org.ruitx.jaws.types;
+package org.ruitx.www.dto.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

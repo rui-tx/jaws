@@ -1,4 +1,4 @@
-package org.ruitx.www.controllers;
+package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.Tyr;
@@ -6,12 +6,12 @@ import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.types.User;
-import org.ruitx.jaws.types.UserCreateRequest;
-import org.ruitx.jaws.types.UserUpdateRequest;
 import org.ruitx.jaws.utils.JawsUtils;
-import org.ruitx.www.repositories.AuthRepo;
-import org.ruitx.www.services.AuthService;
+import org.ruitx.www.dto.auth.UserCreateRequest;
+import org.ruitx.www.dto.auth.UserUpdateRequest;
+import org.ruitx.www.model.auth.User;
+import org.ruitx.www.repository.AuthRepo;
+import org.ruitx.www.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

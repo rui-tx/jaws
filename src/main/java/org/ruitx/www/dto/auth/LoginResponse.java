@@ -1,16 +1,16 @@
-package org.ruitx.www.models.auth;
+package org.ruitx.www.dto.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.ruitx.jaws.components.Tyr;
 
-public record TokenResponse(
+public record LoginResponse(
         @JsonProperty("access_token") String accessToken,
         @JsonProperty("refresh_token") String refreshToken,
         @JsonProperty("token_type") String tokenType,
         @JsonProperty("expires_in") Long expiresIn
 ) {
-    public static TokenResponse fromTokenPair(Tyr.TokenPair tokenPair) {
-        return new TokenResponse(
+    public static LoginResponse fromTokenPair(Tyr.TokenPair tokenPair) {
+        return new LoginResponse(
                 tokenPair.accessToken(),
                 tokenPair.refreshToken(),
                 "Bearer",

@@ -1,9 +1,11 @@
-package org.ruitx.jaws.types;
+package org.ruitx.www.model.auth;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Optional;
+
+import org.ruitx.jaws.types.Row;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record User(

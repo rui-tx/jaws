@@ -1,9 +1,9 @@
-package org.ruitx.www.repositories;
+package org.ruitx.www.repository;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.types.Row;
-import org.ruitx.jaws.types.User;
-import org.ruitx.www.models.auth.UserSession;
+import org.ruitx.www.model.auth.User;
+import org.ruitx.www.model.auth.UserSession;
 
 import java.sql.Date;
 import java.time.Instant;

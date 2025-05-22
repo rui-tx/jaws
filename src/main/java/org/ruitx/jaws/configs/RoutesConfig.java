@@ -1,10 +1,10 @@
 package org.ruitx.jaws.configs;
 
-import org.ruitx.www.controllers.APIController;
-import org.ruitx.www.controllers.AuthController;
-import org.ruitx.www.controllers.BackofficeController;
-
 import java.util.List;
+
+import org.ruitx.www.controller.APIController;
+import org.ruitx.www.controller.AuthController;
+import org.ruitx.www.controller.BackofficeController;
 
 public class RoutesConfig {
 
