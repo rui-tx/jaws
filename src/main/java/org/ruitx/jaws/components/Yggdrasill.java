@@ -323,7 +323,8 @@ public class Yggdrasill {
                 }
 
                 // Synchronize the controller instance to prevent concurrent access
-                synchronized (controllerInstance) {
+                // This should not be needed anymore, Jetty and Bragi are thread safe (I think and hope)
+                //synchronized (controllerInstance) {
                     try {
                         // Get method parameters
                         Class<?>[] parameterTypes = routeMethod.getParameterTypes();
@@ -432,7 +433,7 @@ public class Yggdrasill {
                         handleControllerException(context, e, controllerInstance, routeMethod.getName());
                         return true;
                     }
-                }
+                //}
 
                 // Cleanup if the controller extends Bragi
                 if (controllerInstance instanceof Bragi) {
