@@ -26,16 +26,16 @@ public class ExceptionAspect {
     public void controllerMethods() {
     }
 
-    // Pointcut to match any method in RequestHandler
-    @Pointcut("execution(* org.ruitx.jaws.components.Yggdrasill.RequestHandler.*(..))")
-    public void requestHandlerMethods() {
+    // Pointcut to match any method in JettyServer.RequestContext
+    @Pointcut("execution(* org.ruitx.jaws.components.JettyServer.RequestContext.*(..))")
+    public void requestContextMethods() {
     }
 
     @Pointcut("execution(* org.ruitx.jaws.components.Bragi.*(..))")
     public void apiHandlerMethods() {
     }
 
-    @Around("controllerMethods() || requestHandlerMethods() || apiHandlerMethods()")
+    @Around("controllerMethods() || requestContextMethods() || apiHandlerMethods()")
     public Object handleException(ProceedingJoinPoint joinPoint) throws Throwable {
         try {
             return joinPoint.proceed();
@@ -49,46 +49,64 @@ public class ExceptionAspect {
         // Log the exception
         Logger.error("Exception occurred: {}", ex.getMessage(), ex);
 
-        // Try to send error response if we have access to RequestHandler
+        // Try to send error response if we have access to a controller or RequestContext
         try {
-            Yggdrasill.RequestHandler requestHandler = getRequestHandler(joinPoint);
-            if (requestHandler != null) {
-                sendErrorResponse(ex, requestHandler);
-            }
+            sendErrorResponseFromController(ex, joinPoint);
         } catch (Exception e) {
             Logger.error("Failed to send error response: {}", e.getMessage());
         }
     }
 
-    private Yggdrasill.RequestHandler getRequestHandler(ProceedingJoinPoint joinPoint) {
-        // Check if the target is a BaseController
+    private void sendErrorResponseFromController(Throwable ex, ProceedingJoinPoint joinPoint) {
+        // Check if the target is a Bragi controller (preferred approach)
         if (joinPoint.getTarget() instanceof Bragi controller) {
-            return controller.getRequestHandler();
+            sendErrorResponseThroughController(ex, controller);
+            return;
         }
 
+        // Try to get RequestContext directly
+        Yggdrasill.RequestContext requestContext = getRequestContext(joinPoint);
+        if (requestContext != null) {
+            sendErrorResponseNew(ex, requestContext);
+        }
+    }
+
+    private void sendErrorResponseThroughController(Throwable ex, Bragi controller) {
+        try {
+            ResponseCode responseCode = determineResponseCode(ex);
+            String errorMessage = ex.getMessage();
+
+            // Use the controller's sendErrorResponse method
+            controller.sendErrorResponse(responseCode, errorMessage != null ? errorMessage : "An unexpected error occurred");
+        } catch (Exception e) {
+            Logger.error("Failed to send error response through controller: {}", e.getMessage());
+        }
+    }
+
+    private Yggdrasill.RequestContext getRequestContext(ProceedingJoinPoint joinPoint) {
         // Check method arguments
         for (Object arg : joinPoint.getArgs()) {
-            if (arg instanceof Yggdrasill.RequestHandler) {
-                return (Yggdrasill.RequestHandler) arg;
+            if (arg instanceof Yggdrasill.RequestContext) {
+                return (Yggdrasill.RequestContext) arg;
             }
         }
 
         return null;
     }
 
-    private void sendErrorResponse(Throwable ex, Yggdrasill.RequestHandler requestHandler) {
+    private void sendErrorResponseNew(Throwable ex, Yggdrasill.RequestContext requestContext) {
         try {
             ResponseCode responseCode = determineResponseCode(ex);
             String errorMessage = ex.getMessage();
 
             APIResponse<String> response = APIResponse.error(
                     responseCode.getCodeAndMessage(),
-                    errorMessage
+                    errorMessage != null ? errorMessage : "An unexpected error occurred"
             );
 
             // Only try to send response if connection is still alive
-            if (!requestHandler.isConnectionClosed()) {
-                requestHandler.sendJSONResponse(responseCode, Bragi.encode(response));
+            if (!requestContext.isConnectionClosed()) {
+                requestContext.sendJSONResponse(responseCode, Bragi.encode(response));
             }
         } catch (Exception e) {
             // Log but don't try to send more responses
@@ -98,7 +116,7 @@ public class ExceptionAspect {
 
     private ResponseCode determineResponseCode(Throwable ex) {
         //This happens because the controller method is being invoked through reflection
-        // at invokeRouteMethod in Yggrassil, so we get the actual cause from the thrown exception
+        // at invokeRouteMethod in JettyServer, so we get the actual cause from the thrown exception
         if (ex instanceof InvocationTargetException && ex.getCause() != null) {
             ex = ex.getCause();
         }

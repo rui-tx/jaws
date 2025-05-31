@@ -1,11 +1,11 @@
 package org.ruitx.jaws.middleware;
 
-import org.ruitx.jaws.components.JettyRequestHandler;
+import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
 import org.tinylog.Logger;
 
-import java.io.IOException;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * CorsMiddleware handles Cross-Origin Resource Sharing (CORS) headers.
@@ -13,59 +13,38 @@ import java.io.IOException;
  */
 public class CorsMiddleware implements Middleware {
 
-    private final String allowedOrigins;
-    private final String allowedMethods;
-    private final String allowedHeaders;
-    private final boolean allowCredentials;
-
-    /**
-     * Creates a CorsMiddleware with default permissive settings.
-     */
-    public CorsMiddleware() {
-        this("*", "GET, POST, PUT, PATCH, DELETE, OPTIONS", "Content-Type, Authorization", true);
-    }
-
-    /**
-     * Creates a CorsMiddleware with custom settings.
-     */
-    public CorsMiddleware(String allowedOrigins, String allowedMethods, String allowedHeaders, boolean allowCredentials) {
-        this.allowedOrigins = allowedOrigins;
-        this.allowedMethods = allowedMethods;
-        this.allowedHeaders = allowedHeaders;
-        this.allowCredentials = allowCredentials;
-    }
-
     @Override
-    public boolean handle(JettyRequestHandler handler, MiddlewareChain chain) {
+    public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
-            // Add CORS headers to all responses
-            handler.getResponse().setHeader("Access-Control-Allow-Origin", allowedOrigins);
-            handler.getResponse().setHeader("Access-Control-Allow-Methods", allowedMethods);
-            handler.getResponse().setHeader("Access-Control-Allow-Headers", allowedHeaders);
+            HttpServletResponse response = context.getResponse();
             
-            if (allowCredentials) {
-                handler.getResponse().setHeader("Access-Control-Allow-Credentials", "true");
+            // Add CORS headers
+            response.setHeader("Access-Control-Allow-Origin", "*");
+            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+            response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, HX-Request, HX-Trigger, HX-Target, HX-Current-URL");
+            response.setHeader("Access-Control-Max-Age", "3600");
+            
+            // Handle preflight OPTIONS requests
+            if ("OPTIONS".equals(context.getRequest().getMethod())) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                try {
+                    response.getWriter().flush();
+                } catch (Exception e) {
+                    Logger.debug("Error flushing OPTIONS response: {}", e.getMessage());
+                }
+                return false; // Stop the chain for OPTIONS requests
             }
-
-            // Handle preflight requests (OPTIONS)
-            if ("OPTIONS".equalsIgnoreCase(handler.getRequest().getMethod())) {
-                handler.getResponse().setStatus(200);
-                handler.getResponse().setHeader("Access-Control-Max-Age", "3600");
-                handler.getResponse().getWriter().flush();
-                return false; // Stop processing for preflight requests
-            }
-
-            // Continue with the chain for non-preflight requests
+            
             return chain.next();
             
-        } catch (IOException e) {
-            Logger.error("Error handling CORS in middleware: {}", e.getMessage());
-            return false;
+        } catch (Exception e) {
+            Logger.error("Error in CorsMiddleware: {}", e.getMessage(), e);
+            return chain.next(); // Continue on error
         }
     }
 
     @Override
     public int getOrder() {
-        return 20; // Execute early, but after logging
+        return 10; // Execute early in the chain
     }
 } 

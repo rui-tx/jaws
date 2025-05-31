@@ -30,7 +30,7 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
 public final class Odin {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static JettyServer jettyServer;
+    private static Yggdrasill jettyServer;
 
     private Odin() {
     }
@@ -75,7 +75,7 @@ public final class Odin {
     // JettyServer is the component that listens for incoming connections (replaces Yggdrasill)
     private static Thread createJettyServer() {
         return new Thread(() -> {
-            jettyServer = new JettyServer(ApplicationConfig.PORT, ApplicationConfig.WWW_PATH);
+            jettyServer = new Yggdrasill(ApplicationConfig.PORT, ApplicationConfig.WWW_PATH);
             
             // Add middleware from configuration
             setupMiddleware(jettyServer);
@@ -87,7 +87,7 @@ public final class Odin {
     /**
      * Sets up middleware for the JettyServer using the configuration.
      */
-    private static void setupMiddleware(JettyServer server) {
+    private static void setupMiddleware(Yggdrasill server) {
         MiddlewareConfig.MIDDLEWARE.forEach(server::addMiddleware);
         
         Logger.info("Configured {} middleware(s): {}", 
@@ -147,7 +147,7 @@ public final class Odin {
      * 
      * @return the JettyServer instance, or null if not yet started
      */
-    public static JettyServer getJettyServer() {
+    public static Yggdrasill getJettyServer() {
         return jettyServer;
     }
 }

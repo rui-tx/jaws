@@ -2,37 +2,40 @@ package org.ruitx.jaws.components;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.resource.ResourceFactory;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.exceptions.ConnectionException;
 import org.ruitx.jaws.exceptions.ProcessRequestException;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.interfaces.AccessControl;
+import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.utils.ValidationUtils;
 import org.tinylog.Logger;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
-import java.nio.channels.IllegalBlockingModeException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.ruitx.jaws.strings.DefaultHTML.*;
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
@@ -40,19 +43,19 @@ import static org.ruitx.jaws.strings.RequestType.*;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
 /**
- * Yggdrasill represents the main HTTP jaws, handling incoming requests and dispatching them
- * to the appropriate request handlers based on the HTTP method (GET, POST, PUT, PATCH, DELETE).
- * It manages client connections and responses.
+ * Yggdrasill is the main HTTP server component
+ * It integrates Jetty with JAWS' existing route system, middleware support,
+ * and provides all request handling functionality.
  */
 public class Yggdrasill {
 
     /**
      * The current number of active connections.
      */
-    public static Integer currentConnections = 0;
+    public static final AtomicInteger currentConnections = new AtomicInteger(0);
 
     /**
-     * The port on which the jaws is running.
+     * The port on which the server is running.
      */
     public static int currentPort;
 
@@ -63,13 +66,14 @@ public class Yggdrasill {
 
     private final int port;
     private final String resourcesPath;
-    private ServerSocket serverSocket;
+    private final List<Middleware> middlewares = new ArrayList<>();
+    private Server server;
 
     /**
-     * Constructs a new Yggdrasill jaws instance.
+     * Constructs a new Yggdrasill instance.
      *
-     * @param port          the port to run the jaws on.
-     * @param resourcesPath the path to the jaws's static resources.
+     * @param port          the port to run the server on.
+     * @param resourcesPath the path to the server's static resources.
      */
     public Yggdrasill(int port, String resourcesPath) {
         this.port = port;
@@ -79,511 +83,701 @@ public class Yggdrasill {
     }
 
     /**
-     * Starts the jaws, accepting incoming connections and delegating request processing to a thread pool.
+     * Adds a middleware to the server.
+     * Middleware will be executed in order of their priority (getOrder() method).
+     *
+     * @param middleware the middleware to add
+     */
+    public void addMiddleware(Middleware middleware) {
+        middlewares.add(middleware);
+        // Sort middleware by order
+        middlewares.sort(Comparator.comparingInt(Middleware::getOrder));
+    }
+
+    /**
+     * Starts the server, setting up Jetty with custom servlet for route handling.
      */
     public void start() {
         try {
-            serverSocket = new ServerSocket(port);
-            ExecutorService threadPool = Executors.newCachedThreadPool();
-            acceptConnections(serverSocket, threadPool);
-        } catch (IOException | ConnectionException e) {
-            Logger.error("Yggdrasill encountered an error: %s", e.getMessage());
+            server = new Server();
+            
+            // Create connector
+            ServerConnector connector = new ServerConnector(server);
+            connector.setPort(port);
+            connector.setIdleTimeout(ApplicationConfig.TIMEOUT);
+            server.addConnector(connector);
+
+            // Create servlet context
+            ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
+            context.setContextPath("/");
+
+            // Set up static file serving
+            setupStaticFileServing(context);
+
+            // Set up dynamic route handling
+            setupDynamicRouteHandling(context);
+
+            server.setHandler(context);
+            server.start();
+
+            Logger.info("Yggdrasill started on port {} with resources path: {}", port, resourcesPath);
+            
+        } catch (Exception e) {
+            Logger.error("Yggdrasill encountered an error: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to start Yggdrasill", e);
         }
     }
 
     /**
-     * Shuts down the jaws by closing the jaws socket.
+     * Sets up static file serving using Jetty's DefaultServlet.
+     */
+    private void setupStaticFileServing(ServletContextHandler context) {
+        try {
+            // Create static resource handler
+            Path resourcePath = Paths.get(resourcesPath).toAbsolutePath();
+            if (!Files.exists(resourcePath)) {
+                Logger.warn("Static resources path does not exist: {}", resourcePath);
+                Files.createDirectories(resourcePath);
+            }
+
+            // Use DefaultServlet for static files
+            ServletHolder staticServlet = new ServletHolder("static", DefaultServlet.class);
+            staticServlet.setInitParameter("resourceBase", resourcePath.toString());
+            staticServlet.setInitParameter("dirAllowed", "true");
+            staticServlet.setInitParameter("pathInfoOnly", "true");
+            staticServlet.setInitParameter("welcomeServlets", "false");
+            
+            // Add static servlet with lower priority (mapped to /static/*)
+            context.addServlet(staticServlet, "/static/*");
+            
+            Logger.info("Static file serving configured for path: {}", resourcePath);
+        } catch (Exception e) {
+            Logger.error("Failed to setup static file serving: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Sets up dynamic route handling using a custom servlet.
+     */
+    private void setupDynamicRouteHandling(ServletContextHandler context) {
+        // Create and add the main request handling servlet
+        ServletHolder jawsServlet = new ServletHolder("jaws", new JawsServlet());
+        context.addServlet(jawsServlet, "/*");
+    }
+
+    /**
+     * Shuts down the server.
      */
     public void shutdown() {
         Logger.info("Yggdrasill shutdown initiated...");
-        if (serverSocket != null && !serverSocket.isClosed()) {
+        if (server != null) {
             try {
                 Logger.info("Shutting down Yggdrasill...");
-                serverSocket.close();
-            } catch (IOException e) {
-                Logger.error("Error closing jaws socket: %s", e.getMessage());
+                server.stop();
+                server.join();
+            } catch (Exception e) {
+                Logger.error("Error shutting down Yggdrasill: {}", e.getMessage());
             }
         }
     }
 
     /**
-     * Accepts incoming connections and submits them to a thread pool for processing.
-     *
-     * @param serverSocket the jaws socket to accept connections on.
-     * @param threadPool   the thread pool to submit connection tasks.
-     * @throws ConnectionException if an error occurs while accepting a connection.
+     * Custom servlet that handles all dynamic requests and integrates with the existing JAWS route system.
      */
-    private void acceptConnections(ServerSocket serverSocket, ExecutorService threadPool) throws ConnectionException {
-        while (true) {
-            try {
-                Socket clientSocket = serverSocket.accept();
-                clientSocket.setSoTimeout((int) ApplicationConfig.TIMEOUT);
-                threadPool.submit(new RequestHandler(clientSocket, resourcesPath));
-                ThreadPoolExecutor executor = (ThreadPoolExecutor) threadPool;
-                synchronized (Yggdrasill.class) {
-                    currentConnections = executor.getActiveCount();
-                }
-            } catch (SocketTimeoutException e) {
-                throw new ConnectionException("Socket timeout while waiting for connection", e);
-            } catch (IllegalBlockingModeException e) {
-                throw new ConnectionException("Illegal blocking mode: " + e.getMessage(), e);
-            } catch (SecurityException e) {
-                throw new ConnectionException("Security exception: " + e.getMessage(), e);
-            } catch (IOException e) {
-                throw new ConnectionException("Error accepting connection: " + e.getMessage(), e);
-            }
-        }
-    }
+    private class JawsServlet extends HttpServlet {
 
-    /**
-     * RequestHandler processes individual HTTP requests from clients.
-     * It reads the request, determines the appropriate route, and sends a response.
-     */
-    public static class RequestHandler implements Runnable {
-
-        private final Socket socket;
-        private final String resourcesPath;
-        private final Map<String, String> headers = new LinkedHashMap<>();
-        private final Map<String, String> customResponseHeaders = new LinkedHashMap<>();
-        private final StringBuilder body = new StringBuilder();
-        private Map<String, String> queryParams = new LinkedHashMap<>();
-        private Map<String, String> bodyParams = new LinkedHashMap<>();
-        private Map<String, String> pathParams = new LinkedHashMap<>();
-        private String currentToken;
-        private BufferedReader in;
-        private DataOutputStream out;
-
-        /**
-         * Constructs a RequestHandler for the specified socket and resource path.
-         *
-         * @param socket        the socket to handle.
-         * @param resourcesPath the path to static resources.
-         */
-        public RequestHandler(Socket socket, String resourcesPath) {
-            this.socket = socket;
-            this.resourcesPath = resourcesPath;
-        }
-
-        /**
-         * Runs the request handling process, including reading headers, body, and sending a response.
-         */
         @Override
-        public void run() {
-            processRequest();
-        }
-
-        /**
-         * Initializes input/output streams and processes the request.
-         * Reads the request's headers, body, and sends the appropriate response.
-         */
-        private void processRequest() {
-            initializeStreams();
-            readHeaders();
-            readBody();
-            checkRequestAndSendResponse();
-            closeSocket();
-        }
-
-        /**
-         * Initializes the input and output streams for the socket.
-         */
-        private void initializeStreams() {
+        protected void service(HttpServletRequest request, HttpServletResponse response) 
+                throws ServletException, IOException {
+            
+            currentConnections.incrementAndGet();
+            
             try {
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                out = new DataOutputStream(socket.getOutputStream());
-            } catch (IOException e) {
-                throw new ProcessRequestException("Error initializing streams", e);
-            }
-        }
+                // Create request context for this request
+                RequestContext context = new RequestContext(request, response, resourcesPath);
 
-        /**
-         * Reads the HTTP request headers and stores them in the {@link #headers} map.
-         */
-        private void readHeaders() {
-            String headerLine;
-            try {
-                while (!(headerLine = in.readLine()).isEmpty()) {
-                    String[] parts = headerLine.split(" ", 2);
-                    headers.put(parts[0].replace(":", ""), parts[1]);
+                // Execute middleware chain
+                MiddlewareChainImpl middlewareChain = new MiddlewareChainImpl(middlewares, context);
+                boolean continueProcessing = middlewareChain.execute();
+
+                if (!continueProcessing) {
+                    // Middleware stopped the request
+                    return;
                 }
-            } catch (IOException e) {
-                throw new ProcessRequestException("Error reading headers", e);
-            }
-            extractAndStoreToken(headers);
-        }
 
-        /**
-         * Reads the body of the HTTP request (if any).
-         */
-        private void readBody() {
-            try {
-                while (in.ready()) {
-                    body.append((char) in.read());
+                // Process the request using integrated JAWS logic
+                processRequest(context);
+
+            } catch (Exception e) {
+                Logger.error("Error processing request: {}", e.getMessage(), e);
+                try {
+                    if (!response.isCommitted()) {
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        response.setContentType("text/html; charset=UTF-8");
+                        response.getWriter().write("Internal Server Error");
+                        response.getWriter().flush();
+                    }
+                } catch (IOException ioException) {
+                    Logger.error("Error sending error response: {}", ioException.getMessage());
+                } finally {
+                    currentConnections.decrementAndGet();
                 }
-            } catch (IOException e) {
-                throw new ProcessRequestException("Error reading body", e);
             }
         }
 
         /**
-         * Determines the type of HTTP request (e.g., GET, POST, etc.) and sends a response accordingly.
+         * Processes the request using JAWS' existing route system.
          */
-        private void checkRequestAndSendResponse() {
-            String requestType = getRequestType();
-            if (requestType.equals("INVALID")) {
-                Logger.error("Invalid method: " + requestType);
-                byte[] content = """
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <title>405 - Method Not Allowed</title>
-                        </head>
-                        <body>
-                            <h1>405 - Method not allowed</h1>
-                        </body>
-                        </html>
-                        """.getBytes();
-                sendResponseHeaders(METHOD_NOT_ALLOWED, "text/html", content.length);
-                sendResponseBody(content);
-                return;
-            }
+        private void processRequest(RequestContext context) throws IOException {
+            String method = context.request.getMethod().toUpperCase();
+            String endPoint = context.request.getRequestURI();
 
-            sendResponse(requestType, body.toString());
-        }
-
-        /**
-         * Sends an appropriate response based on the HTTP request type (GET, POST, PUT, PATCH, DELETE).
-         *
-         * @param requestType the type of the HTTP request.
-         * @param body        the body of the HTTP request.
-         */
-        private void sendResponse(String requestType, String body) {
-            String endPoint = headers.get(requestType).split(" ")[0];
-            queryParams = extractQueryParameters(endPoint);
-
+            // Remove query parameters from endpoint for route matching
             int questionMarkIndex = endPoint.indexOf('?');
             if (questionMarkIndex != -1) {
                 endPoint = endPoint.substring(0, questionMarkIndex);
             }
 
-            switch (RequestType.fromString(requestType)) {
-                case GET -> processGET(endPoint);
-                case POST -> processPOST(endPoint, body);
-                case PUT -> processPUT(endPoint, body);
-                case PATCH -> processPATCH(endPoint, body);
-                case DELETE -> processDELETE(endPoint, body);
-                default -> Logger.error("Request type not recognized [" + requestType + "], ignored");
-            }
-        }
-
-        // I know there is some code duplication here, but I don't want to overload sendResponse method
-        // I think it's easier to read this way, and in the future, I think adding authentication and authorization
-        // should be easier
-
-        /**
-         * Processes GET requests, serving static files or invoking dynamic routes.
-         *
-         * @param endPoint the endpoint of the request.
-         */
-        private void processGET(String endPoint) {
-
-            if (findDynamicRouteFor(endPoint, GET)) {
+            // Convert HTTP method to RequestType
+            RequestType requestType = RequestType.fromString(method);
+            if (requestType == null) {
+                Logger.error("Invalid method: {}", method);
+                context.response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                context.response.getWriter().write("405 - Method Not Allowed");
                 return;
             }
 
-            // Try to get the file or index.html if it's a directory
-            Path path = getResourcePath(endPoint);
-            Path fileToServe = getFileToServe(path);
-            if (fileToServe != null) {
-                sendFileResponse(fileToServe);
-                return;
-            }
+            // Try to find and execute dynamic route
+            boolean routeFound = findDynamicRouteFor(context, endPoint, requestType);
 
-            sendNotFoundResponse();
-        }
-
-        /**
-         * Processes POST requests, extracting body parameters and dispatching to dynamic routes.
-         *
-         * @param endPoint the endpoint of the request.
-         * @param body     the body of the request.
-         */
-        private void processPOST(String endPoint, String body) {
-            bodyParams = extractBodyParameters(body);
-
-            if (findDynamicRouteFor(endPoint, POST)) {
-                return;
-            }
-            sendNotFoundResponse();
-        }
-
-        /**
-         * Processes PUT requests, extracting body parameters and dispatching to dynamic routes.
-         *
-         * @param endPoint the endpoint of the request.
-         * @param body     the body of the request.
-         */
-        private void processPUT(String endPoint, String body) {
-            bodyParams = extractBodyParameters(body);
-
-            if (findDynamicRouteFor(endPoint, PUT)) {
-                return;
-            }
-            sendNotFoundResponse();
-        }
-
-        /**
-         * Processes PATCH requests, extracting body parameters and dispatching to dynamic routes.
-         *
-         * @param endPoint the endpoint of the request.
-         * @param body     the body of the request.
-         */
-        private void processPATCH(String endPoint, String body) {
-            bodyParams = extractBodyParameters(body);
-
-            if (findDynamicRouteFor(endPoint, PATCH)) {
-                return;
-            }
-            sendNotFoundResponse();
-        }
-
-        /**
-         * Processes DELETE requests, extracting body parameters and dispatching to dynamic routes.
-         *
-         * @param endPoint the endpoint of the request.
-         * @param body     the body of the request.
-         * @throws IOException if an error occurs while processing the DELETE request.
-         */
-        private void processDELETE(String endPoint, String body) {
-            bodyParams = extractBodyParameters(body);
-
-            if (findDynamicRouteFor(endPoint, DELETE)) {
-                return;
-            }
-            sendNotFoundResponse();
-        }
-
-        /**
-         * Sends an HTML response with the specified response code and body content.
-         *
-         * @param responseCode the HTTP response code.
-         * @param body         the body content of the response.
-         * @throws IOException if an error occurs while sending the response.
-         */
-        public void sendHTMLResponse(ResponseCode responseCode, String body) throws IOException {
-            byte[] content = body.getBytes();
-            String contentType = "text/html";
-
-            String parsedHTML = Hermod.processTemplate(new String(content));
-            parsedHTML += "\n\n";
-            sendResponseHeaders(responseCode, contentType, parsedHTML.length());
-            sendResponseBody(parsedHTML.getBytes());
-        }
-
-        /**
-         * Sends a JSON response with the specified response code and body content.
-         *
-         * @param responseCode the HTTP response code.
-         * @param body         the body content of the response.
-         */
-        public void sendJSONResponse(ResponseCode responseCode, String body) {
-            byte[] content = body.getBytes();
-            String contentType = "application/json";
-
-            sendResponseHeaders(responseCode, contentType, content.length);
-            sendResponseBody(content);
-        }
-
-        /**
-         * Sends a binary response with the specified response code and body content.
-         *
-         * @param responseCode the HTTP response code.
-         * @param contentType  the content type of the response.
-         * @param body         the body content of the response.
-         */
-        public void sendBinaryResponse(ResponseCode responseCode, String contentType, byte[] body) {
-            sendResponseHeaders(responseCode, contentType, body.length);
-            sendResponseBody(body);
-        }
-
-        /**
-         * Sends a file response for the specified path.
-         *
-         * @param path the path to the file.
-         */
-        private void sendFileResponse(Path path) {
-            if (isConnectionClosed()) {
-                return;
-            }
-            try {
-                byte[] content = Files.readAllBytes(path);
-                String contentType = Files.probeContentType(path);
-
-                if (contentType.equals("text/html")) {
-                    String parsedHTML = Hermod.processTemplate(new String(content), queryParams, bodyParams);
-                    parsedHTML += "\n\n"; // prevents truncation of the last line
-                    sendResponseHeaders(OK, contentType, parsedHTML.length());
-                    out.write(parsedHTML.getBytes(StandardCharsets.UTF_8));
-                } else {
-                    sendResponseHeaders(OK, contentType, content.length);
-                    out.write(content);
+            if (!routeFound) {
+                // Try to serve static file if no dynamic route found
+                if (requestType == RequestType.GET) {
+                    if (tryServeStaticFile(context, endPoint)) {
+                        return;
+                    }
                 }
-                out.flush();
-            } catch (IOException e) {
-                throw new ProcessRequestException("Error sending file response", e);
+                
+                // Send 404 if no route and no static file found
+                sendNotFoundResponse(context);
+            }
+        }
+
+        /**
+         * Finds and executes a dynamic route for the given endpoint and method.
+         */
+        private boolean findDynamicRouteFor(RequestContext context, String endPoint, RequestType method) {
+            try {
+                // Get all registered controllers from Njord
+                for (Method routeMethod : Njord.getInstance().getAllRoutes()) {
+                    if (routeMethod.isAnnotationPresent(Route.class)) {
+                        Route route = routeMethod.getAnnotation(Route.class);
+                        
+                        // Check if the route method matches
+                        if (!method.equals(route.method())) {
+                            continue;
+                        }
+                        
+                        // Check if the route pattern matches
+                        Map<String, String> pathParams = matchRoutePattern(route.endpoint(), endPoint);
+                        if (pathParams != null) {
+                            Logger.debug("Route matched: {} {} -> {}.{}", 
+                                route.method(), route.endpoint(), 
+                                routeMethod.getDeclaringClass().getSimpleName(), routeMethod.getName());
+                            
+                            // Store path parameters
+                            context.pathParams = pathParams;
+                            
+                            // Get controller instance and invoke the route method
+                            String controllerName = routeMethod.getDeclaringClass().getSimpleName();
+                            Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
+                            if (controllerInstance == null) {
+                                Logger.error("Controller instance not found: {}", controllerName);
+                                return false;
+                            }
+                            
+                            return invokeRouteMethod(context, routeMethod, controllerInstance);
+                        }
+                    }
+                }
+                
+                return false;
+            } catch (Exception e) {
+                Logger.error("Error finding dynamic route: {}", e.getMessage(), e);
+                return false;
+            }
+        }
+
+        /**
+         * Invokes the route method with proper parameter handling and validation.
+         */
+        private boolean invokeRouteMethod(RequestContext context, Method routeMethod, Object controllerInstance) {
+            try {
+                String controllerName = routeMethod.getDeclaringClass().getSimpleName();
+                Logger.debug("Invoking route method {} in controller {}", routeMethod.getName(), controllerName);
+
+                // Set request context if the controller extends Bragi
+                if (controllerInstance instanceof Bragi bragi) {
+                    bragi.setRequestContext(context);
+                    Logger.debug("Set request context for controller {}", controllerName);
+                }
+
+                // Synchronize the controller instance to prevent concurrent access
+                synchronized (controllerInstance) {
+                    try {
+                        // Get method parameters
+                        Class<?>[] parameterTypes = routeMethod.getParameterTypes();
+                        Object[] parameters = new Object[parameterTypes.length];
+
+                        // Handle request body deserialization if needed
+                        if (parameterTypes.length > 0) {
+                            String contentType = context.getHeader(CONTENT_TYPE.getHeaderName());
+                            String requestBodyTrimmed = context.requestBody != null ? context.requestBody.trim() : "";
+                            
+                            // For POST/PUT/PATCH requests that expect a request body parameter,
+                            // we need to ensure proper JSON content type and non-empty body
+                            String httpMethod = context.request.getMethod().toUpperCase();
+                            boolean expectsRequestBody = httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH");
+                            
+                            if (expectsRequestBody) {
+                                // Check for missing Content-Type header
+                                if (contentType == null || !contentType.contains("application/json")) {
+                                    APIResponse<String> response = APIResponse.error(
+                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                            "Content-Type header must be 'application/json' for " + httpMethod + " requests"
+                                    );
+                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
+                                    return true;
+                                }
+                                
+                                // Check for empty request body
+                                if (requestBodyTrimmed.isEmpty()) {
+                                    APIResponse<String> response = APIResponse.error(
+                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                            "Request body is required for " + httpMethod + " requests. Please provide a valid JSON body."
+                                    );
+                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
+                                    return true;
+                                }
+                            }
+
+                            // If we have a request body, process it
+                            if (!requestBodyTrimmed.isEmpty()) {
+                                try {
+                                    ObjectMapper mapper = Odin.getMapper();
+
+                                    // Deserialize the object
+                                    parameters[0] = mapper.readValue(requestBodyTrimmed, parameterTypes[0]);
+                                    
+                                    // Validate the deserialized object using Jakarta Bean Validation
+                                    APIResponse<String> validationError = ValidationUtils.validate(parameters[0]);
+                                    if (validationError != null) {
+                                        sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(validationError));
+                                        return true;
+                                    }
+                                } catch (com.fasterxml.jackson.core.JsonParseException e) {
+                                    APIResponse<String> response = APIResponse.error(
+                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                            "Invalid JSON format: " + e.getOriginalMessage()
+                                    );
+                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
+                                    return true;
+                                } catch (com.fasterxml.jackson.databind.JsonMappingException e) {
+                                    // Handle unknown fields or mapping issues
+                                    String originalMessage = e.getOriginalMessage();
+                                    if (originalMessage != null && originalMessage.contains("Unrecognized field")) {
+                                        // Extract the field name from the error message
+                                        String fieldName = extractFieldNameFromError(originalMessage);
+                                        APIResponse<String> response = APIResponse.error(
+                                                ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                                String.format("Unknown field '%s'. Accepted fields are: content, title, language, expiresInHours, isPrivate, password", fieldName)
+                                        );
+                                        sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
+                                        return true;
+                                    } else {
+                                        APIResponse<String> response = APIResponse.error(
+                                                ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                                "JSON mapping error: " + (originalMessage != null ? originalMessage : e.getMessage())
+                                        );
+                                        sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
+                                        return true;
+                                    }
+                                } catch (IllegalArgumentException e) {
+                                    // This is thrown by validateRequestFields when validation fails
+                                    // The error response is already sent in validateRequestFields
+                                    return true;
+                                } catch (Exception e) {
+                                    APIResponse<String> response = APIResponse.error(
+                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                            "Error processing request body: " + e.getMessage()
+                                    );
+                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
+                                    return true;
+                                }
+                            } else if (parameterTypes.length > 0 && expectsRequestBody) {
+                                // If we reach here, it means we have parameters expected but no body was provided
+                                // This shouldn't happen due to the checks above, but let's be safe
+                                APIResponse<String> response = APIResponse.error(
+                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                        "Request body is required but was not provided"
+                                );
+                                sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
+                                return true;
+                            }
+                        }
+
+                        // Invoke the method
+                        routeMethod.invoke(controllerInstance, parameters);
+                    } catch (Exception e) {
+                        handleControllerException(context, e, controllerInstance, routeMethod.getName());
+                        return true;
+                    }
+                }
+
+                // Cleanup if the controller extends Bragi
+                if (controllerInstance instanceof Bragi) {
+                    ((Bragi) controllerInstance).cleanup();
+                }
+
+                return true;
+            } catch (Exception e) {
+                Logger.error("Failed to handle request: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+                return false;
+            }
+        }
+
+        /**
+         * Handles exceptions that occur during controller execution.
+         */
+        private void handleControllerException(RequestContext context, Exception e, Object controllerInstance, String methodName) {
+            String controllerName = controllerInstance.getClass().getSimpleName();
+            Logger.error("Controller execution failed in {}.{}: {} - {}",
+                    controllerName, methodName, e.getClass().getSimpleName(), e.getMessage());
+
+            if (e.getCause() != null) {
+                Logger.error("Caused by: {} - {}", e.getCause().getClass().getSimpleName(), e.getCause().getMessage());
             }
 
+            // Try to send error response if possible
+            if (controllerInstance instanceof Bragi controller) {
+                try {
+                    String errorMessage = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+                    APIResponse<String> response = APIResponse.error(
+                            ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+                            errorMessage != null ? errorMessage : "An unexpected error occurred"
+                    );
+                    sendJSONResponse(context, ResponseCode.INTERNAL_SERVER_ERROR, Bragi.encode(response));
+                    controller.cleanup();
+                } catch (Exception ex) {
+                    Logger.error("Failed to send error response: {}", ex.getMessage());
+                }
+            }
+        }
+
+        /**
+         * Extracts the field name from Jackson's error message for unknown fields.
+         * Example: "Unrecognized field \"contednt\" (class ...)" -> "contednt"
+         */
+        private String extractFieldNameFromError(String errorMessage) {
+            try {
+                // Look for the pattern: "field \"fieldname\""
+                int startQuote = errorMessage.indexOf('"');
+                if (startQuote != -1) {
+                    int endQuote = errorMessage.indexOf('"', startQuote + 1);
+                    if (endQuote != -1) {
+                        return errorMessage.substring(startQuote + 1, endQuote);
+                    }
+                }
+                return "unknown";
+            } catch (Exception e) {
+                return "unknown";
+            }
+        }
+
+        /**
+         * Matches the route pattern to the endpoint and extracts path parameters if any.
+         */
+        private Map<String, String> matchRoutePattern(String routePattern, String endPoint) {
+            Map<String, String> params = new LinkedHashMap<>();
+
+            String[] routeParts = routePattern.split("/");
+            String[] endpointParts = endPoint.split("/");
+
+            if (routeParts.length != endpointParts.length) {
+                return null;
+            }
+
+            for (int i = 0; i < routeParts.length; i++) {
+                String routePart = routeParts[i];
+                String endpointPart = endpointParts[i];
+
+                if (routePart.startsWith(":")) {
+                    String paramName = routePart.substring(1);
+                    params.put(paramName, endpointPart);
+                } else if (!routePart.equals(endpointPart)) {
+                    return null;
+                }
+            }
+
+            return params;
+        }
+
+        /**
+         * Sends a JSON response to the client.
+         */
+        private void sendJSONResponse(RequestContext context, ResponseCode responseCode, String body) {
+            try {
+                context.response.setStatus(responseCode.getCode());
+                context.response.setContentType("application/json; charset=UTF-8");
+                
+                // Add custom headers
+                context.customResponseHeaders.forEach((name, value) -> 
+                    context.response.setHeader(name, value));
+                
+                context.response.getWriter().write(body);
+                context.response.getWriter().flush();
+            } catch (IOException e) {
+                Logger.error("Error sending JSON response: {}", e.getMessage());
+                throw new SendRespondException("Error sending JSON response", e);
+            }
+        }
+
+        /**
+         * Sends an HTML response to the client.
+         */
+        private void sendHTMLResponse(RequestContext context, ResponseCode responseCode, String body) throws IOException {
+            context.response.setStatus(responseCode.getCode());
+            context.response.setContentType("text/html; charset=UTF-8");
+            
+            // Add custom headers
+            context.customResponseHeaders.forEach((name, value) -> 
+                context.response.setHeader(name, value));
+            
+            // Process templates through Hermod
+            String processedHTML = Hermod.processTemplate(body, context.queryParams, context.bodyParams);
+            processedHTML += "\n\n"; // Prevent truncation
+            
+            context.response.getWriter().write(processedHTML);
+            context.response.getWriter().flush();
+        }
+
+        /**
+         * Sends a binary response to the client.
+         */
+        private void sendBinaryResponse(RequestContext context, ResponseCode responseCode, String contentType, byte[] body) {
+            try {
+                context.response.setStatus(responseCode.getCode());
+                context.response.setContentType(contentType);
+                
+                // Add custom headers
+                context.customResponseHeaders.forEach((name, value) -> 
+                    context.response.setHeader(name, value));
+                
+                context.response.getOutputStream().write(body);
+                context.response.getOutputStream().flush();
+            } catch (IOException e) {
+                Logger.error("Error sending binary response: {}", e.getMessage());
+                throw new SendRespondException("Error sending binary response", e);
+            }
         }
 
         /**
          * Sends a 404 Not Found response.
          */
-        private void sendNotFoundResponse() {
+        private void sendNotFoundResponse(RequestContext context) {
             try {
-                byte[] content;
-                Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_404);
-                if (Files.exists(path)) {
-                    content = Files.readAllBytes(path);
+                context.response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                context.response.setContentType("text/html; charset=UTF-8");
+                context.response.getWriter().write(HTML_404_NOT_FOUND);
+                context.response.getWriter().flush();
+            } catch (IOException e) {
+                Logger.error("Error sending 404 response: {}", e.getMessage());
+            }
+        }
+
+        /**
+         * Sends an unauthorized response.
+         */
+        private void sendUnauthorizedResponse(RequestContext context, ResponseType responseType) {
+            try {
+                context.response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                
+                if (responseType == ResponseType.JSON) {
+                    APIResponse<String> response = APIResponse.error(
+                            ResponseCode.UNAUTHORIZED.getCodeAndMessage(),
+                            "Access denied. Please provide valid authentication."
+                    );
+                    context.response.setContentType("application/json; charset=UTF-8");
+                    context.response.getWriter().write(Bragi.encode(response));
                 } else {
-                    Logger.warn("Could not find 404 page, using hard coded default");
-                    content = HTML_404_NOT_FOUND.getBytes();
+                    context.response.setContentType("text/html; charset=UTF-8");
+                    context.response.getWriter().write(HTML_401_UNAUTHORIZED);
                 }
-                sendResponseHeaders(NOT_FOUND, "text/html", content.length);
-                sendResponseBody(content);
-            } catch (IOException e) {
-                throw new ProcessRequestException("Error sending 404 response", e);
+                
+                context.response.getWriter().flush();
+            } catch (Exception e) {
+                Logger.error("Error sending unauthorized response: {}", e.getMessage());
             }
         }
 
         /**
-         * Sends a 401 Not Found response.
+         * Attempts to serve a static file for the given endpoint.
          */
-        private void sendUnauthorizedResponse(ResponseType responseType) {
-            byte[] content;
-            switch (responseType) {
-                case HTML -> {
-                    Logger.warn("Could not find 401 page, using hard coded default");
-                    if (isHTMX()) {
-                        sendResponseHeaders(OK, "text/html", HTML_401_UNAUTHORIZED_HTMX.getBytes().length);
-                        sendResponseBody(HTML_401_UNAUTHORIZED_HTMX.getBytes());
-                        return;
-                    }
+        private boolean tryServeStaticFile(RequestContext context, String endPoint) throws IOException {
+            Path filePath = getResourcePath(endPoint);
+            Path fileToServe = getFileToServe(filePath);
+            
+            if (fileToServe != null) {
+                serveStaticFile(context, fileToServe);
+                return true;
+            }
+            
+            return false;
+        }
 
-                    Path path = Paths.get(ApplicationConfig.CUSTOM_PAGE_PATH_401);
-                    if (Files.exists(path)) {
-                        try {
-                            content = Files.readAllBytes(path);
-                        } catch (IOException e) {
-                            throw new ProcessRequestException("Error sending 401 response", e);
-                        }
-                    } else {
-                        Logger.warn("Could not find 401 page, using hard coded default");
-                        content = HTML_401_UNAUTHORIZED.getBytes();
-                    }
+        /**
+         * Serves a static file with proper content type and template processing.
+         */
+        private void serveStaticFile(RequestContext context, Path filePath) throws IOException {
+            byte[] content = Files.readAllBytes(filePath);
+            String contentType = Files.probeContentType(filePath);
+            
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
 
-                    sendResponseHeaders(UNAUTHORIZED, "text/html", content.length);
-                    sendResponseBody(content);
-                }
-
-                case JSON -> {
-                    APIResponse<String> res = APIResponse.error(
-                            UNAUTHORIZED.getCodeAndMessage(),
-                            "You are not authorized to access this resource"
-                    );
-                    content = Bragi.encode(res).getBytes();
-                    sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
-                    sendResponseBody(content);
-                }
-
-                case INVALID -> {
-                    Logger.error("Invalid response type");
-                    APIResponse<String> res = APIResponse.error(
-                            METHOD_NOT_ALLOWED.getCodeAndMessage(),
-                            "The requested response type is invalid"
-                    );
-                    content = Bragi.encode(res).getBytes();
-                    sendResponseHeaders(UNAUTHORIZED, "application/json", content.length);
-                    sendResponseBody(content);
-                }
+            if ("text/html".equals(contentType)) {
+                // Process HTML templates
+                String processedHTML = Hermod.processTemplate(
+                    new String(content), 
+                    context.queryParams, 
+                    context.bodyParams
+                );
+                processedHTML += "\n\n"; // Prevent truncation
+                
+                context.response.setStatus(HttpServletResponse.SC_OK);
+                context.response.setContentType(contentType);
+                context.response.getWriter().write(processedHTML);
+            } else {
+                // Serve binary content
+                context.response.setStatus(HttpServletResponse.SC_OK);
+                context.response.setContentType(contentType);
+                context.response.getOutputStream().write(content);
             }
         }
 
         /**
-         * Sends response headers to the client.
-         *
-         * @param responseCode  the HTTP response code.
-         * @param contentType   the content type of the response.
-         * @param contentLength the length of the content.
+         * Gets the file to serve based on the path, checking for index.html in directories.
          */
-        private void sendResponseHeaders(ResponseCode responseCode, String contentType, int contentLength) {
-            if (isConnectionClosed()) {
-                return;
+        private Path getFileToServe(Path path) {
+            if (Files.exists(path) && !Files.isDirectory(path)) {
+                return path;
             }
 
-            Volundr.Builder builder = new Volundr.Builder()
-                    .responseType(responseCode.toString())
-                    .contentType(contentType)
-                    .contentLength(String.valueOf(contentLength));
-
-            if (!customResponseHeaders.isEmpty()) {
-                for (Map.Entry<String, String> entry : customResponseHeaders.entrySet()) {
-                    builder.addCustomHeader(entry.getKey(), entry.getValue());
+            if (Files.isDirectory(path)) {
+                Path indexPath = path.resolve("index.html");
+                if (Files.exists(indexPath) && !Files.isDirectory(indexPath)) {
+                    return indexPath;
                 }
             }
-            builder.build();
 
-            Volundr responseHeader = builder.build();
+            return null;
+        }
+
+        /**
+         * Returns the path for the static resource corresponding to the endpoint.
+         */
+        private Path getResourcePath(String endPoint) {
+            return endPoint.equals("/") 
+                ? Paths.get(resourcesPath + "/index.html") 
+                : Paths.get(resourcesPath + endPoint);
+        }
+    }
+
+    /**
+     * RequestContext encapsulates all request-related data and functionality.
+     */
+    public static class RequestContext {
+        private final HttpServletRequest request;
+        private final HttpServletResponse response;
+        private final String resourcesPath;
+        private final Map<String, String> headers = new LinkedHashMap<>();
+        private final Map<String, String> customResponseHeaders = new LinkedHashMap<>();
+        private Map<String, String> queryParams = new LinkedHashMap<>();
+        private Map<String, String> bodyParams = new LinkedHashMap<>();
+        private Map<String, String> pathParams = new LinkedHashMap<>();
+        private String currentToken;
+        private String requestBody;
+
+        public RequestContext(HttpServletRequest request, HttpServletResponse response, String resourcesPath) {
+            this.request = request;
+            this.response = response;
+            this.resourcesPath = resourcesPath;
+            
+            // Extract headers from Jetty request
+            extractHeaders();
+            
+            // Extract query parameters
+            extractQueryParameters();
+            
+            // Extract and store token
+            extractAndStoreToken();
+            
+            // Read request body
+            readRequestBody();
+        }
+
+        /**
+         * Extracts headers from the Jetty request and stores them in the headers map.
+         */
+        private void extractHeaders() {
+            // Add the HTTP method as the first header (for compatibility with existing system)
+            String method = request.getMethod().toUpperCase();
+            String requestURI = request.getRequestURI();
+            String queryString = request.getQueryString();
+            String fullPath = queryString != null ? requestURI + "?" + queryString : requestURI;
+            
+            headers.put(method, fullPath + " HTTP/1.1");
+            
+            // Extract all other headers
+            Collections.list(request.getHeaderNames()).forEach(headerName -> {
+                String headerValue = request.getHeader(headerName);
+                headers.put(headerName.replace(":", ""), headerValue);
+            });
+        }
+
+        /**
+         * Extracts query parameters from the Jetty request.
+         */
+        private void extractQueryParameters() {
+            queryParams = request.getParameterMap().entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            entry -> entry.getValue().length > 0 ? entry.getValue()[0] : "",
+                            (existing, replacement) -> existing,
+                            LinkedHashMap::new
+                    ));
+        }
+
+        /**
+         * Reads the request body from the Jetty request.
+         */
+        private void readRequestBody() {
             try {
-                out.write(responseHeader.headerToBytes());
-                out.flush();
+                requestBody = request.getReader().lines().collect(Collectors.joining("\n"));
+                
+                // Extract body parameters if it's form data
+                String contentType = request.getContentType();
+                if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+                    bodyParams = extractBodyParameters(requestBody);
+                } else if (contentType != null && contentType.contains("application/json")) {
+                    bodyParams = parseJsonBody(requestBody);
+                }
             } catch (IOException e) {
-                throw new SendRespondException("Error sending response headers", e);
+                Logger.error("Error reading request body: {}", e.getMessage());
+                requestBody = "";
+                bodyParams = new LinkedHashMap<>();
             }
-        }
-
-        /**
-         * Sends the body of the response to the client.
-         *
-         * @param body the body content of the response.
-         */
-        private void sendResponseBody(byte[] body) {
-            if (isConnectionClosed()) {
-                return;
-            }
-
-            try {
-                out.write(body);
-                out.flush();
-            } catch (IOException e) {
-                throw new SendRespondException("Error sending response body", e);
-            }
-        }
-
-        /**
-         * Retrieves the type of HTTP request (GET, POST, PUT, PATCH, DELETE).
-         *
-         * @return the HTTP request type, or "INVALID" if no valid request type is found.
-         */
-        private String getRequestType() {
-            return headers.keySet().stream()
-                    .filter(this::isValidRequestType)
-                    .findFirst()
-                    .orElse("INVALID");
-        }
-
-        /**
-         * Checks if the provided key is a valid HTTP request type (GET, POST, PUT, PATCH, DELETE).
-         *
-         * @param key the header key to check.
-         * @return true if the key is a valid request type, false otherwise.
-         */
-        private boolean isValidRequestType(String key) {
-            return key.equals(GET.name())
-                    || key.equals(POST.name())
-                    || key.equals(PUT.name())
-                    || key.equals(PATCH.name())
-                    || key.equals(DELETE.name());
         }
 
         /**
@@ -593,14 +787,11 @@ public class Yggdrasill {
          * @return a map of body parameters.
          */
         private Map<String, String> extractBodyParameters(String data) {
-            // Check if the content type is JSON
-            String contentType = headers.get(CONTENT_TYPE.getHeaderName());
-            if (contentType != null && contentType.contains("application/json")) {
-                return parseJsonBody(data);
-            }
-
-            // Fall back to form data parsing
             Map<String, String> parsedData = new LinkedHashMap<>();
+            if (data == null || data.isEmpty()) {
+                return parsedData;
+            }
+            
             String[] pairs = data.split("&");
             for (String pair : pairs) {
                 String[] keyValue = pair.split("=");
@@ -611,7 +802,14 @@ public class Yggdrasill {
             return parsedData;
         }
 
+        /**
+         * Parses JSON body into a map of string key-value pairs.
+         */
         private Map<String, String> parseJsonBody(String json) {
+            if (json == null || json.trim().isEmpty()) {
+                return new LinkedHashMap<>();
+            }
+            
             try {
                 ObjectMapper mapper = Odin.getMapper();
                 Map<String, String> result = new LinkedHashMap<>();
@@ -630,528 +828,141 @@ public class Yggdrasill {
             }
         }
 
-        // TODO: Refactor this method
-        // what if ? is present but is not a query parameter
-        // if query parameter is not present, then it should ignore extractQueryParameters
-
         /**
-         * Extracts query parameters from the URL.
-         *
-         * @param endPoint the endpoint (URL) of the request.
-         * @return a map of query parameters, or null if no query parameters exist.
+         * Extracts the current token from the request headers and stores it.
          */
-        private Map<String, String> extractQueryParameters(String endPoint) {
-            int questionMarkIndex = endPoint.indexOf('?');
-            if (questionMarkIndex == -1) {
-                return null;
-            }
-
-            Map<String, String> queryParams = new LinkedHashMap<>();
-            String queryString = endPoint.substring(questionMarkIndex + 1);
-            String[] pairs = queryString.split("&");
-            for (String pair : pairs) {
-                String[] keyValue = pair.split("=");
-                String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8);
-                String value = keyValue.length > 1 ? URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8) : "";
-                queryParams.put(key, value);
-            }
-            return queryParams;
-        }
-
-        /**
-         * Extracts the current token from the request headers and stores it in a thread-local variable.
-         *
-         * @param headers the request headers.
-         */
-        private void extractAndStoreToken(Map<String, String> headers) {
-            if (headers == null) return;
-
-            String authHeader = headers.entrySet().stream()
-                    .filter(entry -> "Authorization".equalsIgnoreCase(entry.getKey()))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(null);
-
-            if (authHeader != null) {
+        private void extractAndStoreToken() {
+            // First try Authorization header
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 this.currentToken = authHeader.substring(7);
                 return;
             }
 
-            // TODO: Refactor this if statement, it shouldn't be just "Cookie", but "Cookie token=" or something
-            // tries to extract the token from the Cookie header
-            String cookieHeader = headers.entrySet().stream()
-                    .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(null);
-
-            if (cookieHeader != null) {
-                this.currentToken = cookieHeader.split(";")[0].split("=")[1];
-            }
-        }
-
-        /**
-         * Finds a dynamic route for the given endpoint and HTTP method.
-         *
-         * @param endPoint the endpoint to match.
-         * @param method   the HTTP method (GET, POST, etc.).
-         * @return true if a route is found and invoked, false otherwise.
-         */
-        private boolean findDynamicRouteFor(String endPoint, RequestType method) {
-            // Check if we have a static route match first
-            Method routeMethod = Njord.getInstance().getRoute(endPoint, method);
-            if (routeMethod != null) {
-
-                // Check if the route requires authorization
-                if (isAuthorized(routeMethod)) {
-                    return invokeRouteMethod(routeMethod);
-                } else {
-                    sendUnauthorizedResponse(routeMethod.getAnnotation(Route.class).responseType());
-                    return false;
-                }
-            }
-
-            // If no direct match, search through all routes for dynamic matches
-            for (Method route : Njord.getInstance().getAllRoutes()) {
-                if (route.isAnnotationPresent(Route.class)) {
-                    Route routeAnnotation = route.getAnnotation(Route.class);
-                    String routePattern = routeAnnotation.endpoint();
-                    // Check if the route pattern matches the endpoint, allowing dynamic parameters
-                    pathParams = matchRoutePattern(routePattern, endPoint);
-                    if (pathParams != null && routeAnnotation.method() == method) {
-                        // Check if the route requires authorization
-                        if (isAuthorized(route)) {
-                            return invokeRouteMethod(route);
-                        } else {
-                            sendUnauthorizedResponse(route.getAnnotation(Route.class).responseType());
-                            return false;
-                        }
+            // Try to extract from cookies - specifically look for auth_token
+            if (request.getCookies() != null) {
+                for (var cookie : request.getCookies()) {
+                    if ("auth_token".equals(cookie.getName())) {
+                        this.currentToken = cookie.getValue();
+                        return;
                     }
                 }
             }
 
-            return false;
-        }
-
-        /**
-         * Checks if the current user is authorized and has the required role to access the route.
-         *
-         * @param routeMethod the route method to check.
-         * @return true if the user is authorized, false otherwise.
-         */
-        private boolean isAuthorized(Method routeMethod) {
-            if (routeMethod.isAnnotationPresent(AccessControl.class)) {
-                AccessControl auth = routeMethod.getAnnotation(AccessControl.class);
-                if (auth.login()) {
-                    if (currentToken == null) {
-                        if (getHeaders().get("Cookie") == null && getHeaders().get("cookie") == null) {
-                            return false;
-                        }
-                    } else if (!Tyr.isTokenValid(currentToken)) {
-                        return false;
-                    }
-                    String userId = Tyr.getUserIdFromJWT(currentToken);
-                    String userRole = Tyr.getUserRoleFromJWT(currentToken);
-
-                    // Check if the user's role is sufficient for this endpoint
-                    // Roles does nothing at the moment
-                    // Logger.info("User ID: " + userId);
-                    // Logger.info("User Role: " + userRole);
-                }
-            }
-
-            return true; // Authorized if no issues
-        }
-
-        /**
-         * Invokes the method corresponding to a dynamic route.
-         *
-         * @param routeMethod the route method to invoke.
-         * @return true if the method was invoked successfully, false otherwise.
-         */
-        private boolean invokeRouteMethod(Method routeMethod) {
-            try {
-                String controllerName = routeMethod.getDeclaringClass().getSimpleName();
-                Logger.debug("Invoking route method {} in controller {}", routeMethod.getName(), controllerName);
-
-                Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
-                if (controllerInstance == null) {
-                    Logger.error("Failed to get controller instance for {}", controllerName);
-                    throw new IllegalStateException("Controller instance not found: " + controllerName);
-                }
-
-                // Set request handler if the controller extends BaseController
-                if (controllerInstance instanceof Bragi bragi) {
-                    bragi.setRequestHandler(this);
-                    Logger.debug("Set request handler for controller {}", controllerName);
-                }
-
-                // Synchronize the controller instance to prevent concurrent access
-                synchronized (controllerInstance) {
-                    try {
-                        // Get method parameters
-                        Class<?>[] parameterTypes = routeMethod.getParameterTypes();
-                        Object[] parameters = new Object[parameterTypes.length];
-
-                        // If there's a parameter and it's a request object, try to deserialize it
-                        if (parameterTypes.length > 0) {
-                            String contentType = headers.get(CONTENT_TYPE.getHeaderName());
-                            String requestBody = body.toString().trim();
-
-                            // Check if Content-Type is missing or not JSON
-                            if (contentType == null || !contentType.contains("application/json")) {
-                                APIResponse<String> response = APIResponse.error(
-                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                        "Request body is required. Check the API documentation for the correct request body"
-                                );
-                                sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                return true;
-                            }
-
-                            if (requestBody.isEmpty()) {
-                                // Send a proper error response for empty JSON body
-                                APIResponse<String> response = APIResponse.error(
-                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                        "Request body is required. Check the API documentation for the correct request body"
-                                );
-                                sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                return true;
-                            }
-
-                            try {
-                                ObjectMapper mapper = Odin.getMapper();
-                                JsonNode root = mapper.readTree(requestBody);
-
-                                // Get the expected fields from the parameter type
-                                Class<?> paramType = parameterTypes[0];
-                                List<String> expectedFields = new ArrayList<>();
-                                for (Field field : paramType.getDeclaredFields()) {
-                                    expectedFields.add(field.getName());
-                                }
-
-                                // Check for missing or extra fields
-                                List<String> missingFields = new ArrayList<>();
-                                List<String> extraFields = new ArrayList<>();
-
-                                for (String field : expectedFields) {
-                                    if (!root.has(field)) {
-                                        missingFields.add(field);
-                                    }
-                                }
-
-                                Iterator<String> fieldNames = root.fieldNames();
-                                while (fieldNames.hasNext()) {
-                                    String field = fieldNames.next();
-                                    if (!expectedFields.contains(field)) {
-                                        extraFields.add(field);
-                                    }
-                                }
-
-                                // Only enforce missing fields for POST/PUT, not PATCH
-                                boolean isPatch = false;
-                                String requestType = headers.keySet().stream()
-                                        .filter(this::isValidRequestType)
-                                        .findFirst()
-                                        .orElse("INVALID");
-                                if (requestType.equalsIgnoreCase("PATCH")) {
-                                    isPatch = true;
-                                }
-
-                                if ((!isPatch && !missingFields.isEmpty()) || !extraFields.isEmpty()) {
-                                    StringBuilder errorMessage = new StringBuilder("Invalid request body: ");
-                                    if (!isPatch && !missingFields.isEmpty()) {
-                                        errorMessage.append("Missing required fields: ").append(String.join(", ", missingFields));
-                                    }
-                                    if (!extraFields.isEmpty()) {
-                                        if (!isPatch && !missingFields.isEmpty()) {
-                                            errorMessage.append(". ");
-                                        }
-                                        errorMessage.append("Unexpected fields: ").append(String.join(", ", extraFields));
-                                    }
-
-                                    APIResponse<String> response = APIResponse.error(
-                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                            errorMessage.toString()
-                                    );
-                                    sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                    return true;
-                                }
-
-                                // If validation passes, deserialize the object
-                                parameters[0] = mapper.readValue(requestBody, parameterTypes[0]);
-                            } catch (Exception e) {
-                                // Send a proper error response for invalid JSON
-                                APIResponse<String> response = APIResponse.error(
-                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                        "Invalid JSON format. Check the API documentation for the correct request body"
-                                );
-                                sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                return true;
-                            }
-                        }
-
-                        // Invoke the method
-                        routeMethod.invoke(controllerInstance, parameters);
-                    } catch (Exception e) {
-                        Logger.error("Controller execution failed in {}.{}: {} - {}",
-                                controllerName,
-                                routeMethod.getName(),
-                                e.getClass().getSimpleName(),
-                                e.getMessage());
-
-                        if (e.getCause() != null) {
-                            Logger.error("Caused by: {} - {}",
-                                    e.getCause().getClass().getSimpleName(),
-                                    e.getCause().getMessage());
-                        }
-
-                        // Try to send error response if possible
-                        if (controllerInstance instanceof Bragi controller) {
-                            Yggdrasill.RequestHandler handler = controller.getRequestHandler();
-                            if (handler != null) {
-                                // Create error response with detailed message
-                                String errorMessage = e.getCause() != null ?
-                                        e.getCause().getMessage() : e.getMessage();
-
-                                APIResponse<String> response = APIResponse.error(
-                                        ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                                        errorMessage != null ? errorMessage : "An unexpected error occurred"
-                                );
-
-                                // Send error response
-                                handler.sendJSONResponse(
-                                        ResponseCode.INTERNAL_SERVER_ERROR,
-                                        Bragi.encode(response)
-                                );
-
-                                // Cleanup after sending response
-                                controller.cleanup();
-                                return true;
-                            }
-                        }
-                        throw e; // Re-throw if we couldn't handle it
+            // Fallback: try to parse from Cookie header like original Yggdrasill
+            String cookieHeader = request.getHeader("Cookie");
+            if (cookieHeader != null && cookieHeader.contains("auth_token=")) {
+                String[] cookies = cookieHeader.split(";");
+                for (String cookie : cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.startsWith("auth_token=")) {
+                        this.currentToken = cookie.substring("auth_token=".length());
+                        return;
                     }
                 }
-
-                // Cleanup if the controller extends BaseController
-                if (controllerInstance instanceof Bragi) {
-                    ((Bragi) controllerInstance).cleanup();
-                }
-
-                return true;
-            } catch (Exception e) {
-                Logger.error("Failed to handle request: {} - {}",
-                        e.getClass().getSimpleName(),
-                        e.getMessage());
-                if (e.getCause() != null) {
-                    Logger.error("Caused by: {} - {}",
-                            e.getCause().getClass().getSimpleName(),
-                            e.getCause().getMessage());
-                }
-                closeSocket();
-                return false;
-            }
-        }
-
-        /**
-         * Matches the route pattern to the endpoint and extracts path parameters if any.
-         *
-         * @param routePattern the route pattern to match.
-         * @param endPoint     the endpoint to check against the pattern.
-         * @return a map of path parameters if the pattern matches, null otherwise.
-         */
-        private Map<String, String> matchRoutePattern(String routePattern, String endPoint) {
-            Map<String, String> params = new LinkedHashMap<>();
-
-            // Split the route pattern and the endpoint into parts (e.g., "/user/:id" becomes ["user", ":id"])
-            String[] routeParts = routePattern.split("/");
-            String[] endpointParts = endPoint.split("/");
-
-            // If the number of parts doesn't match, it's not a valid route
-            if (routeParts.length != endpointParts.length) {
-                return null;
             }
 
-            // Loop through the route parts and check if they match the endpoint
-            for (int i = 0; i < routeParts.length; i++) {
-                String routePart = routeParts[i];
-                String endpointPart = endpointParts[i];
-
-                if (routePart.startsWith(":")) {
-                    // Dynamic segment, extract the value and add it to the params map
-                    String paramName = routePart.substring(1);  // Remove the ":"
-                    params.put(paramName, endpointPart);
-                } else if (!routePart.equals(endpointPart)) {
-                    // Static segment doesn't match, return null
-                    return null;
-                }
-            }
-
-            // Return the map of parameters (if any)
-            return params;
+            this.currentToken = null;
         }
 
-        /**
-         * Gets the file to serve based on the path.
-         * If the path is a directory, it will check for an index.html file.
-         *
-         * @param path the path to the file
-         * @return the file to serve, or null if no valid file is found
-         */
-        private Path getFileToServe(Path path) {
-            // If the path exists and is a file, return it
-            if (Files.exists(path) && !Files.isDirectory(path)) {
-                return path;
-            }
+        // Getter methods for compatibility
+        public String getCurrentToken() { return currentToken; }
+        public Map<String, String> getQueryParams() { return queryParams; }
+        public Map<String, String> getBodyParams() { return bodyParams; }
+        public Map<String, String> getPathParams() { return pathParams; }
+        public Map<String, String> getHeaders() { return headers; }
+        public HttpServletRequest getRequest() { return request; }
+        public HttpServletResponse getResponse() { return response; }
+        public String getRequestBody() { return requestBody; }
+        public String getResourcesPath() { return resourcesPath; }
 
-            // If the path is a directory, check for index.html
-            if (Files.isDirectory(path)) {
-                Path indexPath = path.resolve("index.html");
-                if (Files.exists(indexPath) && !Files.isDirectory(indexPath)) {
-                    return indexPath;
-                }
-            }
-
-            // Return null if no valid file is found
-            return null;
-        }
-
-        /**
-         * Retrieves the client's IP address by checking various headers commonly used
-         * when a client is behind a proxy, or falls back to the remote address of the socket.
-         * The order of preference for determining the IP address is:
-         * - "X-Forwarded-For" header
-         * - "Proxy-Client-IP" header
-         * - "WL-Proxy-Client-IP" header
-         * - Remote address of the socket
-         * If none of these are available, it returns "unknown".
-         *
-         * @return the client's IP address as a String, or "unknown" if the IP cannot be determined
-         */
-        public String getClientIpAddress() {
-            // First check the X-Forwarded-For header (for clients behind a proxy)
-            String forwardedFor = headers.get("X-Forwarded-For");
-            if (forwardedFor != null && !forwardedFor.isEmpty()) {
-                // Get the first IP if there are multiple
-                return forwardedFor.split(",")[0].trim();
-            }
-
-            // Then check the Proxy-Client-IP header
-            String proxyClientIp = headers.get("Proxy-Client-IP");
-            if (proxyClientIp != null && !proxyClientIp.isEmpty()) {
-                return proxyClientIp;
-            }
-
-            // Then check the WL-Proxy-Client-IP header
-            String wlProxyClientIp = headers.get("WL-Proxy-Client-IP");
-            if (wlProxyClientIp != null && !wlProxyClientIp.isEmpty()) {
-                return wlProxyClientIp;
-            }
-
-            // Finally, get the remote address from the socket
-            if (socket != null && socket.getInetAddress() != null) {
-                return socket.getInetAddress().getHostAddress();
-            }
-
-            return "unknown";
-        }
-
-        /**
-         * Check if the current request is made by HTMX.
-         *
-         * @return true if the request is made by HTMX, false otherwise.
-         */
-        public boolean isHTMX() {
-            return headers.containsKey("HX-Request") || headers.containsKey("hx-request");
-        }
-
-        /**
-         * Checks whether the socket connection is closed.
-         *
-         * @return true if the socket is null, closed, or not connected; false otherwise.
-         */
-        public boolean isConnectionClosed() {
-            return socket == null || socket.isClosed() || !socket.isConnected();
-        }
-
-        /**
-         * Closes the socket connection.
-         */
-        private void closeSocket() {
-            synchronized (Yggdrasill.class) {
-                currentConnections--;
-            }
-            //currentToken.remove();
-            try {
-                socket.close();
-            } catch (IOException e) {
-                throw new ProcessRequestException("Error closing socket", e);
-            }
-        }
-
-        /**
-         * Returns the path for the static resource corresponding to the endpoint.
-         *
-         * @param endPoint the endpoint of the request.
-         * @return the path to the corresponding static resource.
-         */
-        private Path getResourcePath(String endPoint) {
-            return endPoint.equals("/") ? Paths.get(resourcesPath + "/index.html") : Paths.get(resourcesPath + endPoint);
-        }
-
-        /**
-         * Retrieves the current token from the request headers.
-         *
-         * @return the current token, or null if no token is found.
-         */
-        public String getCurrentToken() {
-            return this.currentToken;
-        }
-
-        /**
-         * Retrieves the query parameters from the request.
-         *
-         * @return a map of query parameters.
-         */
-        public Map<String, String> getQueryParams() {
-            return queryParams;
-        }
-
-        /**
-         * Retrieves the body parameters from the request.
-         *
-         * @return a map of body parameters.
-         */
-        public Map<String, String> getBodyParams() {
-            return bodyParams;
-        }
-
-        /**
-         * Retrieves the path parameters from the request.
-         *
-         * @return a map of path parameters.
-         */
-        public Map<String, String> getPathParams() {
-            return pathParams;
-        }
-
-        /**
-         * Add a custom response header to the response.
-         *
-         * @param name  the name of the header.
-         * @param value the value of the header.
-         */
         public void addCustomHeader(String name, String value) {
             customResponseHeaders.put(name, value);
         }
 
-        /**
-         * Retrieves the headers as a map of key-value pairs.
-         *
-         * @return a map containing the headers, where keys are the header names and values are the corresponding header values
-         */
-        public Map<String, String> getHeaders() {
-            return headers;
+        public String getHeader(String name) {
+            return headers.get(name);
+        }
+
+        public String getClientIpAddress() {
+            // Try X-Forwarded-For header first (for proxy scenarios)
+            String xForwardedFor = request.getHeader("X-Forwarded-For");
+            if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+                // X-Forwarded-For can contain multiple IPs, take the first one
+                return xForwardedFor.split(",")[0].trim();
+            }
+
+            // Try X-Real-IP header
+            String xRealIp = request.getHeader("X-Real-IP");
+            if (xRealIp != null && !xRealIp.isEmpty()) {
+                return xRealIp;
+            }
+
+            // Fallback to remote address
+            return request.getRemoteAddr();
+        }
+
+        public boolean isHTMX() {
+            return "true".equals(request.getHeader("HX-Request")) || 
+                   request.getHeader("HX-Request") != null || 
+                   request.getHeader("hx-request") != null;
+        }
+
+        public boolean isConnectionClosed() {
+            return response.isCommitted();
+        }
+
+        // Response sending methods for use by controllers
+        public void sendHTMLResponse(ResponseCode responseCode, String body) throws IOException {
+            response.setStatus(responseCode.getCode());
+            response.setContentType("text/html; charset=UTF-8");
+            
+            // Add custom headers
+            customResponseHeaders.forEach((name, value) -> response.setHeader(name, value));
+            
+            // Process templates through Hermod
+            String processedHTML = Hermod.processTemplate(body, queryParams, bodyParams);
+            processedHTML += "\n\n"; // Prevent truncation
+            
+            response.getWriter().write(processedHTML);
+            response.getWriter().flush();
+        }
+
+        public void sendJSONResponse(ResponseCode responseCode, String body) {
+            try {
+                response.setStatus(responseCode.getCode());
+                response.setContentType("application/json; charset=UTF-8");
+                
+                // Add custom headers
+                customResponseHeaders.forEach((name, value) -> response.setHeader(name, value));
+                
+                response.getWriter().write(body);
+                response.getWriter().flush();
+            } catch (IOException e) {
+                Logger.error("Error sending JSON response: {}", e.getMessage());
+                throw new SendRespondException("Error sending JSON response", e);
+            }
+        }
+
+        public void sendBinaryResponse(ResponseCode responseCode, String contentType, byte[] body) {
+            try {
+                response.setStatus(responseCode.getCode());
+                response.setContentType(contentType);
+                
+                // Add custom headers
+                customResponseHeaders.forEach((name, value) -> response.setHeader(name, value));
+                
+                response.getOutputStream().write(body);
+                response.getOutputStream().flush();
+            } catch (IOException e) {
+                Logger.error("Error sending binary response: {}", e.getMessage());
+                throw new SendRespondException("Error sending binary response", e);
+            }
         }
     }
-}
+
+    // Getter methods for compatibility
+    public static int getCurrentConnections() {
+        return currentConnections.get();
+    }
+} 

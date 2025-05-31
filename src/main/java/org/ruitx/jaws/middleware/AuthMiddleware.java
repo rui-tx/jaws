@@ -1,6 +1,6 @@
 package org.ruitx.jaws.middleware;
 
-import org.ruitx.jaws.components.JettyRequestHandler;
+import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.Njord;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.interfaces.AccessControl;
@@ -23,10 +23,10 @@ import java.lang.reflect.Method;
 public class AuthMiddleware implements Middleware {
 
     @Override
-    public boolean handle(JettyRequestHandler handler, MiddlewareChain chain) {
+    public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
-            String endPoint = handler.getRequest().getRequestURI();
-            String methodStr = handler.getRequest().getMethod().toUpperCase();
+            String endPoint = context.getRequest().getRequestURI();
+            String methodStr = context.getRequest().getMethod().toUpperCase();
             RequestType requestType = RequestType.fromString(methodStr);
             
             if (requestType == null) {
@@ -44,11 +44,21 @@ public class AuthMiddleware implements Middleware {
             
             if (routeMethod != null && routeMethod.isAnnotationPresent(AccessControl.class)) {
                 AccessControl auth = routeMethod.getAnnotation(AccessControl.class);
+                Logger.debug("AuthMiddleware: Found AccessControl - login: {}, role: '{}'", auth.login(), auth.role());
+                
                 if (auth.login()) {
                     // This route requires authentication
-                    if (!isAuthenticated(handler)) {
-                        sendUnauthorizedResponse(handler, routeMethod);
+                    if (!isAuthenticated(context)) {
+                        sendUnauthorizedResponse(context, routeMethod);
                         return false; // Stop the chain
+                    }
+                    
+                    // Check role-based authorization if a specific role is required
+                    if (!auth.role().isEmpty()) {
+                        if (!isAuthorized(context, auth.role())) {
+                            sendUnauthorizedResponse(context, routeMethod);
+                            return false; // Stop the chain
+                        }
                     }
                 }
             }
@@ -123,27 +133,63 @@ public class AuthMiddleware implements Middleware {
     /**
      * Check if the request is authenticated.
      */
-    private boolean isAuthenticated(JettyRequestHandler handler) {
-        String token = handler.getCurrentToken();
+    private boolean isAuthenticated(Yggdrasill.RequestContext context) {
+        String token = context.getCurrentToken();
+        
+        Logger.debug("AuthMiddleware: Checking authentication for endpoint: {}", context.getRequest().getRequestURI());
         
         if (token == null || token.trim().isEmpty()) {
-            Logger.debug("No authentication token found");
+            Logger.debug("AuthMiddleware: No authentication token found");
             return false;
         }
 
+        Logger.debug("AuthMiddleware: Token found, validating...");
         if (!Tyr.isTokenValid(token)) {
-            Logger.debug("Invalid authentication token");
+            Logger.debug("AuthMiddleware: Invalid authentication token");
             return false;
         }
 
-        Logger.debug("Authentication successful for user: {}", Tyr.getUserIdFromJWT(token));
+        String userId = Tyr.getUserIdFromJWT(token);
+        Logger.debug("AuthMiddleware: Authentication successful for user: {}", userId);
         return true;
+    }
+
+    /**
+     * Check if the request is authorized for the required role.
+     */
+    private boolean isAuthorized(Yggdrasill.RequestContext context, String requiredRole) {
+        String token = context.getCurrentToken();
+        
+        if (token == null || token.trim().isEmpty()) {
+            Logger.debug("AuthMiddleware: No token for role-based authorization");
+            return false;
+        }
+
+        try {
+            String userRole = Tyr.getUserRoleFromJWT(token);
+            Logger.debug("AuthMiddleware: Role check - required: '{}', user: '{}'", requiredRole, userRole);
+            
+            // Admin has access to everything
+            if ("admin".equals(userRole)) {
+                Logger.debug("AuthMiddleware: Admin access granted");
+                return true;
+            }
+            
+            // Check exact role match
+            boolean authorized = requiredRole.equals(userRole);
+            Logger.debug("AuthMiddleware: Role authorization result: {}", authorized);
+            return authorized;
+            
+        } catch (Exception e) {
+            Logger.error("AuthMiddleware: Error checking role authorization: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**
      * Send an unauthorized response based on the route's response type.
      */
-    private void sendUnauthorizedResponse(JettyRequestHandler handler, Method routeMethod) {
+    private void sendUnauthorizedResponse(Yggdrasill.RequestContext context, Method routeMethod) {
         try {
             Route route = routeMethod.getAnnotation(Route.class);
             ResponseType responseType = route.responseType();
@@ -154,10 +200,16 @@ public class AuthMiddleware implements Middleware {
                             ResponseCode.UNAUTHORIZED.getCodeAndMessage(),
                             "You are not authorized to access this resource"
                     );
-                    handler.sendJSONResponse(ResponseCode.UNAUTHORIZED, Bragi.encode(response));
+                    context.sendJSONResponse(ResponseCode.UNAUTHORIZED, Bragi.encode(response));
                 }
                 case HTML -> {
-                    handler.sendUnauthorizedHTMLResponse();
+                    try {
+                        context.sendHTMLResponse(ResponseCode.UNAUTHORIZED, getUnauthorizedHTML(context));
+                    } catch (Exception e) {
+                        Logger.error("Error sending HTML unauthorized response: {}", e.getMessage());
+                        // Fallback to simple response
+                        context.getResponse().setStatus(401);
+                    }
                 }
                 default -> {
                     // Default to JSON for unknown types
@@ -165,11 +217,22 @@ public class AuthMiddleware implements Middleware {
                             ResponseCode.UNAUTHORIZED.getCodeAndMessage(),
                             "You are not authorized to access this resource"
                     );
-                    handler.sendJSONResponse(ResponseCode.UNAUTHORIZED, Bragi.encode(response));
+                    context.sendJSONResponse(ResponseCode.UNAUTHORIZED, Bragi.encode(response));
                 }
             }
         } catch (Exception e) {
             Logger.error("Error sending unauthorized response: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get appropriate unauthorized HTML response.
+     */
+    private String getUnauthorizedHTML(Yggdrasill.RequestContext context) {
+        if (context.isHTMX()) {
+            return "<div class=\"error\">You are not authorized to access this resource</div>";
+        } else {
+            return "<!DOCTYPE html><html><head><title>Unauthorized</title></head><body><h1>401 - Unauthorized</h1><p>You are not authorized to access this resource.</p></body></html>";
         }
     }
 

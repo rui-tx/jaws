@@ -11,19 +11,19 @@ import java.util.List;
 public class MiddlewareChainImpl implements MiddlewareChain {
     
     private final List<Middleware> middlewares;
-    private final JettyRequestHandler handler;
+    private final Yggdrasill.RequestContext context;
     private int currentIndex = 0;
     
-    public MiddlewareChainImpl(List<Middleware> middlewares, JettyRequestHandler handler) {
+    public MiddlewareChainImpl(List<Middleware> middlewares, Yggdrasill.RequestContext context) {
         this.middlewares = middlewares;
-        this.handler = handler;
+        this.context = context;
     }
     
     @Override
     public boolean next() {
         if (currentIndex < middlewares.size()) {
             Middleware middleware = middlewares.get(currentIndex++);
-            return middleware.handle(handler, this);
+            return middleware.handle(context, this);
         }
         return true; // No more middleware, continue to route handling
     }

@@ -1,6 +1,6 @@
 package org.ruitx.jaws.interfaces;
 
-import org.ruitx.jaws.components.JettyRequestHandler;
+import org.ruitx.jaws.components.Yggdrasill;
 
 /**
  * Middleware interface for processing HTTP requests and responses in a chain pattern.
@@ -11,11 +11,11 @@ public interface Middleware {
     /**
      * Process the request/response and decide whether to continue the chain.
      * 
-     * @param handler The request handler containing request/response information
+     * @param context The request context containing request/response information
      * @param chain The middleware chain to continue processing
      * @return true if processing should continue, false to stop the chain
      */
-    boolean handle(JettyRequestHandler handler, MiddlewareChain chain);
+    boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain);
     
     /**
      * Get the order/priority of this middleware. Lower numbers execute first.
