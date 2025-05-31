@@ -18,6 +18,8 @@ Among other features, these are the main ones
 - **HTML Parsing**: HTML can be enhanced with dynamic values
 - **Database System**: A (very) basic ORM using SQLite
 - **JWT**: Generate access and refresh tokens with ease
+- **Middleware System**: Extensible middleware for cross-cutting concerns (NEW!)
+- **Robust HTTP Server**: Built on Eclipse Jetty for better performance and reliability (NEW!)
 
 ## Setup
 
@@ -71,13 +73,35 @@ JAWS is built with a modular system. Every module is responsible for one aspect 
 - `Bragi`: The base for all controllers. Contains methods to respond to the client
 - `Heimdall`: A file watcher that monitors changes in the specified directory
 - `Hermod`: HTML parser that handles template processing and page assembly
+- `JettyServer`: Robust HTTP server based on Eclipse Jetty (replaces Yggdrasill)
 - `Mimir`: Database interface for SQLite. Acts as a mini basic ORM
 - `Njord`: Dynamic router that routes requests to controllers
 - `Norns`: Scheduler for tasks, like a cron job
 - `Odin`: Module responsible for starting all the other modules
 - `Tyr`:  JWT handling
 - `Volundr`: Makes the response header for all the responses
-- `Yggdrasill`: Main server class that handles incoming HTTP requests
+
+### Middleware System (NEW!)
+
+JAWS now includes a powerful middleware system for handling cross-cutting concerns:
+
+- **LoggingMiddleware**: Automatic request/response logging
+- **CorsMiddleware**: Cross-Origin Resource Sharing support
+- **Custom Middleware**: Create your own middleware for authentication, rate limiting, etc.
+
+Example middleware:
+```java
+public class AuthMiddleware implements Middleware {
+    @Override
+    public boolean handle(JettyRequestHandler handler, MiddlewareChain chain) {
+        if (!isAuthenticated(handler)) {
+            sendUnauthorized(handler);
+            return false; // Stop the chain
+        }
+        return chain.next(); // Continue to next middleware
+    }
+}
+```
 
 ### Bragi
 
@@ -401,6 +425,20 @@ private void processRequest() {
 ```
 
 It's not an example, but that method shows in a simplified way the flow that ```Yggdrasill``` uses.
+
+## Migration from Yggdrasill
+
+JAWS has been upgraded from a custom HTTP server (Yggdrasill) to a robust Jetty-based implementation. **All existing code remains fully compatible** - no changes needed to your controllers, routes, or configuration.
+
+**New benefits:**
+- Better performance and scalability
+- Robust connection management
+- Middleware system for extensibility
+- Enhanced error handling and logging
+
+See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for detailed information about the upgrade and new features.
+
+## API Documentation
 
 ## Notes
 

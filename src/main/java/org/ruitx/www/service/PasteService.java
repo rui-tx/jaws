@@ -24,15 +24,9 @@ public class PasteService {
     }
 
     public APIResponse<String> createPaste(PasteCreateRequest request, Integer userId, String ipAddress, String userAgent) {
-        // Validate content
-        if (request.content() == null || request.content().trim().isEmpty()) {
-            return APIResponse.error(ResponseCode.BAD_REQUEST.getCodeAndMessage(), "Content cannot be empty");
-        }
-
-        if (request.content().length() > 1_000_000) { // 1MB limit
-            return APIResponse.error(ResponseCode.BAD_REQUEST.getCodeAndMessage(), "Content too large (max 1MB)");
-        }
-
+        // Note: Basic validation is now handled by Jakarta Bean Validation annotations on the DTO
+        // Only business-specific validation remains here
+        
         // Generate unique ID
         String pasteId = generateUniqueId();
         
