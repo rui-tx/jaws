@@ -18,8 +18,9 @@ Among other features, these are the main ones
 - **HTML Parsing**: HTML can be enhanced with dynamic values
 - **Database System**: A (very) basic ORM using SQLite
 - **JWT**: Generate access and refresh tokens with ease
-- **Middleware System**: Extensible middleware for cross-cutting concerns (NEW!)
-- **Robust HTTP Server**: Built on Eclipse Jetty for better performance and reliability (NEW!)
+- **Robust HTTP Server**: Built on Eclipse Jetty 
+- **Middleware System**: Extensible middleware for cross-cutting concerns
+
 
 ## Setup
 
@@ -70,10 +71,11 @@ curl http://localhost:8080
 
 JAWS is built with a modular system. Every module is responsible for one aspect of the server.
 
+- `Bifrost`: Middlware implementation
 - `Bragi`: The base for all controllers. Contains methods to respond to the client
 - `Heimdall`: A file watcher that monitors changes in the specified directory
 - `Hermod`: HTML parser that handles template processing and page assembly
-- `JettyServer`: Robust HTTP server based on Eclipse Jetty (replaces Yggdrasill)
+- `Yggdrassil`: The unified HTTP server with integrated request handling, middleware support, and direct controller routing
 - `Mimir`: Database interface for SQLite. Acts as a mini basic ORM
 - `Njord`: Dynamic router that routes requests to controllers
 - `Norns`: Scheduler for tasks, like a cron job
@@ -81,21 +83,29 @@ JAWS is built with a modular system. Every module is responsible for one aspect 
 - `Tyr`:  JWT handling
 - `Volundr`: Makes the response header for all the responses
 
-### Middleware System (NEW!)
+### Architecture
 
-JAWS now includes a powerful middleware system for handling cross-cutting concerns:
+JAWS uses a typical server request/response logic, like this:
+
+```
+[HTTP Request] → [Yggdrassil (Jetty)] → [Middleware Chain] → [Route Discovery] → [Controller Execution] → [Response]
+```
+
+### Bifrost
+
+Bifrost is a middleware system for handling cross-cutting concerns:
 
 - **LoggingMiddleware**: Automatic request/response logging
 - **CorsMiddleware**: Cross-Origin Resource Sharing support
-- **Custom Middleware**: Create your own middleware for authentication, rate limiting, etc.
+- **AuthMiddleware**: JWT authentication for protected routes
 
 Example middleware:
 ```java
 public class AuthMiddleware implements Middleware {
     @Override
-    public boolean handle(JettyRequestHandler handler, MiddlewareChain chain) {
-        if (!isAuthenticated(handler)) {
-            sendUnauthorized(handler);
+    public boolean handle(RequestContext context, MiddlewareChain chain) {
+        if (!isAuthenticated(context)) {
+            sendUnauthorized(context);
             return false; // Stop the chain
         }
         return chain.next(); // Continue to next middleware
@@ -105,10 +115,7 @@ public class AuthMiddleware implements Middleware {
 
 ### Bragi
 
-All controllers can and should extend this class. It wraps one of the most important class, the
-```Yggdrasill.RequestHandler```. The ```RequestHandler``` contains all the relevant information about the request, like
-the path or query params, among other important data. We can use ```RequestHandler``` without extending ```Bragi``` in
-the controller, this module is just for ease of use
+All controllers can and should extend this class. It provides convenient methods for accessing request data and sending responses. The class automatically adapts to work with the current request context.
 
 **Example**
 
@@ -407,38 +414,36 @@ This module is just a simple builder that constructs all the response headers. N
 
 ### Yggdrasill
 
-This module is the heart of JAWS. ```Yggdrasill``` is responsible for decoding the request, passing it to the
-controller and then responding with the correct data. It's also here where we get the header, body, JWT token and other
-request data. It contains its own thread pool, as it is one thread per connection
+This module is the heart of JAWS. `Yggdrasill` is responsible for handling HTTP requests, processing them through middleware chains, discovering routes, and executing controller methods.
 
-**Example**
+Key features:
+- **Jetty-based**: Built on the proven Eclipse Jetty server for reliability and performance
+- **Integrated request handling**: Direct processing without bridge layers
+- **Middleware support**: Extensible middleware chain for cross-cutting concerns
+- **Route discovery**: Automatic route detection and parameter injection
+- **Static file serving**: Efficiently serves static resources
+- **Thread management**: Handles concurrent connections with proper resource management
+- **Exception handling**: Comprehensive error handling and response management
+
+The `RequestContext` contains all the relevant information about the request, including headers, body, JWT tokens, path parameters, and query parameters. Controllers access this through the `Bragi` base class methods.
+
+**Example request flow:**
 
 ```java
+// Yggdrasill processes request through middleware chain
+LoggingMiddleware -> CorsMiddleware -> AuthMiddleware -> Route Discovery -> Controller
 
-private void processRequest() {
-    initializeStreams();
-    readHeaders();
-    readBody();
-    checkRequestAndSendResponse();
-    closeSocket();
+// Controller handles business logic
+@Route(endpoint = "/api/users", method = GET)
+public void getUsers() {
+    // Access request data through Bragi methods
+    String token = getCurrentToken();
+    Map<String, String> headers = getHeaders();
+    
+    // Process and respond
+    sendSucessfulResponse(OK, userService.getAllUsers());
 }
 ```
-
-It's not an example, but that method shows in a simplified way the flow that ```Yggdrasill``` uses.
-
-## Migration from Yggdrasill
-
-JAWS has been upgraded from a custom HTTP server (Yggdrasill) to a robust Jetty-based implementation. **All existing code remains fully compatible** - no changes needed to your controllers, routes, or configuration.
-
-**New benefits:**
-- Better performance and scalability
-- Robust connection management
-- Middleware system for extensibility
-- Enhanced error handling and logging
-
-See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for detailed information about the upgrade and new features.
-
-## API Documentation
 
 ## Notes
 
