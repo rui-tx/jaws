@@ -91,7 +91,8 @@ public abstract class Bragi {
      * @return the variable value or null if not found
      */
     protected String getTemplateVariable(String name) {
-        return Hermod.getTemplateVariable(name);
+        Object value = Hermod.getTemplateVariable(name);
+        return value != null ? value.toString() : null;
     }
 
     /**
@@ -312,16 +313,22 @@ public abstract class Bragi {
     }
 
     /**
-     * Render a template file with parameters.
+     * Render a template with parameters replaced.
      *
      * @param templatePath The path to the template file
-     * @param params       The parameters to be used in the template
+     * @param params       The parameters to replace in the template
      * @return The rendered template with parameters replaced
      */
     protected String renderTemplate(String templatePath, Map<String, String> params) {
         try {
-            String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
-            return Hermod.processTemplate(templateHtml, params, null);
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                return Hermod.renderTemplate(templatePath, context.getRequest(), context.getResponse());
+            } else {
+                // Fallback to old method if no context available
+                String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
+                return Hermod.processTemplate(templateHtml, params, null);
+            }
         } catch (IOException e) {
             Logger.error("Failed to render template: {}", e.getMessage());
             throw new SendRespondException("Failed to render template", e);
@@ -352,7 +359,14 @@ public abstract class Bragi {
      */
     protected String assemblePage(String baseTemplatePath, String partialTemplatePath) {
         try {
-            return Hermod.assemblePage(baseTemplatePath, partialTemplatePath);
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                return Hermod.assemblePage(baseTemplatePath, partialTemplatePath, 
+                                         context.getRequest(), context.getResponse());
+            } else {
+                // Fallback to old method if no context available
+                return Hermod.assemblePage(baseTemplatePath, partialTemplatePath);
+            }
         } catch (IOException e) {
             Logger.error("Failed to assemble page: {}", e.getMessage());
             throw new SendRespondException("Failed to assemble page", e);

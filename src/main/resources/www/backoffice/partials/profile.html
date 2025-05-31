@@ -3,8 +3,8 @@
         <div class="level-left">
             <div class="level-item">
                 <ul>
-                    <li>{{currentUser}}</li>
-                    <li>Profile from {{userFirstName}} {{userLastName}}</li>
+                    <li th:text="${currentUser}">User Name</li>
+                    <li>Profile from <span th:text="${userFirstName}"></span> <span th:text="${userLastName}"></span></li>
                 </ul>
             </div>
         </div>
@@ -48,7 +48,7 @@
                             <div class="field-body">
                                 <div class="field">
                                     <div class="control">
-                                        <input class="input" name="username" type="text" value="{{username}}" disabled
+                                        <input class="input" name="username" type="text" th:value="${username}" disabled
                                             readonly>
                                     </div>
                                 </div>
@@ -59,7 +59,7 @@
                             <div class="field-body">
                                 <div class="field">
                                     <div class="control">
-                                        <input class="input" name="email" type="email" value="{{userEmail}}">
+                                        <input class="input" name="email" type="email" th:value="${userEmail}">
                                     </div>
                                 </div>
                             </div>
@@ -69,7 +69,7 @@
                             <div class="field-body">
                                 <div class="field">
                                     <div class="control">
-                                        <input class="input" name="firstName" type="text" value="{{userFirstName}}">
+                                        <input class="input" name="firstName" type="text" th:value="${userFirstName}">
                                     </div>
                                 </div>
                             </div>
@@ -79,7 +79,7 @@
                             <div class="field-body">
                                 <div class="field">
                                     <div class="control">
-                                        <input class="input" name="lastName" type="text" value="{{userLastName}}">
+                                        <input class="input" name="lastName" type="text" th:value="${userLastName}">
                                     </div>
                                 </div>
                             </div>
@@ -115,7 +115,7 @@
                     <div class="field-body">
                         <div class="field">
                             <div class="control">
-                                <input class="input" name="lastLogin" type="text" value="{{lastLogin}}" disabled
+                                <input class="input" name="lastLogin" type="text" th:value="${lastLogin}" disabled
                                     readonly>
                             </div>
                         </div>
@@ -127,7 +127,7 @@
                         <div class="field">
                             <div class="control">
                                 <input class="input" name="failedLoginAttempts" type="number"
-                                    value="{{failedLoginAttempts}}" disabled readonly>
+                                    th:value="${failedLoginAttempts}" disabled readonly>
                             </div>
                         </div>
                     </div>
@@ -137,7 +137,7 @@
                     <div class="field-body">
                         <div class="field">
                             <div class="control">
-                                <input class="input" name="lockoutUntil" type="datetime-local" value="{{lockoutUntil}}"
+                                <input class="input" name="lockoutUntil" type="datetime-local" th:value="${lockoutUntil}"
                                     disabled readonly>
                             </div>
                         </div>
@@ -162,7 +162,7 @@
                     <div class="field-body">
                         <div class="field">
                             <div class="control">
-                                <input class="input" name="birthdate" type="date" value="{{birthdate}}">
+                                <input class="input" name="birthdate" type="date" th:value="${birthdate}">
                             </div>
                         </div>
                     </div>
@@ -175,9 +175,9 @@
                                 <div class="select is-fullwidth">
                                     <select name="gender">
                                         <option value="">Select gender</option>
-                                        <option value="male" {{#if gender=='male' }}selected{{/if}}>Male</option>
-                                        <option value="female" {{#if gender=='female' }}selected{{/if}}>Female</option>
-                                        <option value="other" {{#if gender=='other' }}selected{{/if}}>Other</option>
+                                        <option value="male" th:selected="${gender == 'male'}">Male</option>
+                                        <option value="female" th:selected="${gender == 'female'}">Female</option>
+                                        <option value="other" th:selected="${gender == 'other'}">Other</option>
                                     </select>
                                 </div>
                             </div>
@@ -189,7 +189,7 @@
                     <div class="field-body">
                         <div class="field">
                             <div class="control">
-                                <input class="input" name="phoneNumber" type="tel" value="{{phoneNumber}}">
+                                <input class="input" name="phoneNumber" type="tel" th:value="${phoneNumber}">
                             </div>
                         </div>
                     </div>
@@ -213,10 +213,10 @@
                     <div class="field-body">
                         <div class="field">
                             <div class="control">
-                                <input class="input" name="profilePicture" id="profile-picture-url" type="text" value="{{profilePicture}}">
+                                <input class="input" name="profilePicture" id="profile-picture-url" type="text" th:value="${profilePicture}">
                             </div>
                             <figure class="image is-128x128 mt-2">
-                                <img id="profile-picture-preview" src="{{userProfilePicture}}" alt="Profile Picture Preview" style="object-fit:cover;">
+                                <img id="profile-picture-preview" src="[[${userProfilePicture}]]" alt="Profile Picture Preview" style="object-fit:cover;" th:src="${userProfilePicture}">
                             </figure>
                         </div>
                     </div>
@@ -226,7 +226,7 @@
                         <div class="field-body">
                             <div class="field">
                                 <div class="control">
-                                    <textarea class="textarea" name="bio">{{bio}}</textarea>
+                                    <textarea class="textarea" name="bio" th:value="${bio}"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -250,7 +250,7 @@
                         <div class="field-body">
                             <div class="field">
                                 <div class="control">
-                                    <input class="input" name="location" type="text" value="{{location}}">
+                                    <input class="input" name="location" type="text" th:value="${location}">
                                 </div>
                             </div>
                         </div>
@@ -260,7 +260,7 @@
                         <div class="field-body">
                             <div class="field">
                                 <div class="control">
-                                    <input class="input" name="website" type="url" value="{{website}}">
+                                    <input class="input" name="website" type="url" th:value="${website}">
                                 </div>
                             </div>
                         </div>
@@ -286,11 +286,11 @@
                                 <div class="control">
                                     <div class="select is-fullwidth">
                                         <select name="status" disabled>
-                                            <option value="active" {{#if status=='active' }}selected{{/if}}>Active
+                                            <option value="active" th:selected="${status == 'active'}">Active
                                             </option>
-                                            <option value="suspended" {{#if status=='suspended' }}selected{{/if}}>
+                                            <option value="suspended" th:selected="${status == 'suspended'}">
                                                 Suspended</option>
-                                            <option value="inactive" {{#if status=='inactive' }}selected{{/if}}>Inactive
+                                            <option value="inactive" th:selected="${status == 'inactive'}">Inactive
                                             </option>
                                         </select>
                                     </div>
@@ -305,8 +305,8 @@
                                 <div class="control">
                                     <div class="select is-fullwidth">
                                         <select name="isActive" disabled readonly>
-                                            <option value="1" {{#if isActive==1}}selected{{/if}}>Yes</option>
-                                            <option value="0" {{#if isActive==0}}selected{{/if}}>No</option>
+                                            <option value="1" th:selected="${isActive == 1}">Yes</option>
+                                            <option value="0" th:selected="${isActive == 0}">No</option>
                                         </select>
                                     </div>
                                 </div>
@@ -320,8 +320,8 @@
                                 <div class="control">
                                     <div class="select is-fullwidth">
                                         <select name="isSuperuser" disabled readonly>
-                                            <option value="1" {{#if isSuperuser==1}}selected{{/if}}>Yes</option>
-                                            <option value="0" {{#if isSuperuser==0}}selected{{/if}}>No</option>
+                                            <option value="1" th:selected="${isSuperuser == 1}">Yes</option>
+                                            <option value="0" th:selected="${isSuperuser == 0}">No</option>
                                         </select>
                                     </div>
                                 </div>
@@ -333,7 +333,7 @@
                         <div class="field-body">
                             <div class="field">
                                 <div class="control">
-                                    <input class="input" name="createdAt" type="text" value="{{createdAt}}" disabled
+                                    <input class="input" name="createdAt" type="text" th:value="${createdAt}" disabled
                                         readonly>
                                 </div>
                             </div>
@@ -344,7 +344,7 @@
                         <div class="field-body">
                             <div class="field">
                                 <div class="control">
-                                    <input class="input" name="updatedAt" type="text" value="{{updatedAt}}" disabled
+                                    <input class="input" name="updatedAt" type="text" th:value="${updatedAt}" disabled
                                         readonly>
                                 </div>
                             </div>
@@ -432,7 +432,7 @@
             const data = collectFormData(profileForm);
 
             // Get userId from template variable
-            const userId = "{{userId}}";
+            const userId = '[[${userId}]]';
 
             fetch(`/backoffice/profile/${userId}`, {
                 method: 'PATCH',

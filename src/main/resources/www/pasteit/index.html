@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
@@ -7,17 +7,15 @@
           rel="icon"
           type="image/x-icon"/>
     <title>pasteit</title>
-    <link href="{{getPathFor("pasteit/css/style.css")}}" rel="stylesheet">
+    <link th:href="${utils.getPathFor('pasteit/css/style.css')}" rel="stylesheet">
 </head>
 <body>
-<div class="container">
-    {{_BODY_CONTENT_}}
-</div>
-
+<div class="container" th:if="${bodyContent}" th:insert="~{${bodyContent}}"></div>
 <div class="drag-overlay" id="drag-overlay">
     Drop file here
 </div>
 
-<script src='js/htmx.min.js'></script>
+<script th:src="${utils.getPathFor('pasteit/js/htmx.min.js')}"></script>
+
 </body>
 </html>

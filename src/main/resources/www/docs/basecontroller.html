@@ -43,7 +43,7 @@ public class BackofficeController extends Bragi {
     public void renderIndex() {
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        Map<String, String> context = new HashMap<>();
+        Map&lt;String, String&gt; context = new HashMap&lt;&gt;();
         context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
         context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
         setContext(context);

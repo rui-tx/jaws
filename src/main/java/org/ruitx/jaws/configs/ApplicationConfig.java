@@ -28,6 +28,7 @@ public class ApplicationConfig {
     public static final String DATABASE_PATH;
     public static final String DATABASE_SCHEMA_PATH;
     public static final String JWT_SECRET;
+    public static final boolean DEVELOPMENT_MODE;
 
     private static final Properties properties = new Properties();
 
@@ -40,14 +41,15 @@ public class ApplicationConfig {
         }
 
         // Initialize all static fields
-        PORT = getPortValue();
         URL = getUrlValue();
+        PORT = getPortValue();
         WWW_PATH = getWwwPathValue();
         CUSTOM_PAGE_PATH_401 = getCustomPagePath401Value();
         CUSTOM_PAGE_PATH_404 = getCustomPagePath404Value();
         DATABASE_PATH = getDatabasePathValue();
         DATABASE_SCHEMA_PATH = getDatabaseSchemaPathValue();
         JWT_SECRET = getJWTSecretValue();
+        DEVELOPMENT_MODE = getDevelopmentModeValue();
     }
 
     private ApplicationConfig() {
@@ -115,6 +117,11 @@ public class ApplicationConfig {
             return jwtToken;
         }
         return jwtSecret;
+    }
+
+    private static boolean getDevelopmentModeValue() {
+        String devMode = getConfigValue("DEVELOPMENT_MODE", "development.mode", "false");
+        return Boolean.parseBoolean(devMode);
     }
 
     private static String getConfigValue(String envKey, String propKey, String defaultValue) {

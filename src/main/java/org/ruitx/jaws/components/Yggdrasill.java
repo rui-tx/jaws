@@ -551,7 +551,7 @@ public class Yggdrasill {
                 context.response.setHeader(name, value));
             
             // Process templates through Hermod
-            String processedHTML = Hermod.processTemplate(body, context.queryParams, context.bodyParams);
+            String processedHTML = Hermod.processTemplate(body, context.queryParams, context.bodyParams, context.request, context.response);
             processedHTML += "\n\n"; // Prevent truncation
             
             context.response.getWriter().write(processedHTML);
@@ -644,11 +644,17 @@ public class Yggdrasill {
             }
 
             if ("text/html".equals(contentType)) {
-                // Process HTML templates
+                // Get relative path from the resources directory for Thymeleaf
+                Path resourcesPath = Paths.get(context.resourcesPath);
+                String relativePath = resourcesPath.relativize(filePath).toString();
+                
+                // Process HTML templates using the relative file path
                 String processedHTML = Hermod.processTemplate(
-                    new String(content), 
+                    relativePath, 
                     context.queryParams, 
-                    context.bodyParams
+                    context.bodyParams,
+                    context.request,
+                    context.response
                 );
                 processedHTML += "\n\n"; // Prevent truncation
                 
@@ -918,7 +924,7 @@ public class Yggdrasill {
             customResponseHeaders.forEach((name, value) -> response.setHeader(name, value));
             
             // Process templates through Hermod
-            String processedHTML = Hermod.processTemplate(body, queryParams, bodyParams);
+            String processedHTML = Hermod.processTemplate(body, queryParams, bodyParams, request, response);
             processedHTML += "\n\n"; // Prevent truncation
             
             response.getWriter().write(processedHTML);

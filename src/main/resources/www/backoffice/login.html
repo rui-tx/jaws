@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667" type="image/x-icon" />
     <title>Jaws - Backoffice - Log In</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link href="{{getPathFor("backoffice/css/main.css")}}" rel="stylesheet">
-    <link href="{{getPathFor("backoffice/css/login.css")}}" rel="stylesheet">
-    <script src="{{getPathFor("backoffice/js/auth.js")}}" defer></script>
+    <link th:href="${utils.getPathFor('backoffice/css/main.css')}" rel="stylesheet">
+    <link th:href="${utils.getPathFor('backoffice/css/login.css')}" rel="stylesheet">
+    <script th:src="${utils.getPathFor('backoffice/js/auth.js')}" defer></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
 </head>
@@ -63,8 +63,9 @@
 
 </div>
 
-<script src="{{getPathFor("backoffice/js/htmx.min.js")}}"></script>
-<script>
+<script th:src="${utils.getPathFor('backoffice/js/main.min.js')}" type="text/javascript"></script>
+
+<script th:inline="javascript">
     document.getElementById('login-button').addEventListener('click', function() {
         const loginText = document.getElementById('login-text');
         const loginSpinner = document.getElementById('login-spinner');
@@ -102,8 +103,8 @@
                     localStorage.setItem('refresh_token', data.data.refresh_token);
                     document.cookie = "auth_token=" + data.data.access_token + "; path=/; SameSite=Strict";
 
-                    // Redirect to dashboard
-                    window.location.href = '{{getPathFor("backoffice/")}}';
+                    // Redirect to dashboard using proper Thymeleaf JavaScript inlining
+                    window.location.href = /*[[${utils.getPathFor('backoffice/')}]]*/ '/backoffice/';
                 } else {
                     // Show error message
                     document.getElementById('error-message').style.display = 'block';
