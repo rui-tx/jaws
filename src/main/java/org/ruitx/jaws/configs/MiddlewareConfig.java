@@ -1,0 +1,25 @@
+package org.ruitx.jaws.configs;
+
+import org.ruitx.jaws.interfaces.Middleware;
+import org.ruitx.jaws.middleware.AuthMiddleware;
+import org.ruitx.jaws.middleware.CorsMiddleware;
+import org.ruitx.jaws.middleware.LoggingMiddleware;
+
+import java.util.List;
+
+/**
+ * Configuration class for middleware setup.
+ * Add your middleware here to be automatically registered with the server.
+ */
+public class MiddlewareConfig {
+
+    /**
+     * List of middleware to be registered with the server.
+     * Middleware will be executed in order of their priority (getOrder() method).
+     */
+    public static final List<Middleware> MIDDLEWARE = List.of(
+            new LoggingMiddleware(),
+            new CorsMiddleware(),
+            new AuthMiddleware()
+    );
+} 

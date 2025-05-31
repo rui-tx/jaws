@@ -10,5 +10,5 @@ import java.lang.annotation.Target;
 public @interface AccessControl {
     boolean login() default false;
 
-    String role() default "USER";
+    String role() default "";
 }

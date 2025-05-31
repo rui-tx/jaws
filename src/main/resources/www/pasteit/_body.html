@@ -115,8 +115,8 @@ document.getElementById('paste-form').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // The paste ID is in the info field due to method overloading in the API
-            const pasteId = data.info;
+            // The paste ID is in the data field
+            const pasteId = data.data;
             const shareUrl = `${window.location.origin}/pasteit/${pasteId}`;
             
             document.getElementById('share-url').value = shareUrl;

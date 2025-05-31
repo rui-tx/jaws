@@ -27,10 +27,10 @@ import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
 /**
  * Base controller class for all controllers.
  * Contains methods for sending responses to the client.
- * The most important object is the requestHandler, that contains the request information.
+ * The requestContext contains the request information and provides response capabilities.
  */
 public abstract class Bragi {
-    private static final ThreadLocal<Yggdrasill.RequestHandler> requestHandler = new ThreadLocal<>();
+    private static final ThreadLocal<Yggdrasill.RequestContext> requestContext = new ThreadLocal<>();
     protected String bodyHtmlPath;
 
     public static ObjectMapper getMapper() {
@@ -104,117 +104,39 @@ public abstract class Bragi {
     }
 
     /**
-     * Retrieves the current token by attempting to fetch it from cookies.
+     * Gets the current authentication token.
      *
-     * @return the current token as a String if present in cookies,
-     * or null if no token is available.
+     * @return the current token, or null if none is set
      */
     protected String getCurrentToken() {
-        return getRequestHandler().getCurrentToken() == null ? "" : getRequestHandler().getCurrentToken();
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null ? context.getCurrentToken() : null;
     }
 
-    /**
-     * Send a JSON success response with no data
-     *
-     * @param code Response code
-     */
+    // Success response methods
     protected void sendSucessfulResponse(ResponseCode code) {
-        try {
-            boolean isSuccess = code.toString().startsWith("2"); // 2xx codes are success
-            sendJSONResponse(isSuccess, code, null, null);
-        } finally {
-            // Clean up template variables
-            Hermod.clearTemplateVariables();
-        }
+        sendJSONResponse(true, code, "Success", null);
     }
 
-    /**
-     * Send a JSON success response with data
-     *
-     * @param code Response code
-     * @param data Response data (can be null)
-     */
     protected void sendSucessfulResponse(ResponseCode code, Object data) {
-        try {
-            APIResponse<?> response = APIResponse.success(code.getCodeAndMessage(), data);
-            requestHandler.get().sendJSONResponse(code, encode(response));
-        } catch (Exception e) {
-            Logger.error("Failed to send JSON response: {}", e.getMessage());
-            throw new SendRespondException("Failed to send JSON response", e);
-        } finally {
-            // Clean up template variables
-            Hermod.clearTemplateVariables();
-        }
+        sendJSONResponse(true, code, "Success", data);
     }
 
-    /**
-     * Sends a successful response with the provided response code and data.
-     *
-     * @param code The response code represented as a string.
-     * @param data The data to be included in the response.
-     */
-    protected void sendSucessfulResponse(String code, Object data) {
-        sendSucessfulResponse(ResponseCode.fromCodeAndMessage(code), null, data);
-    }
-
-    /**
-     * Sends a successful response with the specified response code and message.
-     *
-     * @param code    the response code indicating the status of the operation
-     * @param message the message providing additional information about the response
-     */
-    protected void sendSucessfulResponse(String code, String message) {
-        sendSucessfulResponse(ResponseCode.fromCodeAndMessage(code), message, null);
-    }
-
-    /**
-     * Send a JSON success response with data and info message
-     *
-     * @param code Response code
-     * @param info Info message
-     * @param data Response data (can be null)
-     */
     protected void sendSucessfulResponse(ResponseCode code, String info, Object data) {
-        try {
-            APIResponse<?> response = APIResponse.success(code.getCodeAndMessage(), info, data);
-            requestHandler.get().sendJSONResponse(code, encode(response));
-        } catch (Exception e) {
-            Logger.error("Failed to send JSON response: {}", e.getMessage());
-            throw new SendRespondException("Failed to send JSON response", e);
-        } finally {
-            // Clean up template variables
-            Hermod.clearTemplateVariables();
-        }
+        sendJSONResponse(true, code, info, data);
     }
 
-    /**
-     * Send a JSON error response
-     *
-     * @param code    Error code
-     * @param message Error message
-     */
-    protected void sendErrorResponse(ResponseCode code, String message) {
-        try {
-            APIResponse<?> response = APIResponse.error(code.getCodeAndMessage(), message);
-            requestHandler.get().sendJSONResponse(code, encode(response));
-        } catch (Exception e) {
-            Logger.error("Failed to send JSON response: {}", e.getMessage());
-            throw new SendRespondException("Failed to send JSON response", e);
-        } finally {
-            // Clean up template variables
-            Hermod.clearTemplateVariables();
-        }
+    protected void sendSucessfulResponse(String code, Object data) {
+        sendJSONResponse(true, ResponseCode.fromCodeAndMessage(code), "Success", data);
     }
 
-    /**
-     * Send a JSON error response with a code and message
-     * The code should be like this a string like this "200 OK"
-     *
-     * @param code    Error code
-     * @param message Error message
-     */
-    protected void sendErrorResponse(String code, String message) {
-        sendJSONResponse(false, ResponseCode.fromCodeAndMessage(code), message, null);
+    // Error response methods
+    public void sendErrorResponse(ResponseCode code, String message) {
+        sendJSONResponse(false, code, message, null);
+    }
+
+    public void sendErrorResponse(String code, String message) {
+        sendJSONResponse(false, ResponseCode.valueOf(code), message, null);
     }
 
     /**
@@ -239,7 +161,13 @@ public abstract class Bragi {
             } else {
                 response = APIResponse.error(code.getCodeAndMessage(), info);
             }
-            requestHandler.get().sendJSONResponse(code, encode(response));
+            
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                context.sendJSONResponse(code, encode(response));
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
         } catch (Exception e) {
             Logger.error("Failed to send JSON response: {}", e.getMessage());
             throw new SendRespondException("Failed to send JSON response", e);
@@ -257,7 +185,12 @@ public abstract class Bragi {
      */
     protected void sendHTMLResponse(ResponseCode code, String content) {
         try {
-            requestHandler.get().sendHTMLResponse(code, content);
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                context.sendHTMLResponse(code, content);
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
         } catch (Exception e) {
             Logger.error("Failed to send HTML response: {}", e.getMessage());
             throw new SendRespondException("Failed to send HTML response", e);
@@ -269,7 +202,13 @@ public abstract class Bragi {
 
     protected void sendHTMLResponse(String code, String content) {
         try {
-            requestHandler.get().sendHTMLResponse(ResponseCode.valueOf(code), content);
+            ResponseCode responseCode = ResponseCode.valueOf(code);
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                context.sendHTMLResponse(responseCode, content);
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
         } catch (Exception e) {
             Logger.error("Failed to send HTML response: {}", e.getMessage());
             throw new SendRespondException("Failed to send HTML response", e);
@@ -286,7 +225,8 @@ public abstract class Bragi {
      * @return
      */
     protected String getPathParam(String name) {
-        return requestHandler.get().getPathParams().get(name);
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null ? context.getPathParams().get(name) : null;
     }
 
     /**
@@ -296,7 +236,8 @@ public abstract class Bragi {
      * @return
      */
     protected String getQueryParam(String name) {
-        return requestHandler.get().getQueryParams() != null ? requestHandler.get().getQueryParams().get(name) : null;
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null && context.getQueryParams() != null ? context.getQueryParams().get(name) : null;
     }
 
     /**
@@ -306,7 +247,8 @@ public abstract class Bragi {
      * @return
      */
     protected String getBodyParam(String name) {
-        return requestHandler.get().getBodyParams() != null ? requestHandler.get().getBodyParams().get(name) : null;
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null && context.getBodyParams() != null ? context.getBodyParams().get(name) : null;
     }
 
     /**
@@ -315,7 +257,8 @@ public abstract class Bragi {
      * @return
      */
     protected boolean isHTMX() {
-        return requestHandler.get().isHTMX();
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null && context.isHTMX();
     }
 
     /**
@@ -324,45 +267,48 @@ public abstract class Bragi {
      * @return the client's IP address as a String, or null if the address cannot be determined.
      */
     protected String getClientIpAddress() {
-        return requestHandler.get().getClientIpAddress();
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null ? context.getClientIpAddress() : null;
     }
 
     /**
-     * Cleanup the request handler for the current thread.
+     * Cleanup the request context for the current thread.
      */
     protected void cleanup() {
         try {
-            requestHandler.remove();
+            requestContext.remove();
             Hermod.clearTemplateVariables(); // Also clean up template variables
         } catch (Exception e) {
-            Logger.error("Error cleaning up request handler: {}", e.getMessage());
+            Logger.error("Error cleaning up request context: {}", e.getMessage());
         }
     }
 
-
     /**
-     * Get the request handler for the current thread.
+     * Get the request context for the current thread.
      *
-     * @return The request handler for the current thread
+     * @return The request context for the current thread
      */
-    public Yggdrasill.RequestHandler getRequestHandler() {
-        return requestHandler.get();
+    public Yggdrasill.RequestContext getRequestContext() {
+        return requestContext.get();
     }
 
     /**
-     * Set the request handler and body path for the current thread.
+     * Set the request context for the current thread.
      *
-     * @param handler
+     * @param context
      */
-    public void setRequestHandler(Yggdrasill.RequestHandler handler) {
-        requestHandler.set(handler);
+    public void setRequestContext(Yggdrasill.RequestContext context) {
+        requestContext.set(context);
         if (bodyHtmlPath != null) {
             setBodyPath(bodyHtmlPath);
         }
     }
 
     protected void addCustomHeader(String name, String value) {
-        requestHandler.get().addCustomHeader(name, value);
+        Yggdrasill.RequestContext context = requestContext.get();
+        if (context != null) {
+            context.addCustomHeader(name, value);
+        }
     }
 
     /**
@@ -383,22 +329,9 @@ public abstract class Bragi {
     }
 
     public Map<String, String> getHeaders() {
-        return requestHandler.get().getHeaders();
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null ? context.getHeaders() : new HashMap<>();
     }
-
-//    public Optional<String> getCookieToken() {
-//        String cookieHeader = getHeaders().entrySet().stream()
-//                .filter(entry -> "Cookie".equalsIgnoreCase(entry.getKey()))
-//                .map(Map.Entry::getValue)
-//                .findFirst()
-//                .orElse(null);
-//
-//        if (cookieHeader != null) {
-//            return Optional.of(cookieHeader.split(";")[0].split("=")[1]);
-//        }
-//
-//        return Optional.empty();
-//    }
 
     /**
      * Render a template file without parameters.
@@ -451,7 +384,12 @@ public abstract class Bragi {
      */
     protected void sendBinaryResponse(ResponseCode code, String contentType, byte[] content) {
         try {
-            requestHandler.get().sendBinaryResponse(code, contentType, content);
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                context.sendBinaryResponse(code, contentType, content);
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
         } catch (Exception e) {
             Logger.error("Failed to send binary response: {}", e.getMessage());
             throw new SendRespondException("Failed to send binary response", e);
@@ -512,7 +450,7 @@ public abstract class Bragi {
             Logger.error("HTTP request failed: {}", e.getMessage());
             return APIResponse.error(
                     ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                    "Failed to fetch data from JAWS"
+                    "Failed to fetch data from API"
             );
         }
     }
@@ -609,27 +547,13 @@ public abstract class Bragi {
      */
     private <T> APIResponse<T> parseResponse(String response, JavaType responseType) {
         try {
-            try {
-                T directValue = getMapper().readValue(response, responseType);
-                return APIResponse.success(ResponseCode.OK.getCodeAndMessage(), directValue);
-            } catch (IOException e) {
-                // If direct parsing fails, try to parse as APIResponse
-                JavaType fullType = getMapper().getTypeFactory()
-                        .constructParametricType(APIResponse.class, responseType);
-                return getMapper().readValue(response, fullType);
-            }
+            return getMapper().readValue(response, responseType);
         } catch (JsonParseException e) {
-            Logger.error("Failed to parse JSON (invalid format): {}", e.getMessage());
-            return APIResponse.error(
-                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                    "Invalid JSON response from JAWS"
-            );
-        } catch (IOException e) {
-            Logger.error("Failed to parse JSON response: {}", e.getMessage());
-            return APIResponse.error(
-                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                    "Failed to process JAWS response"
-            );
+            Logger.error("Failed to parse API response as JSON: {}", e.getMessage());
+            return APIResponse.error(ResponseCode.BAD_REQUEST.getCodeAndMessage(), "Invalid JSON response");
+        } catch (Exception e) {
+            Logger.error("Failed to parse API response: {}", e.getMessage());
+            return APIResponse.error(ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(), "Failed to parse response");
         }
     }
 } 

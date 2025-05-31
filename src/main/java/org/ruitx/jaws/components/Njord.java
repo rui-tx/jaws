@@ -2,6 +2,7 @@ package org.ruitx.jaws.components;
 
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.RequestType;
+import org.tinylog.Logger;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -25,12 +26,17 @@ public class Njord {
         String controllerName = controller.getClass().getSimpleName();
         controllers.put(controllerName, controller);
 
+        Logger.info("Registering routes for controller: {}", controllerName);
+
         for (Method method : controller.getClass().getDeclaredMethods()) {
             if (method.isAnnotationPresent(Route.class)) {
                 Route route = method.getAnnotation(Route.class);
                 routes
                         .computeIfAbsent(route.endpoint(), k -> new HashMap<>())
                         .put(route.method(), method);
+                
+                Logger.info("Registered route: {} {} -> {}.{}", 
+                        route.method(), route.endpoint(), controllerName, method.getName());
             }
         }
     }

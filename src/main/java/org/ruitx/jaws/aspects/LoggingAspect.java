@@ -9,7 +9,7 @@ import org.tinylog.Logger;
 @Aspect
 public class LoggingAspect {
 
-    @Before("execution(* org.ruitx.jaws.components.Yggdrasill.start(..))")
+    @Before("execution(* org.ruitx.jaws.components.JettyServer.start(..))")
     public void serverStart(JoinPoint joinPoint) {
         Logger.info("JAWS started at port {} with www path: {}",
                 Yggdrasill.currentPort,
