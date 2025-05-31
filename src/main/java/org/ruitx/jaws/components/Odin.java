@@ -20,7 +20,8 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
  * <p>Odin is the main class that starts the Jaws server.</p>
  * <p>It is responsible for starting the components of the server.</p>
  * <ul>
- * <li>JettyServer is the server that listens for incoming connections (replaces Yggdrasill)</li>
+ * <li>Yggdrasill is the server that listens for incoming connections</li>
+ * <li>Bifrost is the middleware that processes the requests</li>
  * <li>Heimdall is a file watcher that watches for changes in the www path</li>
  * <li>Njord is a dynamic router that routes requests to controllers</li>
  * <li>Norns is a cron job that runs scheduled tasks</li>
@@ -30,7 +31,7 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
 public final class Odin {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static Yggdrasill jettyServer;
+    private static Yggdrasill yggdrasill;
 
     private Odin() {
     }
@@ -49,7 +50,7 @@ public final class Odin {
         createMimir();
         createNjord();
         List<Thread> threads = Arrays.asList(
-                createJettyServer(),
+                createYggdrasill(),
                 createHeimdall(),
                 createNorns());
 
@@ -72,23 +73,21 @@ public final class Odin {
         ROUTES.forEach(njord::registerRoutes);
     }
 
-    // JettyServer is the component that listens for incoming connections (replaces Yggdrasill)
-    private static Thread createJettyServer() {
+    // Yggdrasill is the component that listens for incoming connections
+    private static Thread createYggdrasill() {
         return new Thread(() -> {
-            jettyServer = new Yggdrasill(ApplicationConfig.PORT, ApplicationConfig.WWW_PATH);
+            yggdrasill = new Yggdrasill(ApplicationConfig.PORT, ApplicationConfig.WWW_PATH);
             
             // Add middleware from configuration
-            setupMiddleware(jettyServer);
+            createBifrost(yggdrasill);
             
-            jettyServer.start();
+            yggdrasill.start();
         });
     }
 
-    /**
-     * Sets up middleware for the JettyServer using the configuration.
-     */
-    private static void setupMiddleware(Yggdrasill server) {
-        MiddlewareConfig.MIDDLEWARE.forEach(server::addMiddleware);
+    // Bifrost is the middleware that processes the requests
+    private static void createBifrost(Yggdrasill yggdrasill) {
+        MiddlewareConfig.MIDDLEWARE.forEach(yggdrasill::addMiddleware);
         
         Logger.info("Configured {} middleware(s): {}", 
                 MiddlewareConfig.MIDDLEWARE.size(),
@@ -122,9 +121,9 @@ public final class Odin {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Logger.info("Shutdown hook triggered, stopping services...");
             
-            // Stop JettyServer gracefully
-            if (jettyServer != null) {
-                jettyServer.shutdown();
+            // Stop Yggdrasill gracefully
+            if (yggdrasill != null) {
+                yggdrasill.shutdown();
             }
             
             // Stop other services
@@ -143,11 +142,11 @@ public final class Odin {
     }
 
     /**
-     * Get the current JettyServer instance.
+     * Get the current Yggdrasill instance.
      * 
-     * @return the JettyServer instance, or null if not yet started
+     * @return the Yggdrasill instance, or null if not yet started
      */
-    public static Yggdrasill getJettyServer() {
-        return jettyServer;
+    public static Yggdrasill getYggdrasill() {
+        return yggdrasill;
     }
 }

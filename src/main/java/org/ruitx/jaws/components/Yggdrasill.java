@@ -17,7 +17,6 @@ import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.middleware.MiddlewareChainImpl;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
@@ -41,7 +40,7 @@ import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
 
 /**
  * Yggdrasill is the main HTTP server component
- * It integrates Jetty with JAWS' existing route system, middleware support,
+ * It integrates Jetty with JAWS' route system, middleware support,
  * and provides all request handling functionality.
  */
 public class Yggdrasill {
@@ -179,7 +178,7 @@ public class Yggdrasill {
     }
 
     /**
-     * Custom servlet that handles all dynamic requests and integrates with the existing JAWS route system.
+     * Custom servlet that handles all dynamic requests and integrates with the JAWS route system.
      */
     private class JawsServlet extends HttpServlet {
 
@@ -194,7 +193,7 @@ public class Yggdrasill {
                 RequestContext context = new RequestContext(request, response, resourcesPath);
 
                 // Execute middleware chain
-                MiddlewareChainImpl middlewareChain = new MiddlewareChainImpl(middlewares, context);
+                Bifrost middlewareChain = new Bifrost(middlewares, context);
                 boolean continueProcessing = middlewareChain.execute();
 
                 if (!continueProcessing) {
@@ -223,7 +222,7 @@ public class Yggdrasill {
         }
 
         /**
-         * Processes the request using JAWS' existing route system.
+         * Processes the request using JAWS' route system.
          */
         private void processRequest(RequestContext context) throws IOException {
             String method = context.request.getMethod().toUpperCase();
@@ -863,7 +862,7 @@ public class Yggdrasill {
             this.currentToken = null;
         }
 
-        // Getter methods for compatibility
+        // Getter methods 
         public String getCurrentToken() { return currentToken; }
         public Map<String, String> getQueryParams() { return queryParams; }
         public Map<String, String> getBodyParams() { return bodyParams; }
