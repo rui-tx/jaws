@@ -1,5 +1,7 @@
 package org.ruitx.jaws.components;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
@@ -11,22 +13,19 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.resource.ResourceFactory;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.exceptions.ProcessRequestException;
 import org.ruitx.jaws.exceptions.SendRespondException;
-import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.middleware.MiddlewareChainImpl;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.utils.ValidationUtils;
+import org.ruitx.jaws.utils.JawsValidation;
 import org.tinylog.Logger;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -39,8 +38,6 @@ import java.util.stream.Collectors;
 
 import static org.ruitx.jaws.strings.DefaultHTML.*;
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
-import static org.ruitx.jaws.strings.RequestType.*;
-import static org.ruitx.jaws.strings.ResponseCode.*;
 
 /**
  * Yggdrasill is the main HTTP server component
@@ -371,19 +368,19 @@ public class Yggdrasill {
                                     parameters[0] = mapper.readValue(requestBodyTrimmed, parameterTypes[0]);
                                     
                                     // Validate the deserialized object using Jakarta Bean Validation
-                                    APIResponse<String> validationError = ValidationUtils.validate(parameters[0]);
+                                    APIResponse<String> validationError = JawsValidation.validate(parameters[0]);
                                     if (validationError != null) {
                                         sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(validationError));
                                         return true;
                                     }
-                                } catch (com.fasterxml.jackson.core.JsonParseException e) {
+                                } catch (JsonParseException e) {
                                     APIResponse<String> response = APIResponse.error(
                                             ResponseCode.BAD_REQUEST.getCodeAndMessage(),
                                             "Invalid JSON format: " + e.getOriginalMessage()
                                     );
                                     sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
                                     return true;
-                                } catch (com.fasterxml.jackson.databind.JsonMappingException e) {
+                                } catch (JsonMappingException e) {
                                     // Handle unknown fields or mapping issues
                                     String originalMessage = e.getOriginalMessage();
                                     if (originalMessage != null && originalMessage.contains("Unrecognized field")) {

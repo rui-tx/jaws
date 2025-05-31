@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  * Utility class for Jakarta Bean Validation.
  * Provides methods to validate DTOs and convert validation errors to user-friendly messages.
  */
-public class ValidationUtils {
+public class JawsValidation {
     
     private static final ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
     private static final Validator validator = factory.getValidator();

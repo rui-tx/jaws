@@ -1,5 +1,7 @@
-package org.ruitx.jaws.components;
+package org.ruitx.jaws.middleware;
 
+import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.jaws.components.Yggdrasill.RequestContext;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
 
