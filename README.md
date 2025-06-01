@@ -144,60 +144,63 @@ changes
 
 ### Hermod
 
-```Hermod``` is responsible for HTML parsing. With it, we can have 2 things: Render partial HTML files inside another
-HTML
-file and have dynamic values inside HTML files.
+```Hermod``` is responsible for HTML template processing and page assembly using **Thymeleaf**. It provides powerful template processing capabilities with proper servlet context integration, URL resolution, template inheritance, and enhanced performance through caching.
 
-**Example**
+**Key Features:**
+- **Thymeleaf Integration**: Full Thymeleaf template engine support
+- **WebContext Support**: Proper servlet context for web applications  
+- **Template Caching**: Configurable caching with TTL for development and production modes
+- **Fragment Inclusion**: Support for Thymeleaf fragments and template inheritance
+- **URL Building**: Robust URL resolution with `@{/path}` syntax
+- **Utility Functions**: Built-in utility methods for common template operations
+- **Thread-Safe**: ThreadLocal template variables for concurrent request handling
 
-```html
-
-<main>
-    <section>
-        <a href="/backoffice/index.html">Jaws backoffice</a>
-    </section>
-    <section>
-        <h2>Quick Start Guide</h2>
-        {{renderPartial("docs/staticfiles.html")}}
-        <hr/>
-        {{renderPartial("docs/placeholders.html")}}
-    </section>
-</main>
-```
+**Template Syntax Examples:**
 
 ```html
-
-<a class="navbar-link is-arrowless">
-    <div class="is-user-avatar">
-        <img alt="{{currentUser}}" src="https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>JAWS - Just Another Web Server</title>
+</head>
+<body>
+    <!-- URL Building -->
+    <a th:href="@{/backoffice/login.html}">Backoffice</a>
+    
+    <!-- Fragment Inclusion -->
+    <div th:insert="~{docs/staticfiles.html}">Loading guide...</div>
+    
+    <!-- Variable Display -->
+    <p th:text="${apiPath}">API Path</p>
+    
+    <!-- Conditional Rendering -->
+    <div th:if="${currentUser}">
+        <span th:text="${currentUser}">User Name</span>
     </div>
-    <div class="is-user-name"><span>{{currentUser}}</span></div>
-    <span class="icon"><i class="mdi mdi-chevron-down"></i></span>
-</a>
+    
+</body>
+</html>
 ```
+
+**Controller Example**
 
 ```java
+    @AccessControl(login = true)
+    @Route(endpoint = "/backoffice", method = GET)
+    public void renderIndex() {
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-@AccessControl(login = true)
-@Route(endpoint = "/backoffice", method = GET)
-public void renderIndex() {
-    User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+        Map<String, String> context = new HashMap<>();
+        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
+        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
+                ? user.profilePicture()
+                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        setContext(context);
 
-    Map<String, String> context = new HashMap<>();
-    context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-    context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-    setContext(context);
-
-    sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
-}
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, DASHBOARD_PAGE));
+    }
 ```
-
-- ```renderPartial``` is a command that gets the partial inside ```{{}}``` and renders it. It is **recursive** so we
-  need
-  to be careful
-- ```{{currentUser}}``` is a variable that is set at the controller level. When ```Hermod``` is called, it will change
-  the variable inside the curly brackets with the value set in the context. In this example, the ```userId``` is also
-  available to be rendered in the HTML
 
 ### Mimir
 
