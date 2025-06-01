@@ -31,42 +31,93 @@
 
 .paste-header h1 {
     margin-bottom: 0.5rem;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 500;
+    color: #333;
 }
 
 .paste-meta {
     display: flex;
-    gap: 1rem;
-    font-size: 12px;
-    color: #888;
+    gap: 0.75rem;
+    font-size: 13px;
+    color: #666;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.paste-meta span {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid #e9ecef;
+}
+
+.privacy-badge.private {
+    background: #fff3cd;
+    color: #856404;
+    border-color: #ffeaa7;
+}
+
+.privacy-badge.public {
+    background: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+.password-badge {
+    background: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.expiration-badge {
+    background: #fff3cd;
+    color: #856404;
+    border-color: #ffeaa7;
 }
 
 .paste-content {
+    position: relative;
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
-    border-radius: 4px;
+    border-radius: 6px;
     margin-bottom: 1rem;
+    overflow: hidden;
 }
 
+/* Override Prism.js styles for better integration */
 .paste-content pre {
-    margin: 0;
-    padding: 1rem;
+    margin: 0 !important;
+    padding: 1rem !important;
+    background: transparent !important;
+    border-radius: 0 !important;
     overflow-x: auto;
-    white-space: pre;
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 .paste-content code {
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 14px;
-    line-height: 1.4;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace !important;
+    font-size: 14px !important;
+    background: transparent !important;
+}
+
+/* Line numbers styling */
+.line-numbers .line-numbers-rows {
+    border-right: 1px solid #ddd !important;
+    background: #f1f3f4 !important;
+}
+
+.line-numbers-rows > span:before {
+    color: #999 !important;
+    font-size: 13px !important;
 }
 
 .paste-actions {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .paste-actions button,
@@ -80,12 +131,79 @@
     cursor: pointer;
     text-decoration: none;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .paste-actions button:hover,
 .paste-actions a:hover {
     background-color: #f5f5f5;
     border-color: #999;
+    transform: translateY(-1px);
+}
+
+.copy-btn:hover {
+    background-color: #e6f3ff;
+    border-color: #b3d9ff;
+}
+
+.copy-url-btn:hover {
+    background-color: #f0f8ff;
+    border-color: #d1e7ff;
+}
+
+/* Language indicator in top-right corner */
+.paste-content[data-language]:before {
+    content: attr(data-language);
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #666;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .paste-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .paste-actions {
+        justify-content: center;
+    }
+    
+    .paste-header h1 {
+        font-size: 1.25rem;
+    }
+    
+    .paste-content pre {
+        font-size: 13px !important;
+    }
+}
+
+/* Dark mode support for syntax highlighting */
+@media (prefers-color-scheme: light) {
+    .paste-content {
+        background-color: #1e1e1e;
+        border-color: #333;
+    }
+    
+    .paste-content code {
+        color: #d4d4d4;
+    }
+    
+    .line-numbers .line-numbers-rows {
+        background: #252526 !important;
+        border-color: #333 !important;
+    }
 }
 </style>
 
@@ -96,10 +214,10 @@ function copyContent() {
         const content = contentElement.textContent;
         navigator.clipboard.writeText(content).then(() => {
             const button = document.querySelector('.copy-btn');
-            const originalText = button.textContent;
-            button.textContent = 'copied!';
+            const originalText = button.innerHTML;
+            button.innerHTML = '✅ copied!';
             setTimeout(() => {
-                button.textContent = originalText;
+                button.innerHTML = originalText;
             }, 1500);
         });
     }
@@ -108,10 +226,10 @@ function copyContent() {
 function copyUrl() {
     navigator.clipboard.writeText(window.location.href).then(() => {
         const button = document.querySelector('.copy-url-btn');
-        const originalText = button.textContent;
-        button.textContent = 'copied!';
+        const originalText = button.innerHTML;
+        button.innerHTML = '✅ copied!';
         setTimeout(() => {
-            button.textContent = originalText;
+            button.innerHTML = originalText;
         }, 1500);
     });
 }

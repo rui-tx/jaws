@@ -50,6 +50,8 @@ public class PasteService {
                     request.title() != null ? request.title().trim() : null,
                     request.language() != null ? request.language().trim() : null,
                     expiresAt,
+                    request.isPrivate(),
+                    passwordHash,
                     userId,
                     ipAddress,
                     userAgent

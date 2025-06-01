@@ -7,9 +7,79 @@
         placeholder="paste here..."
         autofocus></textarea>
     
-    <div class="actions">
-        <button type="submit">paste</button>
-        <button type="button" onclick="clearContent()">clear</button>
+    <div class="form-options">
+        <div class="basic-actions">
+            <button type="submit">paste</button>
+            <button type="button" onclick="clearContent()">clear</button>
+            <button type="button" id="toggle-options" onclick="toggleMoreOptions()">more options</button>
+        </div>
+        
+        <!-- More Options Panel -->
+        <div id="more-options" class="more-options hidden">
+            <div class="options-grid">
+                <div class="option-group">
+                    <label for="paste-title">Title (optional)</label>
+                    <input type="text" id="paste-title" name="title" placeholder="Give your paste a title..." maxlength="200">
+                </div>
+                
+                <div class="option-group">
+                    <label for="paste-language">Language</label>
+                    <select id="paste-language" name="language">
+                        <option value="">Auto-detect</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="c">C</option>
+                        <option value="csharp">C#</option>
+                        <option value="php">PHP</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="kotlin">Kotlin</option>
+                        <option value="swift">Swift</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="sql">SQL</option>
+                        <option value="bash">Bash</option>
+                        <option value="powershell">PowerShell</option>
+                        <option value="json">JSON</option>
+                        <option value="xml">XML</option>
+                        <option value="yaml">YAML</option>
+                        <option value="markdown">Markdown</option>
+                        <option value="dockerfile">Dockerfile</option>
+                        <option value="plaintext">Plain Text</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label for="paste-expiration">Expiration</label>
+                    <select id="paste-expiration" name="expiresInHours">
+                        <option value="">Never expires</option>
+                        <option value="1">1 Hour</option>
+                        <option value="6">6 Hours</option>
+                        <option value="24">1 Day</option>
+                        <option value="168">1 Week</option>
+                        <option value="720">1 Month</option>
+                        <option value="8760">1 Year</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label for="paste-password">Password (optional)</label>
+                    <input type="password" id="paste-password" name="password" placeholder="Protect with password..." maxlength="100">
+                </div>
+                
+                <div class="option-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="paste-private" name="isPrivate">
+                        <span class="checkmark"></span>
+                        Make private (unlisted)
+                    </label>
+                </div>
+            </div>
+        </div>
     </div>
 </form>
 
@@ -25,6 +95,20 @@
 -->
 
 <script>
+// More options toggle
+function toggleMoreOptions() {
+    const moreOptions = document.getElementById('more-options');
+    const toggleButton = document.getElementById('toggle-options');
+    
+    if (moreOptions.classList.contains('hidden')) {
+        moreOptions.classList.remove('hidden');
+        toggleButton.textContent = 'fewer options';
+    } else {
+        moreOptions.classList.add('hidden');
+        toggleButton.textContent = 'more options';
+    }
+}
+
 // Drag and drop functionality
 let dragCounter = 0;
 
@@ -58,6 +142,8 @@ document.addEventListener('drop', function(e) {
         reader.onload = function(e) {
             if (file.type.startsWith('text/')) {
                 document.getElementById('paste-content').value = e.target.result;
+                // Try to auto-detect language from file extension
+                autoDetectLanguage(file.name);
             } else {
                 // For binary files, you'd typically upload directly
                 alert('Binary file detected: ' + file.name + '\nThis would be uploaded directly in a real implementation.');
@@ -68,6 +154,41 @@ document.addEventListener('drop', function(e) {
         }
     }
 });
+
+// Auto-detect language from file extension
+function autoDetectLanguage(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const languageMap = {
+        'js': 'javascript',
+        'ts': 'typescript',
+        'py': 'python',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c',
+        'cs': 'csharp',
+        'php': 'php',
+        'rb': 'ruby',
+        'go': 'go',
+        'rs': 'rust',
+        'kt': 'kotlin',
+        'swift': 'swift',
+        'html': 'html',
+        'css': 'css',
+        'sql': 'sql',
+        'sh': 'bash',
+        'ps1': 'powershell',
+        'json': 'json',
+        'xml': 'xml',
+        'yml': 'yaml',
+        'yaml': 'yaml',
+        'md': 'markdown',
+        'dockerfile': 'dockerfile'
+    };
+    
+    if (languageMap[ext]) {
+        document.getElementById('paste-language').value = languageMap[ext];
+    }
+}
 
 // Clipboard paste for images
 document.addEventListener('paste', function(e) {
@@ -91,6 +212,14 @@ document.getElementById('paste-form').addEventListener('submit', function(e) {
         return;
     }
     
+    // Collect form data
+    const title = document.getElementById('paste-title').value.trim() || null;
+    const language = document.getElementById('paste-language').value || null;
+    const expiresInHours = document.getElementById('paste-expiration').value ? 
+        parseInt(document.getElementById('paste-expiration').value) : null;
+    const isPrivate = document.getElementById('paste-private').checked;
+    const password = document.getElementById('paste-password').value.trim() || null;
+    
     // Disable form during submission
     const submitButton = document.querySelector('button[type="submit"]');
     const originalText = submitButton.textContent;
@@ -105,11 +234,11 @@ document.getElementById('paste-form').addEventListener('submit', function(e) {
         },
         body: JSON.stringify({
             content: content,
-            title: null,
-            language: null,
-            expiresInHours: null,
-            isPrivate: false,
-            password: null
+            title: title,
+            language: language,
+            expiresInHours: expiresInHours,
+            isPrivate: isPrivate,
+            password: password
         })
     })
     .then(response => response.json())
@@ -117,7 +246,12 @@ document.getElementById('paste-form').addEventListener('submit', function(e) {
         if (data.success) {
             // The paste ID is in the data field
             const pasteId = data.data;
-            const shareUrl = `${window.location.origin}/pasteit/${pasteId}`;
+            let shareUrl = `${window.location.origin}/pasteit/${pasteId}`;
+            
+            // Add password to URL if provided (for convenience)
+            if (password) {
+                shareUrl += `?password=${encodeURIComponent(password)}`;
+            }
             
             document.getElementById('share-url').value = shareUrl;
             document.getElementById('result').style.display = 'block';
@@ -143,6 +277,11 @@ document.getElementById('paste-form').addEventListener('submit', function(e) {
 
 function clearContent() {
     document.getElementById('paste-content').value = '';
+    document.getElementById('paste-title').value = '';
+    document.getElementById('paste-language').value = '';
+    document.getElementById('paste-expiration').value = '';
+    document.getElementById('paste-password').value = '';
+    document.getElementById('paste-private').checked = false;
     document.getElementById('result').style.display = 'none';
     document.getElementById('paste-content').focus();
 }

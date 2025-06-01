@@ -17,17 +17,20 @@ public class PasteRepo {
     }
 
     public Optional<String> createPaste(String id, String content, String title, String language, 
-                                      Long expiresAt, Integer userId, String ipAddress, String userAgent) {
+                                      Long expiresAt, Boolean isPrivate, String passwordHash,
+                                      Integer userId, String ipAddress, String userAgent) {
         long now = Instant.now().getEpochSecond();
         
         int result = db.executeSql(
                 """
                 INSERT INTO PASTE (
-                    id, content, title, language, expires_at, user_id, 
-                    ip_address, user_agent, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, content, title, language, expires_at, is_private, password_hash,
+                    user_id, ip_address, user_agent, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                id, content, title, language, expiresAt, userId, ipAddress, userAgent, now
+                id, content, title, language, expiresAt, 
+                isPrivate != null && isPrivate ? 1 : 0, passwordHash,
+                userId, ipAddress, userAgent, now
         );
         
         return result > 0 ? Optional.of(id) : Optional.empty();
