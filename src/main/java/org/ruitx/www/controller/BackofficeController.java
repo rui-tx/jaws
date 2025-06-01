@@ -1,6 +1,7 @@
 package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
+import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
@@ -15,6 +16,7 @@ import org.ruitx.www.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ public class BackofficeController extends Bragi {
 
     private static final String BASE_HTML_PATH = "backoffice/index.html";
     private static final String BODY_HTML_PATH = "backoffice/_body.html";
+    private static final String DASHBOARD_PAGE = "backoffice/partials/dashboard.html";
     private static final String SETTINGS_PAGE = "backoffice/partials/settings.html";
     private static final String USERS_PAGE = "backoffice/partials/users.html";
     private static final String USER_PROFILE_PAGE = "backoffice/partials/profile.html";
@@ -55,7 +58,7 @@ public class BackofficeController extends Bragi {
                 : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, BODY_HTML_PATH));
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, DASHBOARD_PAGE));
     }
 
     @AccessControl(login = true)

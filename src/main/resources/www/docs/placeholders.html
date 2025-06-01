@@ -1,25 +1,50 @@
 <div id="placeholders">
     <article>
-        <h3>Placeholders</h3>
-        <p>You can use placeholders in the HTML file to display dynamic information. Placeholders are enclosed in
-            double curly braces and are replaced with the actual value when the HTML file is parsed.</p>
+        <h3>Template Variables & Placeholders</h3>
+        <p>JAWS now uses <strong>Thymeleaf</strong> as its template engine, providing robust and powerful templating capabilities. 
+           You can use Thymeleaf expressions to display dynamic information and include partial templates.</p>
 
-        <h4>Placeholders List</h4>
+        <h4>Modern Thymeleaf Syntax</h4>
         <ul>
-            <li><strong><code>renderPartial("partial/header.html")</code></strong>: render a partial HTML file.</li>
-            <li><strong><code>getPathFor("file.txt")</code></strong>: display the path for a file.</li>
-            <li><strong><code>{{variable}}</code></strong>: display the variable set in the <strong>context</strong> at
-                the controller
-                level.
-            </li>
+            <li><strong><code>th:insert="~{docs/header.html}"</code></strong>: Insert a partial HTML template.</li>
+            <li><strong><code>th:text="${variable}"</code></strong>: Display text content safely (HTML escaped).</li>
+            <li><strong><code>th:utext="${rawHtml}"</code></strong>: Display raw HTML content (unescaped).</li>
+            <li><strong><code>th:href="@{/path/to/page}"</code></strong>: Generate URLs with context path.</li>
+            <li><strong><code>th:if="${condition}"</code></strong>: Conditional rendering.</li>
+            <li><strong><code>th:each="item : ${list}"</code></strong>: Loop through collections.</li>
         </ul>
 
-        <h4>Context</h4>
-        Context can be used at the controller level to pass data to the HTML when rendered. For example, to pass a
-        variable to the HTML, you can do the following:
-        <pre><code>context.put("variable", "value");</code></pre>
-        Then, in the HTML file, you can use the variable like this:
-        <pre><code>{{variable}}</code></pre>
+        <h4>Available Utility Objects</h4>
+        <ul>
+            <li><strong><code>${utils.renderPartial('path/to/partial.html')}</code></strong>: Render a partial HTML file.</li>
+            <li><strong><code>${utils.getPathFor('file.txt')}</code></strong>: Get the full URL path for a file.</li>
+            <li><strong><code>${utils.getConfig('url')}</code></strong>: Get application configuration values.</li>
+        </ul>
 
+        <h4>Legacy Syntax (Still Supported)</h4>
+        <p>For backward compatibility, the old syntax is automatically converted:</p>
+        <ul>
+            <li><strong><code>{{renderPartial("partial/header.html")}}</code></strong> → <code>th:insert</code></li>
+            <li><strong><code>{{variable}}</code></strong> → <code>th:text="${variable}"</code></li>
+        </ul>
+
+        <h4>Setting Variables in Controllers</h4>
+        <p>You can pass data to templates from your controllers using the Hermod utility methods:</p>
+        <pre><code>// Set template variables
+Hermod.setTemplateVariable("title", "Welcome to JAWS");
+Hermod.setTemplateVariable("user", userObject);
+
+// In template, access like:
+// &lt;h1 th:text="${title}"&gt;&lt;/h1&gt;
+// &lt;span th:text="${user.name}"&gt;&lt;/span&gt;</code></pre>
+
+        <h4>Request Parameters</h4>
+        <p>Query and body parameters are automatically available in templates:</p>
+        <pre><code>// Access individual parameters
+&lt;span th:text="${paramName}"&gt;&lt;/span&gt;
+
+// Or access parameter maps
+&lt;span th:text="${queryParams.paramName}"&gt;&lt;/span&gt;
+&lt;span th:text="${bodyParams.paramName}"&gt;&lt;/span&gt;</code></pre>
     </article>
 </div>

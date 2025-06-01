@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
@@ -18,23 +18,25 @@
 
 <main>
     <section>
-        <a href="/backoffice/login.html">Jaws backoffice</a>
+        <a th:href="@{/backoffice/login.html}">Backoffice</a>
+        <a th:href="@{/pasteit}">Pasteit</a>
+        <a th:href="@{/base64viewer.html}">Base64 Viewer</a>
     </section>
     <section>
         <h2>Quick Start Guide</h2>
-        {{renderPartial("docs/staticfiles.html")}}
+        <div th:insert="~{docs/staticfiles.html}">Loading static files guide...</div>
         <hr/>
-        {{renderPartial("docs/placeholders.html")}}
+        <div th:insert="~{docs/placeholders.html}">Loading placeholders guide...</div>
         <hr/>
-        {{renderPartial("docs/dynamicsroutes.html")}}
+        <div th:insert="~{docs/dynamicsroutes.html}">Loading dynamic routes guide...</div>
         <hr/>
-        {{renderPartial("docs/basecontroller.html")}}
+        <div th:insert="~{docs/basecontroller.html}">Loading base controller guide...</div>
         <hr/>
-        {{renderPartial("docs/authsystem.html")}}
+        <div th:insert="~{docs/authsystem.html}">Loading auth system guide...</div>
         <hr/>
-        {{renderPartial("docs/dbsystem.html")}}
+        <div th:insert="~{docs/dbsystem.html}">Loading database system guide...</div>
         <hr/>
-        {{renderPartial("docs/cronservice.html")}}
+        <div th:insert="~{docs/cronservice.html}">Loading cron service guide...</div>
     </section>
 </main>
 

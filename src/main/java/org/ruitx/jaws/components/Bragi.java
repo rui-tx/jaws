@@ -91,7 +91,8 @@ public abstract class Bragi {
      * @return the variable value or null if not found
      */
     protected String getTemplateVariable(String name) {
-        return Hermod.getTemplateVariable(name);
+        Object value = Hermod.getTemplateVariable(name);
+        return value != null ? value.toString() : null;
     }
 
     /**
@@ -312,16 +313,19 @@ public abstract class Bragi {
     }
 
     /**
-     * Render a template file with parameters.
+     * Render a template with parameters replaced.
      *
      * @param templatePath The path to the template file
-     * @param params       The parameters to be used in the template
      * @return The rendered template with parameters replaced
      */
-    protected String renderTemplate(String templatePath, Map<String, String> params) {
+    protected String renderTemplate(String templatePath) {
         try {
-            String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
-            return Hermod.processTemplate(templateHtml, params, null);
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                return Hermod.renderTemplate(templatePath, context.getRequest(), context.getResponse());
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
         } catch (IOException e) {
             Logger.error("Failed to render template: {}", e.getMessage());
             throw new SendRespondException("Failed to render template", e);
@@ -334,16 +338,6 @@ public abstract class Bragi {
     }
 
     /**
-     * Render a template file without parameters.
-     *
-     * @param templatePath The path to the template file
-     * @return The rendered template
-     */
-    protected String renderTemplate(String templatePath) {
-        return renderTemplate(templatePath, new HashMap<>());
-    }
-
-    /**
      * Assemble a full page by combining a base template with a partial template.
      *
      * @param baseTemplatePath    The path to the base template file
@@ -352,26 +346,16 @@ public abstract class Bragi {
      */
     protected String assemblePage(String baseTemplatePath, String partialTemplatePath) {
         try {
-            return Hermod.assemblePage(baseTemplatePath, partialTemplatePath);
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                return Hermod.assemblePage(baseTemplatePath, partialTemplatePath, 
+                                         context.getRequest(), context.getResponse());
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
         } catch (IOException e) {
             Logger.error("Failed to assemble page: {}", e.getMessage());
             throw new SendRespondException("Failed to assemble page", e);
-        }
-    }
-
-    /**
-     * Assemble a full page by combining a base template with raw content.
-     *
-     * @param baseTemplatePath The path to the base template file
-     * @param content          The raw content to insert
-     * @return The assembled page
-     */
-    protected String assemblePageWithContent(String baseTemplatePath, String content) {
-        try {
-            return Hermod.assemblePageWithContent(baseTemplatePath, content);
-        } catch (IOException e) {
-            Logger.error("Failed to assemble page with content: {}", e.getMessage());
-            throw new SendRespondException("Failed to assemble page with content", e);
         }
     }
 

@@ -17,6 +17,7 @@ import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.strings.DefaultHTML;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
@@ -551,7 +552,7 @@ public class Yggdrasill {
                 context.response.setHeader(name, value));
             
             // Process templates through Hermod
-            String processedHTML = Hermod.processTemplate(body, context.queryParams, context.bodyParams);
+            String processedHTML = Hermod.processTemplate(body, context.queryParams, context.bodyParams, context.request, context.response);
             processedHTML += "\n\n"; // Prevent truncation
             
             context.response.getWriter().write(processedHTML);
@@ -585,7 +586,27 @@ public class Yggdrasill {
             try {
                 context.response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 context.response.setContentType("text/html; charset=UTF-8");
-                context.response.getWriter().write(HTML_404_NOT_FOUND);
+                // get custom 404 page from application.properties if its set
+                String custom404Page = ApplicationConfig.CUSTOM_PAGE_PATH_404;
+                if (custom404Page != null && !custom404Page.isEmpty()) {
+                    // Extract only the filename since Hermod already has WWW_PATH as prefix
+                    // Convert full path like "src/main/resources/www/404.html" to just "404.html"
+                    String templateName = custom404Page;
+                    if (custom404Page.contains("/")) {
+                        templateName = custom404Page.substring(custom404Page.lastIndexOf("/") + 1);
+                    }
+                    
+                    String processedHTML = Hermod.processTemplate(
+                        templateName, 
+                        context.queryParams, 
+                        context.bodyParams, 
+                        context.request, 
+                        context.response
+                    );
+                    context.response.getWriter().write(processedHTML);
+                } else {
+                    context.response.getWriter().write(DefaultHTML.HTML_404_NOT_FOUND);
+                }
                 context.response.getWriter().flush();
             } catch (IOException e) {
                 Logger.error("Error sending 404 response: {}", e.getMessage());
@@ -608,7 +629,34 @@ public class Yggdrasill {
                     context.response.getWriter().write(Bragi.encode(response));
                 } else {
                     context.response.setContentType("text/html; charset=UTF-8");
-                    context.response.getWriter().write(HTML_401_UNAUTHORIZED);
+                    
+                    // Check for custom 401 page
+                    String custom401Page = ApplicationConfig.CUSTOM_PAGE_PATH_401;
+                    if (custom401Page != null && !custom401Page.isEmpty()) {
+                        try {
+                            // Extract only the filename since Hermod already has WWW_PATH as prefix
+                            // Convert full path like "src/main/resources/www/401.html" to just "401.html"
+                            String templateName = custom401Page;
+                            if (custom401Page.contains("/")) {
+                                templateName = custom401Page.substring(custom401Page.lastIndexOf("/") + 1);
+                            }
+                            
+                            String processedHTML = Hermod.processTemplate(
+                                templateName,
+                                context.queryParams,
+                                context.bodyParams,
+                                context.request,
+                                context.response
+                            );
+                            context.response.getWriter().write(processedHTML);
+                        } catch (Exception e) {
+                            Logger.error("Error processing custom 401 template: {}", e.getMessage());
+                            // Fall back to default
+                            context.response.getWriter().write(HTML_401_UNAUTHORIZED);
+                        }
+                    } else {
+                        context.response.getWriter().write(HTML_401_UNAUTHORIZED);
+                    }
                 }
                 
                 context.response.getWriter().flush();
@@ -644,11 +692,17 @@ public class Yggdrasill {
             }
 
             if ("text/html".equals(contentType)) {
-                // Process HTML templates
+                // Get relative path from the resources directory for Thymeleaf
+                Path resourcesPath = Paths.get(context.resourcesPath);
+                String relativePath = resourcesPath.relativize(filePath).toString();
+                
+                // Process HTML templates using the relative file path
                 String processedHTML = Hermod.processTemplate(
-                    new String(content), 
+                    relativePath, 
                     context.queryParams, 
-                    context.bodyParams
+                    context.bodyParams,
+                    context.request,
+                    context.response
                 );
                 processedHTML += "\n\n"; // Prevent truncation
                 
@@ -918,7 +972,7 @@ public class Yggdrasill {
             customResponseHeaders.forEach((name, value) -> response.setHeader(name, value));
             
             // Process templates through Hermod
-            String processedHTML = Hermod.processTemplate(body, queryParams, bodyParams);
+            String processedHTML = Hermod.processTemplate(body, queryParams, bodyParams, request, response);
             processedHTML += "\n\n"; // Prevent truncation
             
             response.getWriter().write(processedHTML);

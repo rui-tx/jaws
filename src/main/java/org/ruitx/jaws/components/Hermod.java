@@ -1,24 +1,28 @@
 package org.ruitx.jaws.components;
 
-import org.ruitx.jaws.commands.CommandList;
-import org.ruitx.jaws.interfaces.Command;
+import org.ruitx.jaws.utils.ThymeleafUtils;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.WebContext;
+import org.thymeleaf.templateresolver.FileTemplateResolver;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 import org.tinylog.Logger;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
+import static org.ruitx.jaws.configs.ApplicationConfig.HERMOD_DEVELOPMENT_MODE;
+import static org.ruitx.jaws.configs.ApplicationConfig.HERMOD_TEMPLATE_CACHE_TTL;
 
 /**
- * Hermes is a utility class that handles template processing and page assembly.
- * It provides methods for processing templates with variables, assembling full pages,
+ * Hermod is a utility class that handles template processing and page assembly using Thymeleaf.
+ * It provides methods for processing templates with variables, assembling full pages, 
  * and rendering template files.
  */
 public final class Hermod {
@@ -27,11 +31,46 @@ public final class Hermod {
     private static final ThreadLocal<String> BODY_PATH = ThreadLocal.withInitial(() -> DEFAULT_BODY_PATH);
 
     // Global template variables that persist across requests
-    private static final ThreadLocal<Map<String, String>> TEMPLATE_VARIABLES =
+    private static final ThreadLocal<Map<String, Object>> TEMPLATE_VARIABLES =
             ThreadLocal.withInitial(HashMap::new);
 
+    // Thymeleaf template engine - configured once and reused
+    private static final TemplateEngine templateEngine = createTemplateEngine();
+
+    // Utility objects for templates
+    private static final ThymeleafUtils utils = new ThymeleafUtils();
 
     private Hermod() {
+    }
+
+    /**
+     * Create and configure the Thymeleaf template engine.
+     */
+    private static TemplateEngine createTemplateEngine() {
+        TemplateEngine engine = new TemplateEngine();
+        
+        // Configure file template resolver for loading templates from the file system
+        FileTemplateResolver fileResolver = new FileTemplateResolver();
+        fileResolver.setPrefix(WWW_PATH);
+        fileResolver.setSuffix("");
+        fileResolver.setTemplateMode(TemplateMode.HTML);
+        
+        // Configure caching based on development mode
+        if (HERMOD_DEVELOPMENT_MODE) {
+            fileResolver.setCacheable(false);
+            fileResolver.setCacheTTLMs(0L);
+            Logger.trace("Hermod template caching disabled for live reload");
+        } else {
+            fileResolver.setCacheable(true);
+            fileResolver.setCacheTTLMs(HERMOD_TEMPLATE_CACHE_TTL);
+            Logger.trace("Hermod template caching enabled (TTL: " + HERMOD_TEMPLATE_CACHE_TTL + "ms)");
+        }
+        
+        fileResolver.setOrder(1);
+        
+        engine.addTemplateResolver(fileResolver);
+        
+        return engine;
     }
 
     /**
@@ -40,7 +79,7 @@ public final class Hermod {
      * @param name  the variable name
      * @param value the variable value
      */
-    public static void setTemplateVariable(String name, String value) {
+    public static void setTemplateVariable(String name, Object value) {
         if (name != null && !name.isEmpty()) {
             TEMPLATE_VARIABLES.get().put(name, value);
         }
@@ -52,7 +91,7 @@ public final class Hermod {
      * @param name the variable name
      * @return the variable value or null if not found
      */
-    public static String getTemplateVariable(String name) {
+    public static Object getTemplateVariable(String name) {
         return TEMPLATE_VARIABLES.get().get(name);
     }
 
@@ -74,7 +113,6 @@ public final class Hermod {
         // Important to prevent memory leaks in thread pools
         TEMPLATE_VARIABLES.remove();
     }
-
 
     /**
      * Get the body path for the default body template.
@@ -101,169 +139,172 @@ public final class Hermod {
     }
 
     /**
-     * Process a template file, replacing placeholders with actual values.
+     * Process a template file using Thymeleaf.
      *
      * @param templateFile The template file to process
+     * @param request      The HTTP servlet request
+     * @param response     The HTTP servlet response
      * @return the processed template
      * @throws IOException if there's an error reading the template file
      */
-    public static String processTemplate(File templateFile) throws IOException {
-        String template = new String(Files.readAllBytes(Path.of(templateFile.getPath())));
-        return processTemplate(template);
+    public static String processTemplate(File templateFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String templatePath = templateFile.getName();
+        return processTemplate(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response);
     }
 
     /**
-     * Process a template string, replacing placeholders with actual values.
+     * Process a template using the template path.
      *
-     * @param template The template string to process
+     * @param templatePath The template path to process
+     * @param request      The HTTP servlet request
+     * @param response     The HTTP servlet response
      * @return the processed template
      * @throws IOException if there's an error processing the template
      */
-    public static String processTemplate(String template) throws IOException {
-        return processTemplate(template, new LinkedHashMap<>(), new LinkedHashMap<>());
+    public static String processTemplate(String templatePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        return processTemplate(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response);
     }
 
     /**
-     * Process a template string with parameters, replacing placeholders with actual values.
+     * Process a template string with parameters using Thymeleaf.
+     * If the template parameter looks like a file path, treat it as such.
+     * Otherwise, fall back to reading it as a file path.
      *
-     * @param template    The template string to process
+     * @param template    The template path or content to process
      * @param queryParams The query parameters map
      * @param bodyParams  The body parameters map
+     * @param request     The HTTP servlet request
+     * @param response    The HTTP servlet response
      * @return the processed template
      * @throws IOException if there's an error processing the template
      */
-    public static String processTemplate(String template, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
+    public static String processTemplate(String template, Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response) throws IOException {
         if (queryParams == null) {
             queryParams = new LinkedHashMap<>();
         }
         if (bodyParams == null) {
             bodyParams = new LinkedHashMap<>();
         }
-        return processTemplateWithParams(template, queryParams, bodyParams);
-    }
-
-    /**
-     * Core template processing method that handles variable substitution and command execution.
-     */
-    private static String processTemplateWithParams(String template, Map<String, String> queryParams, Map<String, String> bodyParams) {
-        String regex = "\\{\\{([^}]*)}}";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(template);
-        StringBuilder result = new StringBuilder();
-
-        Map<String, String> requestParams = new LinkedHashMap<>(queryParams);
-        requestParams.putAll(bodyParams);
-
-        while (matcher.find()) {
-            String placeholderContent = matcher.group(1).trim();
-            if (placeholderContent.isEmpty()) {
-                matcher.appendReplacement(result, "{{}}");
-                continue;
-            }
-
-            String[] parts = placeholderContent.split("\\s*\\(", 2);
-            String commandName = parts[0].trim();
-            Command commandExecutor = CommandList.LIST.get(commandName);
-
-            String replacement;
-            if (commandExecutor != null) {
-                replacement = commandExecutor.execute(placeholderContent);
-            } else {
-                // First check request parameters
-                String paramValue = requestParams.get(placeholderContent);
-                if (paramValue != null) {
-                    replacement = paramValue;
-                }
-                // Then check thread-local template variables
-                else if (TEMPLATE_VARIABLES.get().containsKey(placeholderContent)) {
-                    replacement = TEMPLATE_VARIABLES.get().get(placeholderContent);
-                } else {
-                    if (placeholderContent.equals("_BODY_CONTENT_")) {
-                        try {
-                            synchronized (Hermod.class) {
-                                if (getBodyPath() == null || getBodyPath().isEmpty()) {
-                                    setBodyPath(DEFAULT_BODY_PATH);
-                                }
-                                replacement = processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + getBodyPath()))));
-                            }
-                        } catch (IOException e) {
-                            Logger.error("Error reading default body content: " + e.getMessage());
-                            replacement = "{{" + placeholderContent + "}}";
-                        }
-                    } else {
-                        replacement = "{{" + placeholderContent + "}}";
-                    }
-                }
-            }
-
-            // Use a safe replacement method that doesn't interpret $ as group references
-            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+        
+        // If template looks like a file path (doesn't contain HTML tags), use it as a template path
+        if (!template.contains("<") && !template.contains(">")) {
+            return processThymeleafTemplate(template, queryParams, bodyParams, request, response);
         }
-
-        matcher.appendTail(result);
-        return result.toString();
+        
+        // Otherwise, just return content
+        Logger.trace("Received template content. Template: {}", template);
+        return template;
     }
 
-
     /**
-     * Escape dollar signs in the input string for regex processing.
-     * This method now also handles potential regex group references.
+     * Process a template using Thymeleaf engine.
      */
-    private static String escapeDollarSigns(String input) {
-        if (input == null) {
-            return "";
+    private static String processThymeleafTemplate(String templatePath, Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response) {
+        try {
+            // Create Thymeleaf web context
+            WebContext context = createThymeleafWebContext(queryParams, bodyParams, request, response);
+            
+            // Process the template using the file path
+            return templateEngine.process(templatePath, context);
+            
+        } catch (Exception e) {
+            Logger.error("Error processing Thymeleaf template '{}': {}", templatePath, e.getMessage());
+            return "Error processing template: " + templatePath;
         }
-        String escaped = input.replaceAll("\\$(\\d+)", "\\\\\\$$1");
-        return escaped.replaceAll("\\$", "\\\\\\$");
     }
 
     /**
-     * Restore escaped dollar signs in the output string.
-     * This method is now only used for command execution results.
+     * Create a Thymeleaf web context with all available variables.
      */
-    private static String restoreDollarSigns(String input) {
-        if (input == null) {
-            return "";
+    private static WebContext createThymeleafWebContext(Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response) {
+        // Create the web application instance
+        JakartaServletWebApplication application = JakartaServletWebApplication.buildApplication(request.getServletContext());
+        
+        // Create web context with proper servlet request/response
+        WebContext context = new WebContext(application.buildExchange(request, response));
+        
+        // Add template variables
+        context.setVariables(TEMPLATE_VARIABLES.get());
+        
+        // Add request parameters
+        context.setVariable("queryParams", queryParams);
+        context.setVariable("bodyParams", bodyParams);
+        
+        // Add utility objects
+        context.setVariable("utils", utils);
+        
+        // Add individual parameters to root context for easy access
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            context.setVariable(entry.getKey(), entry.getValue());
         }
-        return input.replaceAll("\\\\\\$", "\\$");
+        for (Map.Entry<String, String> entry : bodyParams.entrySet()) {
+            context.setVariable(entry.getKey(), entry.getValue());
+        }
+        
+        return context;
     }
 
     /**
-     * Assemble a full page by combining a base template with a partial template.
+     * Assemble a full page by combining a base template with a partial template using Thymeleaf.
      *
      * @param baseTemplatePath    the path to the base template file
      * @param partialTemplatePath the path to the partial template file
+     * @param request            The HTTP servlet request
+     * @param response           The HTTP servlet response
      * @return the assembled page
      * @throws IOException if there's an error reading or processing the templates
      */
-    public static String assemblePage(String baseTemplatePath, String partialTemplatePath) throws IOException {
-        HashMap<String, String> params = new HashMap<>();
-        params.put("_BODY_CONTENT_", "{{renderPartial(\"" + partialTemplatePath + "\")}}");
-        return processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + baseTemplatePath))), params, null);
+    public static String assemblePage(String baseTemplatePath, String partialTemplatePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
+            context.setVariable("bodyContent", partialTemplatePath);
+            
+            return templateEngine.process(baseTemplatePath, context);
+        } catch (Exception e) {
+            Logger.error("Error assembling page: " + e.getMessage(), e);
+            throw new IOException("Failed to assemble page", e);
+        }
     }
 
     /**
-     * Assemble a full page by combining a base template with raw content.
+     * Assemble a full page by combining a base template with raw content using Thymeleaf.
      *
      * @param baseTemplatePath the path to the base template file
      * @param content          the raw content to insert
+     * @param request         The HTTP servlet request
+     * @param response        The HTTP servlet response
      * @return the assembled page
      * @throws IOException if there's an error reading or processing the template
      */
-    public static String assemblePageWithContent(String baseTemplatePath, String content) throws IOException {
-        HashMap<String, String> params = new HashMap<>();
-        params.put("_BODY_CONTENT_", content);
-        return processTemplate(new String(Files.readAllBytes(Path.of(WWW_PATH + baseTemplatePath))), params, null);
+    public static String assemblePageWithContent(String baseTemplatePath, String content, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
+            context.setVariable("bodyContent", content);
+            
+            return templateEngine.process(baseTemplatePath, context);
+        } catch (Exception e) {
+            Logger.error("Error assembling page with content: " + e.getMessage(), e);
+            throw new IOException("Failed to assemble page with content", e);
+        }
     }
 
     /**
-     * Render a template file.
+     * Render a template file using Thymeleaf.
      *
      * @param templatePath the path to the template file
+     * @param request     The HTTP servlet request
+     * @param response    The HTTP servlet response
      * @return the rendered template
      * @throws IOException if there's an error reading or processing the template
      */
-    public static String renderTemplate(String templatePath) throws IOException {
-        return "{{renderPartial(\"" + templatePath + "\")}}";
+    public static String renderTemplate(String templatePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
+            return templateEngine.process(templatePath, context);
+        } catch (Exception e) {
+            Logger.error("Error rendering template: " + e.getMessage(), e);
+            throw new IOException("Failed to render template", e);
+        }
     }
+
 }
