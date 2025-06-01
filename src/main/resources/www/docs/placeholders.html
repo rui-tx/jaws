@@ -1,7 +1,7 @@
 <div id="placeholders">
     <article>
         <h3>Template Variables & Placeholders</h3>
-        <p>JAWS now uses <strong>Thymeleaf</strong> as its template engine, providing robust and powerful templating capabilities. 
+        <p>JAWS uses <strong>Thymeleaf</strong> as its template engine, providing robust and powerful templating capabilities. 
            You can use Thymeleaf expressions to display dynamic information and include partial templates.</p>
 
         <h4>Modern Thymeleaf Syntax</h4>
@@ -19,13 +19,6 @@
             <li><strong><code>${utils.renderPartial('path/to/partial.html')}</code></strong>: Render a partial HTML file.</li>
             <li><strong><code>${utils.getPathFor('file.txt')}</code></strong>: Get the full URL path for a file.</li>
             <li><strong><code>${utils.getConfig('url')}</code></strong>: Get application configuration values.</li>
-        </ul>
-
-        <h4>Legacy Syntax (Still Supported)</h4>
-        <p>For backward compatibility, the old syntax is automatically converted:</p>
-        <ul>
-            <li><strong><code>{{renderPartial("partial/header.html")}}</code></strong> → <code>th:insert</code></li>
-            <li><strong><code>{{variable}}</code></strong> → <code>th:text="${variable}"</code></li>
         </ul>
 
         <h4>Setting Variables in Controllers</h4>

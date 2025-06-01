@@ -1,0 +1,34 @@
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head></head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667"
+          rel="icon"
+          type="image/x-icon"/>
+    <title>JAWS - Documentation</title>
+    <link th:href="${utils.getPathFor('css/style.css')}" rel="stylesheet">
+</head>
+<body>
+<header>
+    <h1>JAWS - Documentation</h1>
+    <p>This is the documentation for JAWS. For the most part, it's a work in progress.</p>
+    <p>Please feel free to go to the <a href="https://github.com/rui-tx/jaws">GitHub repository</a> and check for the most up to date documentation.</p>
+</header>
+<main>
+<section>
+    <div th:insert="~{docs/staticfiles.html}">Loading static files guide...</div>
+    <hr/>
+    <div th:insert="~{docs/placeholders.html}">Loading placeholders guide...</div>
+    <hr/>
+    <div th:insert="~{docs/dynamicsroutes.html}">Loading dynamic routes guide...</div>
+    <hr/>
+    <div th:insert="~{docs/basecontroller.html}">Loading base controller guide...</div>
+    <hr/>
+    <div th:insert="~{docs/authsystem.html}">Loading auth system guide...</div>
+    <hr/>
+    <div th:insert="~{docs/dbsystem.html}">Loading database system guide...</div>
+    <hr/>
+        <div th:insert="~{docs/cronservice.html}">Loading cron service guide...</div>
+    </section>
+</body>
+</html>

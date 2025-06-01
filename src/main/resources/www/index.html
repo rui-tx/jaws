@@ -7,7 +7,7 @@
           rel="icon"
           type="image/x-icon"/>
     <title>JAWS - Just Another Web Server</title>
-    <link href="css/style.css" rel="stylesheet">
+    <link th:href="${utils.getPathFor('css/style.css')}" rel="stylesheet">
 </head>
 <body>
 <header>
@@ -15,31 +15,19 @@
     <p>This is the default page for JAWS. If you see this page, it means that JAWS is running. <strong>Welcome!</strong>
     </p>
 </header>
-
+<hr/>
 <main>
-    <section>
-        <a th:href="@{/backoffice/login.html}">Backoffice</a>
-        <a th:href="@{/pasteit}">Pasteit</a>
-        <a th:href="@{/base64viewer.html}">Base64 Viewer</a>
-    </section>
-    <section>
-        <h2>Quick Start Guide</h2>
-        <div th:insert="~{docs/staticfiles.html}">Loading static files guide...</div>
+    <ul class="menu-list">
+        <p>JAWS documentation</p>
+        <li><a th:href="@{/docs}">Documentation</a> - The documentation for JAWS</li>
+        <li><a th:href="@{/backoffice/login.html}">Backoffice</a> - JAWS Backoffice</li>
         <hr/>
-        <div th:insert="~{docs/placeholders.html}">Loading placeholders guide...</div>
-        <hr/>
-        <div th:insert="~{docs/dynamicsroutes.html}">Loading dynamic routes guide...</div>
-        <hr/>
-        <div th:insert="~{docs/basecontroller.html}">Loading base controller guide...</div>
-        <hr/>
-        <div th:insert="~{docs/authsystem.html}">Loading auth system guide...</div>
-        <hr/>
-        <div th:insert="~{docs/dbsystem.html}">Loading database system guide...</div>
-        <hr/>
-        <div th:insert="~{docs/cronservice.html}">Loading cron service guide...</div>
-    </section>
+        <p>Tools made with JAWS</p>
+        <li><a th:href="@{/base64viewer.html}">Base64 Viewer</a> - A simple base64 viewer using a single HTML page</li>
+        <li><a th:href="@{/pasteit}">Pasteit</a> - A simple pastebin, using DB and API to store and retrieve pastes</li>
+    </ul>
 </main>
 
-<script src='js/htmx.min.js'></script>
+<script th:src="${utils.getPathFor('js/htmx.min.js')}" defer></script>
 </body>
 </html>

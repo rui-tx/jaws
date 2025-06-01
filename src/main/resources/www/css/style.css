@@ -35,6 +35,16 @@ pre code {
     background: var(--background);
 }
 
+.menu-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-divider {
+    border-bottom: 1px solid #444444;
+    margin: 10px 0;
+}
 
 @media (max-width: 575px) {
     .images-wrapper {
