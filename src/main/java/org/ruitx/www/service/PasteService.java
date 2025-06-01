@@ -6,6 +6,7 @@ import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.dto.PasteCreateRequest;
 import org.ruitx.www.model.Paste;
 import org.ruitx.www.repository.PasteRepo;
+import org.tinylog.Logger;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -137,6 +138,13 @@ public class PasteService {
     }
 
     public void cleanExpiredPastes() {
-        pasteRepo.cleanExpiredPastes();
+        Logger.debug("Cleaning expired pastes");
+        int result = pasteRepo.cleanExpiredPastes();
+        if (result > 0) {
+            Logger.info("Cleaned {} expired pastes", result);
+            return;
+        }
+        
+        Logger.debug("No expired pastes found");
     }
 } 

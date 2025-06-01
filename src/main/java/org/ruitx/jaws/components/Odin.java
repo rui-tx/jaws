@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
 import org.ruitx.www.service.AuthService;
+import org.ruitx.www.service.PasteService;
 import org.tinylog.Logger;
 
 import java.nio.file.Paths;
@@ -111,6 +112,12 @@ public final class Odin {
                 "clean-old-sessions",
                 () -> new AuthService().cleanOldSessions(),
                 30,
+                TimeUnit.MINUTES
+        );
+        norns.registerTask(
+                "clean-expired-pastes",
+                () -> new PasteService().cleanExpiredPastes(),
+                10,
                 TimeUnit.MINUTES
         );
         return new Thread(norns, "norns");

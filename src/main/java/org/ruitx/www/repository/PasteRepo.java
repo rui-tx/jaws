@@ -73,9 +73,10 @@ public class PasteRepo {
         return result > 0;
     }
 
-    public void cleanExpiredPastes() {
+    public int cleanExpiredPastes() {
         long now = Instant.now().getEpochSecond();
-        db.executeSql("DELETE FROM PASTE WHERE expires_at IS NOT NULL AND expires_at < ?", now);
+        int result = db.executeSql("DELETE FROM PASTE WHERE expires_at IS NOT NULL AND expires_at < ?", now);
+        return result;
     }
 
     public long getPasteCount() {
