@@ -13,6 +13,7 @@ public class LoggingMiddleware implements Middleware {
     @Override
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
+            Logger.debug("LoggingMiddleware: Handling request");
             long startTime = System.currentTimeMillis();
             String method = context.getRequest().getMethod();
             String uri = context.getRequest().getRequestURI();

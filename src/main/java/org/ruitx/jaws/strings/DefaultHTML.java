@@ -11,6 +11,7 @@ public class DefaultHTML {
             </head>
             <body>
                 <h1>404 - Not Found</h1>
+                <p>The page you are looking for does not exist.</p>
             </body>
             </html>
             """;
@@ -28,6 +29,7 @@ public class DefaultHTML {
             </head>
             <body>
                 <h1>401 - Unauthorized</h1>
+                <p>You are not authorized to access this resource.</p>
             </body>
             </html>
             """;

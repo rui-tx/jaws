@@ -316,18 +316,15 @@ public abstract class Bragi {
      * Render a template with parameters replaced.
      *
      * @param templatePath The path to the template file
-     * @param params       The parameters to replace in the template
      * @return The rendered template with parameters replaced
      */
-    protected String renderTemplate(String templatePath, Map<String, String> params) {
+    protected String renderTemplate(String templatePath) {
         try {
             Yggdrasill.RequestContext context = requestContext.get();
             if (context != null) {
                 return Hermod.renderTemplate(templatePath, context.getRequest(), context.getResponse());
             } else {
-                // Fallback to old method if no context available
-                String templateHtml = new String(Files.readAllBytes(Path.of(WWW_PATH + templatePath)));
-                return Hermod.processTemplate(templateHtml, params, null);
+                throw new IllegalStateException("No request context available");
             }
         } catch (IOException e) {
             Logger.error("Failed to render template: {}", e.getMessage());
@@ -338,16 +335,6 @@ public abstract class Bragi {
     public Map<String, String> getHeaders() {
         Yggdrasill.RequestContext context = requestContext.get();
         return context != null ? context.getHeaders() : new HashMap<>();
-    }
-
-    /**
-     * Render a template file without parameters.
-     *
-     * @param templatePath The path to the template file
-     * @return The rendered template
-     */
-    protected String renderTemplate(String templatePath) {
-        return renderTemplate(templatePath, new HashMap<>());
     }
 
     /**
@@ -364,28 +351,11 @@ public abstract class Bragi {
                 return Hermod.assemblePage(baseTemplatePath, partialTemplatePath, 
                                          context.getRequest(), context.getResponse());
             } else {
-                // Fallback to old method if no context available
-                return Hermod.assemblePage(baseTemplatePath, partialTemplatePath);
+                throw new IllegalStateException("No request context available");
             }
         } catch (IOException e) {
             Logger.error("Failed to assemble page: {}", e.getMessage());
             throw new SendRespondException("Failed to assemble page", e);
-        }
-    }
-
-    /**
-     * Assemble a full page by combining a base template with raw content.
-     *
-     * @param baseTemplatePath The path to the base template file
-     * @param content          The raw content to insert
-     * @return The assembled page
-     */
-    protected String assemblePageWithContent(String baseTemplatePath, String content) {
-        try {
-            return Hermod.assemblePageWithContent(baseTemplatePath, content);
-        } catch (IOException e) {
-            Logger.error("Failed to assemble page with content: {}", e.getMessage());
-            throw new SendRespondException("Failed to assemble page with content", e);
         }
     }
 

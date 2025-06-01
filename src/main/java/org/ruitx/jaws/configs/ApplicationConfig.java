@@ -14,8 +14,8 @@ public class ApplicationConfig {
     public static final String DEFAULT_URL = "http://localhost:" + DEFAULT_PORT + "/";
     public static final String DEFAULT_WWW_PATH = "src/main/resources/www/";
     public static final long TIMEOUT = 1000L * 10L; // 10 seconds
-    public static final String DEFAULT_CUSTOM_PAGE_PATH_401 = DEFAULT_WWW_PATH + "/401.html";
-    public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = DEFAULT_WWW_PATH + "/404.html";
+    public static final String DEFAULT_CUSTOM_PAGE_PATH_401 = "";
+    public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = "";
     public static final String DEFAULT_DATABASE_PATH = "src/main/resources/db.db";
     public static final String DEFAULT_DATABASE_SCHEMA_PATH = "src/main/resources/sql/create_schema_v1.sql";
 
@@ -28,7 +28,8 @@ public class ApplicationConfig {
     public static final String DATABASE_PATH;
     public static final String DATABASE_SCHEMA_PATH;
     public static final String JWT_SECRET;
-    public static final boolean DEVELOPMENT_MODE;
+    public static final boolean HERMOD_DEVELOPMENT_MODE;
+    public static final long HERMOD_TEMPLATE_CACHE_TTL;
 
     private static final Properties properties = new Properties();
 
@@ -49,7 +50,21 @@ public class ApplicationConfig {
         DATABASE_PATH = getDatabasePathValue();
         DATABASE_SCHEMA_PATH = getDatabaseSchemaPathValue();
         JWT_SECRET = getJWTSecretValue();
-        DEVELOPMENT_MODE = getDevelopmentModeValue();
+        HERMOD_DEVELOPMENT_MODE = getHermodDevelopmentModeValue();
+        HERMOD_TEMPLATE_CACHE_TTL = getHermodTemplateCacheTtlValue();
+        Logger.info("JAWS Configuration");
+        Logger.info("--------------------------------");
+        Logger.info("URL: " + URL);
+        Logger.info("PORT: " + PORT);
+        Logger.info("WWW_PATH: " + WWW_PATH);
+        Logger.info("CUSTOM_PAGE_PATH_401: " + CUSTOM_PAGE_PATH_401);
+        Logger.info("CUSTOM_PAGE_PATH_404: " + CUSTOM_PAGE_PATH_404);
+        Logger.info("DATABASE_PATH: " + DATABASE_PATH);
+        Logger.info("DATABASE_SCHEMA_PATH: " + DATABASE_SCHEMA_PATH);
+        Logger.info("JWT_SECRET: [REDACTED]");
+        Logger.info("HERMOD_DEVELOPMENT_MODE: " + HERMOD_DEVELOPMENT_MODE);
+        Logger.info("HERMOD_TEMPLATE_CACHE_TTL: " + HERMOD_TEMPLATE_CACHE_TTL);
+        Logger.info("--------------------------------");
     }
 
     private ApplicationConfig() {
@@ -119,9 +134,14 @@ public class ApplicationConfig {
         return jwtSecret;
     }
 
-    private static boolean getDevelopmentModeValue() {
-        String devMode = getConfigValue("DEVELOPMENT_MODE", "development.mode", "false");
+    private static boolean getHermodDevelopmentModeValue() {
+        String devMode = getConfigValue("HERMOD_DEVELOPMENT_MODE", "hermod.development.mode", "false");
         return Boolean.parseBoolean(devMode);
+    }
+
+    private static long getHermodTemplateCacheTtlValue() {
+        String ttl = getConfigValue("HERMOD_TEMPLATE_CACHE_TTL", "hermod.template.cache.ttl", "3600000");
+        return Long.parseLong(ttl);
     }
 
     private static String getConfigValue(String envKey, String propKey, String defaultValue) {

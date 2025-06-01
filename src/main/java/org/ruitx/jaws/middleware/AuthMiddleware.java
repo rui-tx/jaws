@@ -7,11 +7,13 @@ import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.strings.DefaultHTML;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.components.Bragi;
+import org.ruitx.jaws.components.Hermod;
 import org.tinylog.Logger;
 
 import java.lang.reflect.Method;
@@ -25,11 +27,13 @@ public class AuthMiddleware implements Middleware {
     @Override
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
+            Logger.debug("AuthMiddleware: Handling request");
             String endPoint = context.getRequest().getRequestURI();
             String methodStr = context.getRequest().getMethod().toUpperCase();
             RequestType requestType = RequestType.fromString(methodStr);
             
             if (requestType == null) {
+                Logger.debug("AuthMiddleware: Invalid request type");
                 return chain.next(); // Let other middleware handle invalid methods
             }
 
@@ -49,6 +53,7 @@ public class AuthMiddleware implements Middleware {
                 if (auth.login()) {
                     // This route requires authentication
                     if (!isAuthenticated(context)) {
+                        Logger.debug("AuthMiddleware: User is not authenticated");
                         sendUnauthorizedResponse(context, routeMethod);
                         return false; // Stop the chain
                     }
@@ -56,6 +61,7 @@ public class AuthMiddleware implements Middleware {
                     // Check role-based authorization if a specific role is required
                     if (!auth.role().isEmpty()) {
                         if (!isAuthorized(context, auth.role())) {
+                            Logger.debug("AuthMiddleware: User is not authorized");
                             sendUnauthorizedResponse(context, routeMethod);
                             return false; // Stop the chain
                         }
@@ -64,6 +70,7 @@ public class AuthMiddleware implements Middleware {
             }
 
             // Continue to next middleware if authenticated or no auth required
+            Logger.debug("AuthMiddleware: Continuing to next middleware");
             return chain.next();
             
         } catch (Exception e) {
@@ -76,9 +83,11 @@ public class AuthMiddleware implements Middleware {
      * Find the route method for the given endpoint and request type.
      */
     private Method findRouteMethod(String endPoint, RequestType requestType) {
+        Logger.debug("AuthMiddleware: Finding route method for endpoint: {} and request type: {}", endPoint, requestType);
         // First check for direct route match
         Method routeMethod = Njord.getInstance().getRoute(endPoint, requestType);
         if (routeMethod != null) {
+            Logger.debug("AuthMiddleware: Direct route match found");
             return routeMethod;
         }
 
@@ -87,11 +96,13 @@ public class AuthMiddleware implements Middleware {
             if (route.isAnnotationPresent(Route.class)) {
                 Route routeAnnotation = route.getAnnotation(Route.class);
                 if (routeAnnotation.method() == requestType && matchesRoutePattern(routeAnnotation.endpoint(), endPoint)) {
+                    Logger.debug("AuthMiddleware: Dynamic route match found");
                     return route;
                 }
             }
         }
 
+        Logger.debug("AuthMiddleware: No route method found");
         return null;
     }
 
@@ -99,8 +110,10 @@ public class AuthMiddleware implements Middleware {
      * Simple pattern matching for dynamic routes.
      */
     private boolean matchesRoutePattern(String pattern, String path) {
+        Logger.debug("AuthMiddleware: Matching route pattern: {} for path: {}", pattern, path);
         // Handle exact matches
         if (pattern.equals(path)) {
+            Logger.debug("AuthMiddleware: Exact match found");
             return true;
         }
 
@@ -109,6 +122,7 @@ public class AuthMiddleware implements Middleware {
         String[] pathParts = path.split("/");
         
         if (patternParts.length != pathParts.length) {
+            Logger.debug("AuthMiddleware: Length mismatch: pattern length: {}, path length: {}", patternParts.length, pathParts.length);
             return false;
         }
 
@@ -118,15 +132,18 @@ public class AuthMiddleware implements Middleware {
             
             // Skip dynamic parts (enclosed in {})
             if (patternPart.startsWith("{") && patternPart.endsWith("}")) {
+                Logger.debug("AuthMiddleware: Dynamic part found: {}", patternPart);
                 continue;
             }
             
             // Must match exactly for non-dynamic parts
             if (!patternPart.equals(pathPart)) {
+                Logger.debug("AuthMiddleware: Mismatch found: pattern part: {}, path part: {}", patternPart, pathPart);
                 return false;
             }
         }
 
+        Logger.debug("AuthMiddleware: Route pattern matches path");
         return true;
     }
 
@@ -200,10 +217,12 @@ public class AuthMiddleware implements Middleware {
                             ResponseCode.UNAUTHORIZED.getCodeAndMessage(),
                             "You are not authorized to access this resource"
                     );
+                    Logger.debug("AuthMiddleware: Sending JSON unauthorized response");
                     context.sendJSONResponse(ResponseCode.UNAUTHORIZED, Bragi.encode(response));
                 }
                 case HTML -> {
                     try {
+                        Logger.debug("AuthMiddleware: Sending HTML unauthorized response");
                         context.sendHTMLResponse(ResponseCode.UNAUTHORIZED, getUnauthorizedHTML(context));
                     } catch (Exception e) {
                         Logger.error("Error sending HTML unauthorized response: {}", e.getMessage());
@@ -212,6 +231,7 @@ public class AuthMiddleware implements Middleware {
                     }
                 }
                 default -> {
+                    Logger.debug("AuthMiddleware: Sending JSON unauthorized response for unknown response type");
                     // Default to JSON for unknown types
                     APIResponse<String> response = APIResponse.error(
                             ResponseCode.UNAUTHORIZED.getCodeAndMessage(),
@@ -230,9 +250,35 @@ public class AuthMiddleware implements Middleware {
      */
     private String getUnauthorizedHTML(Yggdrasill.RequestContext context) {
         if (context.isHTMX()) {
-            return "<div class=\"error\">You are not authorized to access this resource</div>";
+            return DefaultHTML.HTML_401_UNAUTHORIZED_HTMX;
         } else {
-            return "<!DOCTYPE html><html><head><title>Unauthorized</title></head><body><h1>401 - Unauthorized</h1><p>You are not authorized to access this resource.</p></body></html>";
+            // Check for custom 401 page
+            String custom401Page = org.ruitx.jaws.configs.ApplicationConfig.CUSTOM_PAGE_PATH_401;
+            if (custom401Page != null && !custom401Page.isEmpty()) {
+                try {
+                    // Extract only the filename since Hermod already has WWW_PATH as prefix
+                    // Convert full path like "src/main/resources/www/401.html" to just "401.html"
+                    String templateName = custom401Page;
+                    if (custom401Page.contains("/")) {
+                        templateName = custom401Page.substring(custom401Page.lastIndexOf("/") + 1);
+                    }
+                    
+                    Logger.debug("AuthMiddleware: Processing custom 401 template: {}", templateName);
+                    return Hermod.processTemplate(
+                        templateName,
+                        context.getQueryParams(),
+                        context.getBodyParams(),
+                        context.getRequest(),
+                        context.getResponse()
+                    );
+                } catch (Exception e) {
+                    Logger.error("Error processing custom 401 template: {}", e.getMessage());
+                }
+            }
+            
+            Logger.debug("AuthMiddleware: No custom 401 page found, using default");
+            // Default HTML response
+            return DefaultHTML.HTML_401_UNAUTHORIZED;
         }
     }
 

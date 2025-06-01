@@ -12,19 +12,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
-import static org.ruitx.jaws.configs.ApplicationConfig.DEVELOPMENT_MODE;
+import static org.ruitx.jaws.configs.ApplicationConfig.HERMOD_DEVELOPMENT_MODE;
+import static org.ruitx.jaws.configs.ApplicationConfig.HERMOD_TEMPLATE_CACHE_TTL;
 
 /**
  * Hermod is a utility class that handles template processing and page assembly using Thymeleaf.
- * It provides methods for processing templates with variables, assembling full pages,
- * and rendering template files with the power and robustness of Thymeleaf template engine.
+ * It provides methods for processing templates with variables, assembling full pages, 
+ * and rendering template files.
  */
 public final class Hermod {
 
@@ -57,16 +56,14 @@ public final class Hermod {
         fileResolver.setTemplateMode(TemplateMode.HTML);
         
         // Configure caching based on development mode
-        if (DEVELOPMENT_MODE) {
-            // Disable caching in development for live reload
+        if (HERMOD_DEVELOPMENT_MODE) {
             fileResolver.setCacheable(false);
             fileResolver.setCacheTTLMs(0L);
-            Logger.info("Thymeleaf development mode enabled - template caching disabled for live reload");
+            Logger.trace("Hermod template caching disabled for live reload");
         } else {
-            // Enable caching in production
             fileResolver.setCacheable(true);
-            fileResolver.setCacheTTLMs(3600000L); // Cache for 1 hour
-            Logger.info("Thymeleaf production mode enabled - template caching enabled (1 hour TTL)");
+            fileResolver.setCacheTTLMs(HERMOD_TEMPLATE_CACHE_TTL);
+            Logger.trace("Hermod template caching enabled (TTL: " + HERMOD_TEMPLATE_CACHE_TTL + "ms)");
         }
         
         fileResolver.setOrder(1);
@@ -194,8 +191,8 @@ public final class Hermod {
             return processThymeleafTemplate(template, queryParams, bodyParams, request, response);
         }
         
-        // Otherwise, this is likely template content passed by mistake - log error and return content
-        Logger.error("Received template content instead of path. This should not happen with new Thymeleaf integration.");
+        // Otherwise, just return content
+        Logger.trace("Received template content. Template: {}", template);
         return template;
     }
 
@@ -310,81 +307,4 @@ public final class Hermod {
         }
     }
 
-    /**
-     * Temporary compatibility method for legacy code.
-     * @deprecated Use the version with HttpServletRequest and HttpServletResponse
-     */
-    @Deprecated
-    public static String processTemplate(File templateFile) throws IOException {
-        Logger.warn("Using deprecated processTemplate method. Consider updating to use WebContext version.");
-        // For legacy File-based calls, read and return file content
-        try {
-            return new String(java.nio.file.Files.readAllBytes(templateFile.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            Logger.error("Error in legacy processTemplate for file {}: {}", templateFile.getName(), e.getMessage());
-            return templateFile.getName();
-        }
-    }
-
-    /**
-     * Temporary compatibility method for legacy code.
-     * @deprecated Use the version with HttpServletRequest and HttpServletResponse
-     */
-    @Deprecated
-    public static String processTemplate(String template, Map<String, String> queryParams, Map<String, String> bodyParams) throws IOException {
-        Logger.warn("Using deprecated processTemplate method. Consider updating to use WebContext version.");
-        // Return the template content as-is for legacy code
-        return template;
-    }
-
-    /**
-     * Temporary compatibility method for legacy code.
-     * @deprecated Use the version with HttpServletRequest and HttpServletResponse
-     */
-    @Deprecated
-    public static String processTemplate(String templatePath) throws IOException {
-        Logger.warn("Using deprecated processTemplate method. Consider updating to use WebContext version.");
-        // For legacy single-parameter calls, just return basic processed template
-        try {
-            java.nio.file.Path filePath = java.nio.file.Paths.get(WWW_PATH, templatePath);
-            if (java.nio.file.Files.exists(filePath)) {
-                return new String(java.nio.file.Files.readAllBytes(filePath), java.nio.charset.StandardCharsets.UTF_8);
-            }
-            return templatePath;
-        } catch (Exception e) {
-            Logger.error("Error in legacy processTemplate: {}", e.getMessage());
-            return templatePath;
-        }
-    }
-
-    /**
-     * Temporary compatibility method for legacy code.
-     * @deprecated Use the version with HttpServletRequest and HttpServletResponse
-     */
-    @Deprecated
-    public static String assemblePage(String baseTemplatePath, String partialTemplatePath) throws IOException {
-        Logger.warn("Using deprecated assemblePage method. Consider updating to use WebContext version.");
-        // For legacy code, just return the partial template content
-        try {
-            java.nio.file.Path filePath = java.nio.file.Paths.get(WWW_PATH, partialTemplatePath);
-            if (java.nio.file.Files.exists(filePath)) {
-                return new String(java.nio.file.Files.readAllBytes(filePath), java.nio.charset.StandardCharsets.UTF_8);
-            }
-            return partialTemplatePath;
-        } catch (Exception e) {
-            Logger.error("Error in legacy assemblePage: {}", e.getMessage());
-            return partialTemplatePath;
-        }
-    }
-
-    /**
-     * Temporary compatibility method for legacy code.
-     * @deprecated Use the version with HttpServletRequest and HttpServletResponse
-     */
-    @Deprecated
-    public static String assemblePageWithContent(String baseTemplatePath, String content) throws IOException {
-        Logger.warn("Using deprecated assemblePageWithContent method. Consider updating to use WebContext version.");
-        // For legacy code, just return the content as-is
-        return content;
-    }
 }
