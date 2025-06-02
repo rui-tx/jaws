@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Optional;
 
 import org.ruitx.jaws.types.Row;
+import org.ruitx.www.model.RowMapper;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record User(
@@ -46,52 +47,35 @@ public record User(
      * @return an Optional containing the User if all required fields are present, empty otherwise
      */
     public static Optional<User> fromRow(Row row) {
-        Optional<Integer> id = row.getInt("id");
-        Optional<String> usernameOpt = row.getString("user");
-        Optional<String> passwordHash = row.getString("password_hash");
-        Optional<String> emailOpt = row.getString("email");
-        Optional<String> firstNameOpt = row.getString("first_name");
-        Optional<String> lastNameOpt = row.getString("last_name");
-        Optional<Long> birthdateOpt = row.getUnixTimestamp("birthdate");
-        Optional<String> genderOpt = row.getString("gender");
-        Optional<String> phoneNumberOpt = row.getString("phone_number");
-        Optional<String> profilePictureOpt = row.getString("profile_picture");
-        Optional<String> bioOpt = row.getString("bio");
-        Optional<String> locationOpt = row.getString("location");
-        Optional<String> websiteOpt = row.getString("website");
-        Optional<Long> lastLoginOpt = row.getUnixTimestamp("last_login");
-        Optional<Integer> isActiveOpt = row.getInt("is_active");
-        Optional<Integer> isSuperuserOpt = row.getInt("is_superuser");
-        Optional<Integer> failedLoginAttemptsOpt = row.getInt("failed_login_attempts");
-        Optional<Long> lockoutUntilOpt = row.getUnixTimestamp("lockout_until");
-        Optional<Long> createdAt = row.getUnixTimestamp("created_at");
-        Optional<Long> updatedAt = row.getUnixTimestamp("updated_at");
-
-        if (id.isEmpty() || usernameOpt.isEmpty() || passwordHash.isEmpty() || createdAt.isEmpty()) {
-            return Optional.empty(); // Essential fields must be present
+        // Check required fields first
+        if (!RowMapper.hasRequiredField(row, "id", row::getInt) ||
+            !RowMapper.hasRequiredField(row, "user", row::getString) ||
+            !RowMapper.hasRequiredField(row, "password_hash", row::getString) ||
+            !RowMapper.hasRequiredField(row, "created_at", row::getUnixTimestamp)) {
+            return Optional.empty();
         }
 
         return Optional.of(User.builder()
-                .id(id.get())
-                .user(usernameOpt.get())
-                .passwordHash(passwordHash.get())
-                .email(emailOpt.orElse(null))
-                .firstName(firstNameOpt.orElse(null))
-                .lastName(lastNameOpt.orElse(null))
-                .birthdate(birthdateOpt.orElse(null))
-                .gender(genderOpt.orElse(null))
-                .phoneNumber(phoneNumberOpt.orElse(null))
-                .profilePicture(profilePictureOpt.orElse(null))
-                .bio(bioOpt.orElse(null))
-                .location(locationOpt.orElse(null))
-                .website(websiteOpt.orElse(null))
-                .lastLogin(lastLoginOpt.orElse(null))
-                .isActive(isActiveOpt.orElse(1))     // Default to 1 (active) if not present
-                .isSuperuser(isSuperuserOpt.orElse(0)) // Default to 0 if not present
-                .failedLoginAttempts(failedLoginAttemptsOpt.orElse(0)) // Default to 0
-                .lockoutUntil(lockoutUntilOpt.orElse(null))
-                .createdAt(createdAt.get())
-                .updatedAt(updatedAt.orElse(null))
+                .id(row.getInt("id").get())
+                .user(row.getString("user").get())
+                .passwordHash(row.getString("password_hash").get())
+                .email(RowMapper.getOrNull(row, "email", row::getString))
+                .firstName(RowMapper.getOrNull(row, "first_name", row::getString))
+                .lastName(RowMapper.getOrNull(row, "last_name", row::getString))
+                .birthdate(RowMapper.getOrNull(row, "birthdate", row::getUnixTimestamp))
+                .gender(RowMapper.getOrNull(row, "gender", row::getString))
+                .phoneNumber(RowMapper.getOrNull(row, "phone_number", row::getString))
+                .profilePicture(RowMapper.getOrNull(row, "profile_picture", row::getString))
+                .bio(RowMapper.getOrNull(row, "bio", row::getString))
+                .location(RowMapper.getOrNull(row, "location", row::getString))
+                .website(RowMapper.getOrNull(row, "website", row::getString))
+                .lastLogin(RowMapper.getOrNull(row, "last_login", row::getUnixTimestamp))
+                .isActive(RowMapper.getOrDefault(row, "is_active", row::getInt, 1))
+                .isSuperuser(RowMapper.getOrDefault(row, "is_superuser", row::getInt, 0))
+                .failedLoginAttempts(RowMapper.getOrDefault(row, "failed_login_attempts", row::getInt, 0))
+                .lockoutUntil(RowMapper.getOrNull(row, "lockout_until", row::getUnixTimestamp))
+                .createdAt(row.getUnixTimestamp("created_at").get())
+                .updatedAt(RowMapper.getOrNull(row, "updated_at", row::getUnixTimestamp))
                 .build());
     }
 
@@ -251,9 +235,6 @@ public record User(
             if (user == null || user.isBlank()) {
                 throw new IllegalStateException("user is required and cannot be blank");
             }
-//            if (email == null || email.isBlank()) {
-//                throw new IllegalStateException("email is required and cannot be blank");
-//            }
             if (createdAt == null) {
                 throw new IllegalStateException("createdAt is required");
             }
