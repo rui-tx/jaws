@@ -22,6 +22,7 @@ import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.QueuedResponse;
 import org.ruitx.jaws.utils.JawsValidation;
 import org.tinylog.Logger;
 
@@ -226,6 +227,38 @@ public class Yggdrasill {
          * Processes the request using JAWS' route system.
          */
         private void processRequest(RequestContext context) throws IOException {
+            // Check if we're in head mode and should queue the request
+            Loki loki = Loki.getInstance();
+            if (loki.isHeadMode()) {
+                // In head mode, queue the request and wait for response
+                Logger.debug("Head mode: Queuing request via Loki");
+                
+                QueuedResponse queuedResponse = loki.queueRequest(context);
+                
+                // Send the response back to the client
+                if (queuedResponse.isSuccess()) {
+                    context.response.setStatus(queuedResponse.getStatusCode());
+                    context.response.setContentType("application/json; charset=UTF-8");
+                    if (queuedResponse.getHeaders() != null) {
+                        queuedResponse.getHeaders().forEach((name, value) -> 
+                            context.response.setHeader(name, value));
+                    }
+                    context.response.getWriter().write(queuedResponse.getBody());
+                    context.response.getWriter().flush();
+                } else {
+                    // Send error response
+                    context.response.setStatus(queuedResponse.getStatusCode());
+                    context.response.setContentType("application/json; charset=UTF-8");
+                    String errorBody = queuedResponse.getErrorMessage() != null 
+                        ? queuedResponse.getErrorMessage() 
+                        : "Request processing failed";
+                    context.response.getWriter().write(errorBody);
+                    context.response.getWriter().flush();
+                }
+                return;
+            }
+            
+            // Traditional standalone mode processing
             String method = context.request.getMethod().toUpperCase();
             String endPoint = context.request.getRequestURI();
 

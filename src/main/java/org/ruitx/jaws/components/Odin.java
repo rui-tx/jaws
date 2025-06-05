@@ -50,6 +50,8 @@ public final class Odin {
 
         createMimir();
         createNjord();
+        createLoki();
+        
         List<Thread> threads = Arrays.asList(
                 createYggdrasill(),
                 createHeimdall(),
@@ -58,6 +60,8 @@ public final class Odin {
         for (Thread thread : threads) {
             executor.execute(thread);
         }
+        
+        createEinherjar();
 
         createHel(executor);
     }
@@ -123,10 +127,43 @@ public final class Odin {
         return new Thread(norns, "norns");
     }
 
+    // Loki is the queue manager
+    private static void createLoki() {
+        Loki loki = Loki.getInstance();
+        Logger.info("Loki initialized in {} mode", ApplicationConfig.JAWS_MODE);
+    }
+    
+    // Einherjar manages worker threads for queue processing
+    private static void createEinherjar() {
+        Loki loki = Loki.getInstance();
+        if (loki.isWorkerMode()) {
+            Einherjar einherjar = Einherjar.getInstance();
+            einherjar.start();
+            Logger.info("Einherjar started for worker mode");
+        }
+    }
+
     // Hel is the shutdown hook that gracefully stops all services
     private static void createHel(ExecutorService executor) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Logger.info("Shutdown hook triggered, stopping services...");
+            
+            // Stop Loki Artemis broker gracefully
+            try {
+                Loki.getInstance().shutdown();
+            } catch (Exception e) {
+                Logger.error("Error shutting down Loki: {}", e.getMessage());
+            }
+            
+            // Stop Einherjar workers
+            try {
+                Loki loki = Loki.getInstance();
+                if (loki.isWorkerMode()) {
+                    Einherjar.getInstance().shutdown();
+                }
+            } catch (Exception e) {
+                Logger.error("Error shutting down Einherjar: {}", e.getMessage());
+            }
             
             // Stop Yggdrasill gracefully
             if (yggdrasill != null) {

@@ -30,6 +30,14 @@ public class ApplicationConfig {
     public static final String JWT_SECRET;
     public static final boolean HERMOD_DEVELOPMENT_MODE;
     public static final long HERMOD_TEMPLATE_CACHE_TTL;
+    
+    // Loki Queue Configuration
+    public static final String JAWS_MODE;
+    public static final String QUEUE_BROKER_URL;
+    public static final String QUEUE_REQUEST_NAME;
+    public static final String QUEUE_RESPONSE_NAME;
+    public static final long QUEUE_REQUEST_TIMEOUT;
+    public static final int WORKER_POOL_SIZE;
 
     private static final Properties properties = new Properties();
 
@@ -52,6 +60,12 @@ public class ApplicationConfig {
         JWT_SECRET = getJWTSecretValue();
         HERMOD_DEVELOPMENT_MODE = getHermodDevelopmentModeValue();
         HERMOD_TEMPLATE_CACHE_TTL = getHermodTemplateCacheTtlValue();
+        JAWS_MODE = getJawsModeValue();
+        QUEUE_BROKER_URL = getQueueBrokerUrlValue();
+        QUEUE_REQUEST_NAME = getQueueRequestNameValue();
+        QUEUE_RESPONSE_NAME = getQueueResponseNameValue();
+        QUEUE_REQUEST_TIMEOUT = getQueueRequestTimeoutValue();
+        WORKER_POOL_SIZE = getWorkerPoolSizeValue();
         Logger.info("JAWS Configuration");
         Logger.info("--------------------------------");
         Logger.info("URL: " + URL);
@@ -64,6 +78,12 @@ public class ApplicationConfig {
         Logger.info("JWT_SECRET: [REDACTED]");
         Logger.info("HERMOD_DEVELOPMENT_MODE: " + HERMOD_DEVELOPMENT_MODE);
         Logger.info("HERMOD_TEMPLATE_CACHE_TTL: " + HERMOD_TEMPLATE_CACHE_TTL);
+        Logger.info("JAWS_MODE: " + JAWS_MODE);
+        Logger.info("QUEUE_BROKER_URL: " + QUEUE_BROKER_URL);
+        Logger.info("QUEUE_REQUEST_NAME: " + QUEUE_REQUEST_NAME);
+        Logger.info("QUEUE_RESPONSE_NAME: " + QUEUE_RESPONSE_NAME);
+        Logger.info("QUEUE_REQUEST_TIMEOUT: " + QUEUE_REQUEST_TIMEOUT);
+        Logger.info("WORKER_POOL_SIZE: " + WORKER_POOL_SIZE);
         Logger.info("--------------------------------");
     }
 
@@ -142,6 +162,32 @@ public class ApplicationConfig {
     private static long getHermodTemplateCacheTtlValue() {
         String ttl = getConfigValue("HERMOD_TEMPLATE_CACHE_TTL", "hermod.template.cache.ttl", "3600000");
         return Long.parseLong(ttl);
+    }
+
+    private static String getJawsModeValue() {
+        return getConfigValue("JAWS_MODE", "jaws.mode", "default");
+    }
+
+    private static String getQueueBrokerUrlValue() {
+        return getConfigValue("QUEUE_BROKER_URL", "queue.broker.url", "amqp://localhost");
+    }
+
+    private static String getQueueRequestNameValue() {
+        return getConfigValue("QUEUE_REQUEST_NAME", "queue.request.name", "jaws.request");
+    }
+
+    private static String getQueueResponseNameValue() {
+        return getConfigValue("QUEUE_RESPONSE_NAME", "queue.response.name", "jaws.response");
+    }
+
+    private static long getQueueRequestTimeoutValue() {
+        String timeout = getConfigValue("QUEUE_REQUEST_TIMEOUT", "queue.request.timeout", "5000");
+        return Long.parseLong(timeout);
+    }
+
+    private static int getWorkerPoolSizeValue() {
+        String size = getConfigValue("WORKER_POOL_SIZE", "worker.pool.size", "10");
+        return Integer.parseInt(size);
     }
 
     private static String getConfigValue(String envKey, String propKey, String defaultValue) {
