@@ -14,6 +14,9 @@ import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ActiveMQServers;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
+import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl;
+import org.apache.activemq.artemis.api.core.management.ResourceNames;
+import org.apache.activemq.artemis.core.server.Queue;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.QueuedRequest;
@@ -21,6 +24,9 @@ import org.ruitx.jaws.types.QueuedResponse;
 import org.tinylog.Logger;
 
 import javax.jms.*;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
@@ -42,7 +48,7 @@ import java.util.HashMap;
  * - Request/response correlation
  * - Timeout handling
  * - Automatic broker setup and teardown
- * - Thread-safe operations
+ * - Thread-safe operations with per-thread JMS resources
  */
 public class Loki {
     
@@ -52,13 +58,15 @@ public class Loki {
     private ActiveMQServer artemisServer;
     private ConnectionFactory connectionFactory;
     private Connection connection;
-    private Session session;
-    private Queue requestQueue;
-    private Queue responseQueue;
+    private Session headSession; // Only used for head mode operations
+    private javax.jms.Queue requestQueue;
+    private javax.jms.Queue responseQueue;
     private MessageProducer requestProducer;
     private MessageProducer responseProducer;
-    private MessageConsumer requestConsumer;
-    private MessageConsumer responseConsumer;
+    private MessageConsumer responseConsumer; // Only used in head mode
+    
+    // Thread-local JMS resources for worker threads
+    private final ThreadLocal<WorkerJMSResources> workerResources = new ThreadLocal<>();
     
     // Response correlation
     private final Map<String, QueuedResponse> responseMap;
@@ -92,6 +100,36 @@ public class Loki {
             instance = new Loki();
         }
         return instance;
+    }
+    
+    /**
+     * Thread-local JMS resources for worker threads to avoid concurrent session usage.
+     */
+    private static class WorkerJMSResources {
+        private final Session session;
+        private final MessageConsumer requestConsumer;
+        private final MessageProducer responseProducer;
+        private final javax.jms.Queue requestQueue;
+        private final javax.jms.Queue responseQueue;
+        
+        public WorkerJMSResources(Session session, MessageConsumer requestConsumer, 
+                                 MessageProducer responseProducer, javax.jms.Queue requestQueue, javax.jms.Queue responseQueue) {
+            this.session = session;
+            this.requestConsumer = requestConsumer;
+            this.responseProducer = responseProducer;
+            this.requestQueue = requestQueue;
+            this.responseQueue = responseQueue;
+        }
+        
+        public void close() {
+            try {
+                if (requestConsumer != null) requestConsumer.close();
+                if (responseProducer != null) responseProducer.close();
+                if (session != null) session.close();
+            } catch (Exception e) {
+                Logger.debug("Error closing worker JMS resources: {}", e.getMessage());
+            }
+        }
     }
     
     /**
@@ -180,17 +218,26 @@ public class Loki {
         
         connectionFactory = ActiveMQJMSClient.createConnectionFactoryWithoutHA(JMSFactoryType.CF, transportConfiguration);
         
-        // Create connection and session
+        // Create connection
         connection = connectionFactory.createConnection();
-        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         
-        // Create queues
-        requestQueue = session.createQueue(requestQueueName);
-        responseQueue = session.createQueue(responseQueueName);
-        
-        // Create producers
-        requestProducer = session.createProducer(requestQueue);
-        responseProducer = session.createProducer(responseQueue);
+        // Create queues (these are shared references)
+        if (isHeadMode()) {
+            // Head mode needs a session for sending requests and receiving responses
+            headSession = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            requestQueue = headSession.createQueue(requestQueueName);
+            responseQueue = headSession.createQueue(responseQueueName);
+            
+            // Create producers for head mode
+            requestProducer = headSession.createProducer(requestQueue);
+        } else {
+            // Worker mode - we'll create per-thread sessions as needed
+            // Just create temporary session to define the queue objects
+            Session tempSession = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            requestQueue = tempSession.createQueue(requestQueueName);
+            responseQueue = tempSession.createQueue(responseQueueName);
+            tempSession.close();
+        }
         
         // Start the connection
         connection.start();
@@ -199,12 +246,11 @@ public class Loki {
     }
     
     /**
-     * Sets up message consumers for worker mode.
+     * Sets up message consumers for worker mode - now using thread-local resources.
      */
     private void setupWorkerConsumers() throws JMSException {
-        Logger.info("Setting up worker consumers...");
-        requestConsumer = session.createConsumer(requestQueue);
-        // Workers don't need response consumers - they only send responses
+        Logger.info("Worker consumers will be created per-thread as needed");
+        // No shared consumers in worker mode - each thread gets its own
     }
     
     /**
@@ -212,7 +258,7 @@ public class Loki {
      */
     private void setupHeadConsumers() throws JMSException {
         Logger.info("Setting up head consumers...");
-        responseConsumer = session.createConsumer(responseQueue);
+        responseConsumer = headSession.createConsumer(responseQueue);
         
         // Set up response message listener
         responseConsumer.setMessageListener(message -> {
@@ -255,9 +301,9 @@ public class Loki {
             
             Logger.debug("Loki queuing request via Artemis: {}", requestId);
             
-            // Send to Artemis queue
+            // Send to Artemis queue using head session
             String requestJson = objectMapper.writeValueAsString(queuedRequest);
-            TextMessage message = session.createTextMessage(requestJson);
+            TextMessage message = headSession.createTextMessage(requestJson);
             message.setJMSCorrelationID(requestId);
             
             requestProducer.send(message);
@@ -274,28 +320,18 @@ public class Loki {
     /**
      * Polls for the next request to process.
      * Used by worker instances to get requests from the queue.
+     * Now uses thread-local JMS resources to avoid concurrent session usage.
      */
     public QueuedRequest pollRequest(long timeoutMs) {
         if (!isInitialized) {
             return null;
         }
         
-        // Check if consumer is valid, reconnect if needed
-        if (!isConnectionValid()) {
-            Logger.warn("Connection invalid, attempting to reconnect...");
-            if (!reconnect()) {
-                Logger.error("Failed to reconnect, returning null");
-                return null;
-            }
-        }
-        
         try {
-            if (requestConsumer == null) {
-                Logger.error("Request consumer is null");
-                return null;
-            }
+            // Get or create thread-local JMS resources
+            WorkerJMSResources resources = getOrCreateWorkerResources();
             
-            Message message = requestConsumer.receive(timeoutMs);
+            Message message = resources.requestConsumer.receive(timeoutMs);
             if (message instanceof TextMessage textMessage) {
                 String requestJson = textMessage.getText();
                 QueuedRequest request = objectMapper.readValue(requestJson, QueuedRequest.class);
@@ -308,145 +344,48 @@ public class Loki {
         } catch (Exception e) {
             Logger.error("Error polling for requests: {}", e.getMessage());
             
-            // If we get a connection-related error, mark the connection as invalid
-            if (isConnectionError(e)) {
-                Logger.warn("Connection error detected, marking connection as invalid");
-                markConnectionInvalid();
-            }
+            // Clean up thread-local resources on error
+            cleanupWorkerResources();
             
             return null;
         }
     }
     
     /**
-     * Checks if the current connection is valid.
+     * Gets or creates thread-local JMS resources for worker operations.
      */
-    private boolean isConnectionValid() {
-        try {
-            // Check if objects exist and test connection with a simple operation
-            if (connection == null || session == null || requestConsumer == null) {
-                return false;
-            }
+    private WorkerJMSResources getOrCreateWorkerResources() throws JMSException {
+        WorkerJMSResources resources = workerResources.get();
+        if (resources == null) {
+            Logger.debug("Creating new JMS resources for worker thread: {}", Thread.currentThread().getName());
             
-            // Try to perform a simple operation to test if connection is alive
-            // This will throw an exception if the connection is closed
-            session.getAcknowledgeMode();
-            return true;
+            // Create a new session for this worker thread
+            Session workerSession = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
             
-        } catch (Exception e) {
-            Logger.debug("Connection validation failed: {}", e.getMessage());
-            return false;
+            // Create queues
+            javax.jms.Queue workerRequestQueue = workerSession.createQueue(requestQueueName);
+            javax.jms.Queue workerResponseQueue = workerSession.createQueue(responseQueueName);
+            
+            // Create consumer and producer for this thread
+            MessageConsumer workerRequestConsumer = workerSession.createConsumer(workerRequestQueue);
+            MessageProducer workerResponseProducer = workerSession.createProducer(workerResponseQueue);
+            
+            resources = new WorkerJMSResources(workerSession, workerRequestConsumer, 
+                                             workerResponseProducer, workerRequestQueue, workerResponseQueue);
+            workerResources.set(resources);
         }
+        return resources;
     }
     
     /**
-     * Checks if an exception indicates a connection error.
+     * Cleans up thread-local JMS resources when a worker thread is done.
      */
-    private boolean isConnectionError(Exception e) {
-        String message = e.getMessage();
-        return message != null && (
-            message.contains("Consumer is closed") ||
-            message.contains("Connection is destroyed") ||
-            message.contains("Session is closed") ||
-            message.contains("AMQ219017")
-        );
-    }
-    
-    /**
-     * Marks the connection as invalid by setting references to null.
-     */
-    private void markConnectionInvalid() {
-        try {
-            if (requestConsumer != null) {
-                requestConsumer.close();
-                requestConsumer = null;
-            }
-            if (session != null) {
-                session.close();
-                session = null;
-            }
-            if (connection != null) {
-                connection.close();
-                connection = null;
-            }
-        } catch (Exception e) {
-            Logger.debug("Error while cleaning up invalid connection: {}", e.getMessage());
-        }
-    }
-    
-    /**
-     * Attempts to reconnect to the broker.
-     */
-    private boolean reconnect() {
-        try {
-            Logger.info("Attempting to reconnect to Artemis broker...");
-            
-            // Clean up old connections
-            markConnectionInvalid();
-            
-            // Wait a bit before reconnecting
-            Thread.sleep(1000);
-            
-            // Re-establish connections
-            setupJMSConnections();
-            
-            // Set up consumers based on mode
-            if (isWorkerMode()) {
-                setupWorkerConsumers();
-            } else if (isHeadMode()) {
-                setupHeadConsumers();
-            }
-            
-            Logger.info("Successfully reconnected to Artemis broker");
-            return true;
-            
-        } catch (Exception e) {
-            Logger.error("Failed to reconnect to Artemis broker: {}", e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Sends a response back to the head instance.
-     * Used by worker instances after processing a request.
-     */
-    public void sendResponse(QueuedResponse response) {
-        if (!isInitialized) {
-            Logger.error("Cannot send response - Loki not initialized");
-            return;
-        }
-        
-        // Check if connection is valid, reconnect if needed
-        if (!isConnectionValid()) {
-            Logger.warn("Connection invalid for sending response, attempting to reconnect...");
-            if (!reconnect()) {
-                Logger.error("Failed to reconnect, cannot send response");
-                return;
-            }
-        }
-        
-        try {
-            if (responseProducer == null) {
-                Logger.error("Response producer is null");
-                return;
-            }
-            
-            Logger.debug("Loki sending response via Artemis: {}", response.getRequestId());
-            
-            String responseJson = objectMapper.writeValueAsString(response);
-            TextMessage message = session.createTextMessage(responseJson);
-            message.setJMSCorrelationID(response.getRequestId());
-            
-            responseProducer.send(message);
-            
-        } catch (Exception e) {
-            Logger.error("Error sending response: {}", e.getMessage());
-            
-            // If we get a connection-related error, mark the connection as invalid
-            if (isConnectionError(e)) {
-                Logger.warn("Connection error detected while sending response, marking connection as invalid");
-                markConnectionInvalid();
-            }
+    public void cleanupWorkerResources() {
+        WorkerJMSResources resources = workerResources.get();
+        if (resources != null) {
+            Logger.debug("Cleaning up JMS resources for worker thread: {}", Thread.currentThread().getName());
+            resources.close();
+            workerResources.remove();
         }
     }
     
@@ -479,15 +418,68 @@ public class Loki {
     }
     
     /**
-     * Gets queue statistics for monitoring.
+     * Gets the actual queue depth using ActiveMQ management API.
+     */
+    private long getQueueDepth(String queueName) {
+        try {
+            if (artemisServer != null && isBrokerStarted) {
+                // Try to get the actual queue from the server
+                org.apache.activemq.artemis.core.server.Queue serverQueue = artemisServer.locateQueue(queueName);
+                if (serverQueue != null) {
+                    // Return the actual message count
+                    return serverQueue.getMessageCount();
+                }
+                
+                Logger.debug("Queue {} not found on server", queueName);
+            }
+            return 0;
+        } catch (Exception e) {
+            Logger.debug("Could not get queue depth for {}: {}", queueName, e.getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * Gets queue statistics for monitoring with real-time data.
      */
     public QueueStats getStats() {
-        // For now, return basic stats. In production, we could query Artemis for detailed metrics
-        return new QueueStats(
-            0, // Artemis queue size would require management API
-            responseMap.size(),
-            mode
-        );
+        try {
+            int pendingRequests = 0;
+            int pendingResponses = responseMap.size();
+            
+            // Get actual queue depth from Artemis
+            if (isInitialized && connection != null) {
+                try {
+                    if (isHeadMode()) {
+                        // For head mode, get request queue depth (messages waiting to be processed)
+                        pendingRequests = (int) getQueueDepth(requestQueueName);
+                        // For head mode, pending responses are tracked in memory
+                        pendingResponses = responseMap.size();
+                    } else if (isWorkerMode()) {
+                        // For worker mode, also get request queue depth 
+                        // This shows how much work is still pending across all workers
+                        pendingRequests = (int) getQueueDepth(requestQueueName);
+                        // Workers don't track pending responses
+                        pendingResponses = 0;
+                    } else {
+                        // Standalone mode - no queues
+                        pendingRequests = 0;
+                        pendingResponses = 0;
+                    }
+                } catch (Exception e) {
+                    Logger.debug("Could not get queue statistics: {}", e.getMessage());
+                }
+            }
+            
+            Logger.debug("Queue stats - Mode: {}, Pending Requests: {}, Pending Responses: {}", 
+                        mode, pendingRequests, pendingResponses);
+            
+            return new QueueStats(pendingRequests, pendingResponses, mode);
+            
+        } catch (Exception e) {
+            Logger.error("Error getting queue stats: {}", e.getMessage());
+            return new QueueStats(0, 0, mode);
+        }
     }
     
     /**
@@ -512,6 +504,37 @@ public class Loki {
     }
     
     /**
+     * Sends a response back to the head instance.
+     * Used by worker instances after processing a request.
+     * Now uses thread-local JMS resources.
+     */
+    public void sendResponse(QueuedResponse response) {
+        if (!isInitialized) {
+            Logger.error("Cannot send response - Loki not initialized");
+            return;
+        }
+        
+        try {
+            // Get or create thread-local JMS resources
+            WorkerJMSResources resources = getOrCreateWorkerResources();
+            
+            Logger.debug("Loki sending response via Artemis: {}", response.getRequestId());
+            
+            String responseJson = objectMapper.writeValueAsString(response);
+            TextMessage message = resources.session.createTextMessage(responseJson);
+            message.setJMSCorrelationID(response.getRequestId());
+            
+            resources.responseProducer.send(message);
+            
+        } catch (Exception e) {
+            Logger.error("Error sending response: {}", e.getMessage());
+            
+            // Clean up thread-local resources on error
+            cleanupWorkerResources();
+        }
+    }
+    
+    /**
      * Shuts down Artemis connections and broker.
      */
     public void shutdown() {
@@ -522,15 +545,6 @@ public class Loki {
         
         try {
             // Close consumers first
-            if (requestConsumer != null) {
-                try {
-                    requestConsumer.close();
-                } catch (Exception e) {
-                    Logger.debug("Error closing request consumer: {}", e.getMessage());
-                }
-                requestConsumer = null;
-            }
-            
             if (responseConsumer != null) {
                 try {
                     responseConsumer.close();
@@ -550,23 +564,22 @@ public class Loki {
                 requestProducer = null;
             }
             
-            if (responseProducer != null) {
-                try {
-                    responseProducer.close();
-                } catch (Exception e) {
-                    Logger.debug("Error closing response producer: {}", e.getMessage());
-                }
-                responseProducer = null;
+            // Clean up any remaining thread-local resources
+            try {
+                cleanupWorkerResources();
+                Logger.debug("Cleaned up thread-local JMS resources during shutdown");
+            } catch (Exception e) {
+                Logger.warn("Error cleaning up thread-local resources: {}", e.getMessage());
             }
             
             // Close session and connection
-            if (session != null) {
+            if (headSession != null) {
                 try {
-                    session.close();
+                    headSession.close();
                 } catch (Exception e) {
-                    Logger.debug("Error closing session: {}", e.getMessage());
+                    Logger.debug("Error closing head session: {}", e.getMessage());
                 }
-                session = null;
+                headSession = null;
             }
             
             if (connection != null) {

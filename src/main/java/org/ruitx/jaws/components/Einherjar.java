@@ -128,6 +128,14 @@ public class Einherjar {
                 }
             }
         } finally {
+            // Clean up thread-local JMS resources
+            try {
+                loki.cleanupWorkerResources();
+                Logger.debug("Worker {} cleaned up JMS resources", workerId);
+            } catch (Exception e) {
+                Logger.warn("Worker {} failed to clean up JMS resources: {}", workerId, e.getMessage());
+            }
+            
             activeWorkers.decrementAndGet();
             Logger.info("Worker {} leaves the battlefield", workerId);
         }

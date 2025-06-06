@@ -8,6 +8,7 @@ import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.dto.api.Post;
 import org.ruitx.www.service.APIService;
+import org.tinylog.Logger;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,12 @@ public class APIController extends Bragi {
 
     @Route(endpoint = API_ENDPOINT + "ping", responseType = JSON)
     public void ping() {
+        //Logger.info("ping");
+        sendSucessfulResponse(OK, apiService.ping());
+    }
+
+    @Route(endpoint = API_ENDPOINT + "ping2", responseType = JSON)
+    public void ping2() {
         try {
             Thread.sleep(10000);
         } catch (InterruptedException e) {
