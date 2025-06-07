@@ -1,5 +1,6 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
+import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.www.jobs.ExternalApiJob;
 import org.ruitx.www.jobs.RetryTestJob;
 import org.ruitx.www.jobs.SequentialPingJob;

@@ -1,9 +1,11 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import org.ruitx.jaws.interfaces.Job;
 
 /**
  * Base implementation of Job interface providing common functionality.

@@ -1,4 +1,4 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import java.time.Instant;
 import java.util.HashMap;

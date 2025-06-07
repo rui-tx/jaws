@@ -1,9 +1,9 @@
 package org.ruitx.www.jobs;
 
 import org.ruitx.jaws.components.Odin;
-import org.ruitx.jaws.jobs.BaseJob;
-import org.ruitx.jaws.jobs.CircuitBreaker;
-import org.ruitx.jaws.jobs.JobResultStore;
+import org.ruitx.jaws.components.freyr.BaseJob;
+import org.ruitx.jaws.components.freyr.CircuitBreaker;
+import org.ruitx.jaws.components.freyr.JobResultStore;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;

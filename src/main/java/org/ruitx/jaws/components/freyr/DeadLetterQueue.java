@@ -1,7 +1,8 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
@@ -135,7 +136,7 @@ public class DeadLetterQueue {
                 // Update the job status to DEAD_LETTER
                 mimir.executeSql(
                     "UPDATE JOBS SET status = ? WHERE id = ?", 
-                    JobQueue.JobStatus.DEAD_LETTER.name(), jobId
+                    Freyr.JobStatus.DEAD_LETTER.name(), jobId
                 );
                 
                 Logger.info("Job {} moved to Dead Letter Queue with ID: {} (reason: {})", 
@@ -197,13 +198,13 @@ public class DeadLetterQueue {
                 """,
                 newJobId, entry.getJobType(), payloadJson, entry.getPriority(),
                 entry.getMaxRetries(), initialRetries, newJob.getTimeoutMs(),
-                entry.getExecutionMode(), JobQueue.JobStatus.PENDING.name(),
+                entry.getExecutionMode(), Freyr.JobStatus.PENDING.name(),
                 now, newJob.getClientId(), newJob.getUserId()
             );
             
             if (inserted > 0) {
                 // Submit the job to the appropriate queue
-                JobQueue jobQueue = JobQueue.getInstance();
+                Freyr jobQueue = Freyr.getInstance();
                 String submittedJobId = jobQueue.submit(newJob);
                 
                 if (submittedJobId != null) {

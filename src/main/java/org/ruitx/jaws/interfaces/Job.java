@@ -1,6 +1,8 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.interfaces;
 
 import java.util.Map;
+
+import org.ruitx.jaws.components.freyr.ExecutionMode;
 
 /**
  * Core interface for background jobs.

@@ -1,7 +1,8 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.interfaces.Job;
 import org.tinylog.Logger;
 
 import java.time.Instant;
@@ -159,9 +160,9 @@ public class SequentialJobQueue {
             try {
                 Logger.info("Processing sequential job: {}", job);
                 
-                updateJobStatus(job.getId(), JobQueue.JobStatus.PROCESSING, null, Instant.now().toEpochMilli(), null);
+                updateJobStatus(job.getId(), Freyr.JobStatus.PROCESSING, null, Instant.now().toEpochMilli(), null);
                 job.execute();
-                updateJobStatus(job.getId(), JobQueue.JobStatus.COMPLETED, null, null, Instant.now().toEpochMilli());
+                updateJobStatus(job.getId(), Freyr.JobStatus.COMPLETED, null, null, Instant.now().toEpochMilli());
                 
                 completedJobs.incrementAndGet();
                 Logger.info("Completed sequential job: {}", job.getId());
@@ -191,7 +192,7 @@ public class SequentialJobQueue {
             }
         }
         
-        private void updateJobStatus(String jobId, JobQueue.JobStatus status, String errorMessage, Long startedAt, Long completedAt) {
+        private void updateJobStatus(String jobId, Freyr.JobStatus status, String errorMessage, Long startedAt, Long completedAt) {
             try {
                 StringBuilder sql = new StringBuilder("UPDATE JOBS SET status = ?");
                 int paramIndex = 2;

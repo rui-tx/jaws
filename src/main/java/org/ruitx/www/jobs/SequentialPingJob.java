@@ -1,9 +1,9 @@
 package org.ruitx.www.jobs;
 
 import org.ruitx.jaws.components.Odin;
-import org.ruitx.jaws.jobs.BaseJob;
-import org.ruitx.jaws.jobs.ExecutionMode;
-import org.ruitx.jaws.jobs.JobResultStore;
+import org.ruitx.jaws.components.freyr.BaseJob;
+import org.ruitx.jaws.components.freyr.ExecutionMode;
+import org.ruitx.jaws.components.freyr.JobResultStore;
 import org.tinylog.Logger;
 
 import java.time.Instant;

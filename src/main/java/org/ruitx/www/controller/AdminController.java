@@ -1,12 +1,12 @@
 package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
+import org.ruitx.jaws.components.freyr.*;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.jobs.*;
 import org.ruitx.www.dto.admin.*;
 import org.tinylog.Logger;
 
@@ -22,7 +22,7 @@ public class AdminController extends Bragi {
     
     private static final String API_ENDPOINT = "/api/admin/";
     
-    private final JobQueue jobQueue = JobQueue.getInstance();
+    private final Freyr jobQueue = Freyr.getInstance();
     private final DeadLetterQueue deadLetterQueue;
     private final JobRetryScheduler retryScheduler;
     private final JobErrorClassifier advancedErrorClassifier;

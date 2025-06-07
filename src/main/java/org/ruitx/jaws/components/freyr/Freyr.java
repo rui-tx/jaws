@@ -1,7 +1,8 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
@@ -12,21 +13,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * JobQueue
+ * Freyr
  * 
- * This class is the main entry point for the job queue system.
+ * Freyr is the main entry point for the job queue system.
  * It is responsible for submitting jobs, processing them, and managing their status.
  * 
- * It uses a priority queue to process jobs in the order of their priority.
- * 
+ * It uses a priority queue to process jobs in the order of their priority. 
  */
-public class JobQueue implements Runnable {
+public class Freyr implements Runnable {
     
     private static final int DEFAULT_WORKER_THREADS = Runtime.getRuntime().availableProcessors();
     private static final int DEFAULT_QUEUE_CAPACITY = 1000;
     private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes
     
-    private static JobQueue instance;
+    private static Freyr instance;
     private static final Object instanceLock = new Object();
     
     private final Mimir mimir = new Mimir();
@@ -47,7 +47,7 @@ public class JobQueue implements Runnable {
     private final AtomicInteger failedJobs = new AtomicInteger(0);
     private final AtomicInteger retriedJobs = new AtomicInteger(0);
         
-    private JobQueue(Map<String, Object> config) {
+    private Freyr(Map<String, Object> config) {
         // Get singleton JobRegistry instance
         this.jobRegistry = JobRegistry.getInstance();
         
@@ -72,11 +72,11 @@ public class JobQueue implements Runnable {
     /**
      * Get the singleton instance
      */
-    public static JobQueue getInstance() {
+    public static Freyr getInstance() {
         if (instance == null) {
             synchronized (instanceLock) {
                 if (instance == null) {
-                    instance = new JobQueue(new HashMap<>());
+                    instance = new Freyr(new HashMap<>());
                 }
             }
         }

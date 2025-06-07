@@ -1,4 +1,4 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
 import org.tinylog.Logger;
@@ -166,7 +166,7 @@ public class JobRetryManager {
                     error_message = ?
                 WHERE id = ?
                 """,
-                JobQueue.JobStatus.RETRY_SCHEDULED.name(),
+                Freyr.JobStatus.RETRY_SCHEDULED.name(),
                 delayMs,
                 nextRetryAt,
                 now,
@@ -201,7 +201,7 @@ public class JobRetryManager {
                     error_message = ?
                 WHERE id = ?
                 """,
-                JobQueue.JobStatus.FAILED.name(),
+                Freyr.JobStatus.FAILED.name(),
                 now,
                 String.format("%s - %s", reason, exception.getMessage()),
                 jobId
@@ -243,7 +243,7 @@ public class JobRetryManager {
                 SELECT next_retry_at, status 
                 FROM JOBS 
                 WHERE id = ? AND status = ?
-                """, jobId, JobQueue.JobStatus.RETRY_SCHEDULED.name());
+                """, jobId, Freyr.JobStatus.RETRY_SCHEDULED.name());
             
             if (row != null) {
                 long nextRetryAt = row.getLong("next_retry_at").orElse(0L);
@@ -263,9 +263,9 @@ public class JobRetryManager {
         try {
             // Count jobs by status
             var retryScheduledRow = mimir.getRow("SELECT COUNT(*) as count FROM JOBS WHERE status = ?", 
-                                                JobQueue.JobStatus.RETRY_SCHEDULED.name());
+                                                Freyr.JobStatus.RETRY_SCHEDULED.name());
             var failedRow = mimir.getRow("SELECT COUNT(*) as count FROM JOBS WHERE status = ?", 
-                                        JobQueue.JobStatus.FAILED.name());
+                                        Freyr.JobStatus.FAILED.name());
             
             // Count total retry attempts
             var totalRetriesRow = mimir.getRow("SELECT SUM(current_retries) as total FROM JOBS WHERE current_retries > 0");

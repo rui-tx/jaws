@@ -1,4 +1,4 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;

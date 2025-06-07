@@ -1,9 +1,9 @@
 package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
+import org.ruitx.jaws.components.freyr.Freyr;
+import org.ruitx.jaws.components.freyr.JobResult;
 import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.jobs.JobQueue;
-import org.ruitx.jaws.jobs.JobResult;
 import org.ruitx.www.jobs.ExternalApiJob;
 import org.ruitx.www.jobs.SequentialPingJob;
 
@@ -21,10 +21,10 @@ import static org.ruitx.jaws.strings.ResponseType.JSON;
 public class JobController extends Bragi {
     
     private static final String API_ENDPOINT = "/api/jobs/";
-    private final JobQueue jobQueue;
+    private final Freyr jobQueue;
     
     public JobController() {
-        this.jobQueue = JobQueue.getInstance();
+        this.jobQueue = Freyr.getInstance();
     }
 
     @Route(endpoint = API_ENDPOINT + "sequential-ping", method = POST, responseType = JSON)
@@ -146,7 +146,7 @@ public class JobController extends Bragi {
             return;
         }
         
-        JobQueue.JobStatus status = jobQueue.getJobStatus(jobId);
+        Freyr.JobStatus status = jobQueue.getJobStatus(jobId);
         if (status == null) {
             sendErrorResponse(NOT_FOUND, "Job not found");
             return;
@@ -171,13 +171,13 @@ public class JobController extends Bragi {
             return;
         }
         
-        JobQueue.JobStatus status = jobQueue.getJobStatus(jobId);
+        Freyr.JobStatus status = jobQueue.getJobStatus(jobId);
         if (status == null) {
             sendErrorResponse(NOT_FOUND, "Job not found");
             return;
         }
         
-        if (status != JobQueue.JobStatus.COMPLETED) {
+        if (status != Freyr.JobStatus.COMPLETED) {
             Map<String, Object> response = new HashMap<>();
             response.put("jobId", jobId);
             response.put("status", status.name());
@@ -231,7 +231,7 @@ public class JobController extends Bragi {
     /**
      * Get a human-readable description for each job status
      */
-    private String getStatusDescription(JobQueue.JobStatus status) {
+    private String getStatusDescription(Freyr.JobStatus status) {
         return switch (status) {
             case PENDING -> "Job is queued and waiting to be processed";
             case PROCESSING -> "Job is currently being processed";

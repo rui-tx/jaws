@@ -1,9 +1,10 @@
 package org.ruitx.jaws.components;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
-import org.ruitx.jaws.jobs.JobQueue;
 import org.ruitx.www.service.AuthService;
 import org.ruitx.www.service.PasteService;
 import org.tinylog.Logger;
@@ -51,7 +52,8 @@ public final class Odin {
 
         createMimir();
         createNjord();
-        startJobQueue();
+        createFreyr();
+        
         List<Thread> threads = Arrays.asList(
                 createYggdrasill(),
                 createHeimdall(),
@@ -125,13 +127,20 @@ public final class Odin {
         return new Thread(norns, "norns");
     }
 
+        // Freyr, the job queue processing system
+        private static void createFreyr() {
+            Freyr freyr = Freyr.getInstance();
+            freyr.start();
+            Logger.info("Freyr started successfully");
+        }
+
     // Hel is the shutdown hook that gracefully stops all services
     private static void createHel(ExecutorService executor) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Logger.info("Shutdown hook triggered, stopping services...");
             
-            // Stop JobQueue gracefully
-            JobQueue jobQueue = JobQueue.getInstance();
+            // Stop Freyr gracefully
+            Freyr jobQueue = Freyr.getInstance();
             jobQueue.shutdown();
             
             // Stop Yggdrasill gracefully
@@ -152,13 +161,6 @@ public final class Odin {
             
             Logger.info("JAWS shutdown complete");
         }));
-    }
-
-    // Start the job queue processing system
-    private static void startJobQueue() {
-        JobQueue jobQueue = JobQueue.getInstance();
-        jobQueue.start();
-        Logger.info("JobQueue started successfully");
     }
 
     /**

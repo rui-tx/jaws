@@ -1,4 +1,4 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 /**
  * ExecutionMode - Defines how jobs should be processed

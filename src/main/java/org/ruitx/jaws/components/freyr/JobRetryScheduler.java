@@ -1,7 +1,8 @@
-package org.ruitx.jaws.jobs;
+package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
@@ -167,7 +168,7 @@ public class JobRetryScheduler {
                 ORDER BY next_retry_at ASC 
                 LIMIT ?
                 """, 
-                JobQueue.JobStatus.RETRY_SCHEDULED.name(), now, batchSize
+                Freyr.JobStatus.RETRY_SCHEDULED.name(), now, batchSize
             );
             
             if (readyJobs.isEmpty()) {
@@ -256,7 +257,7 @@ public class JobRetryScheduler {
                     last_retry_at = ?
                 WHERE id = ?
                 """,
-                JobQueue.JobStatus.PENDING.name(),
+                Freyr.JobStatus.PENDING.name(),
                 now,
                 jobId
             );
@@ -266,7 +267,7 @@ public class JobRetryScheduler {
                 return false;
             }
             
-            JobQueue jobQueue = JobQueue.getInstance();
+            Freyr jobQueue = Freyr.getInstance();
 
             // JobQueue will route to the correct queue based on execution mode
             jobQueue.submit(retryJob);
