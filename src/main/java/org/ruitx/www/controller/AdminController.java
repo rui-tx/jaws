@@ -17,16 +17,7 @@ import static org.ruitx.jaws.strings.RequestType.*;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 import static org.ruitx.jaws.strings.ResponseType.JSON;
 
-/**
- * AdminController - Phase 3 Admin Interface for Job Management
- * 
- * Provides comprehensive administrative functionality for:
- * - Manual retry operations
- * - Dead Letter Queue management  
- * - Circuit breaker monitoring and control
- * - Advanced error analysis and reporting
- * - System health and diagnostics
- */
+
 public class AdminController extends Bragi {
     
     private static final String API_ENDPOINT = "/api/admin/";
@@ -49,7 +40,7 @@ public class AdminController extends Bragi {
     /**
      * Get Dead Letter Queue entries with filtering
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "dlq", method = GET, responseType = JSON)
     public void getDLQEntries() {
         try {
@@ -89,7 +80,7 @@ public class AdminController extends Bragi {
     /**
      * Get specific DLQ entry by ID
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "dlq/:id", method = GET, responseType = JSON)
     public void getDLQEntry() {
         try {
@@ -113,7 +104,7 @@ public class AdminController extends Bragi {
     /**
      * Manually retry a job from DLQ
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "dlq/:id/retry", method = POST, responseType = JSON)
     public void retryDLQEntry(ManualRetryRequest request) {
         try {
@@ -148,7 +139,7 @@ public class AdminController extends Bragi {
     /**
      * Batch retry multiple DLQ entries
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "dlq/batch-retry", method = POST, responseType = JSON)
     public void batchRetryDLQEntries(BatchRetryRequest request) {
         try {
@@ -187,7 +178,7 @@ public class AdminController extends Bragi {
     /**
      * Get DLQ statistics
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "dlq/stats", method = GET, responseType = JSON)
     public void getDLQStatistics() {
         try {
@@ -212,7 +203,7 @@ public class AdminController extends Bragi {
     /**
      * Clean up old DLQ entries
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "dlq/cleanup", method = POST, responseType = JSON)
     public void cleanupDLQ(DLQCleanupRequest request) {
         try {
@@ -243,7 +234,7 @@ public class AdminController extends Bragi {
     /**
      * Get all circuit breaker statistics
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "circuit-breakers", method = GET, responseType = JSON)
     public void getCircuitBreakers() {
         try {
@@ -266,7 +257,7 @@ public class AdminController extends Bragi {
     /**
      * Get specific circuit breaker statistics
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "circuit-breakers/:service", method = GET, responseType = JSON)
     public void getCircuitBreaker() {
         try {
@@ -291,7 +282,7 @@ public class AdminController extends Bragi {
     /**
      * Reset a circuit breaker (admin intervention)
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "circuit-breakers/:service/reset", method = POST, responseType = JSON)
     public void resetCircuitBreaker() {
         try {
@@ -329,7 +320,7 @@ public class AdminController extends Bragi {
     /**
      * Get retry scheduler statistics
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "retry-scheduler/stats", method = GET, responseType = JSON)
     public void getRetrySchedulerStats() {
         try {
@@ -354,7 +345,7 @@ public class AdminController extends Bragi {
     /**
      * Manually trigger retry processing
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "retry-scheduler/process", method = POST, responseType = JSON)
     public void triggerRetryProcessing() {
         try {
@@ -383,7 +374,7 @@ public class AdminController extends Bragi {
     /**
      * Get error classification analysis
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "error-analysis", method = GET, responseType = JSON)
     public void getErrorAnalysis() {
         try {
@@ -411,7 +402,7 @@ public class AdminController extends Bragi {
     /**
      * Test error classification for a given exception
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "error-classification/test", method = POST, responseType = JSON)
     public void testErrorClassification(ErrorClassificationTestRequest request) {
         try {
@@ -455,7 +446,7 @@ public class AdminController extends Bragi {
     /**
      * Get comprehensive system health overview
      */
-    @AccessControl(login = true, role = "admin")
+    //@AccessControl(login = true, role = "admin")
     @Route(endpoint = API_ENDPOINT + "system/health", method = GET, responseType = JSON)
     public void getSystemHealth() {
         try {

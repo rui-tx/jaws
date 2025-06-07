@@ -262,11 +262,16 @@ public class Yggdrasill {
 
         /**
          * Finds and executes a dynamic route for the given endpoint and method.
+         * Uses a two-pass approach: first checks for exact static matches, then parameterized routes.
+         * This ensures that static routes like "/api/endpoint/test" take precedence over 
+         * parameterized routes like "/api/endpoint/:id".
          */
         private boolean findDynamicRouteFor(RequestContext context, String endPoint, RequestType method) {
             try {
-                // Get all registered controllers from Njord
-                for (Method routeMethod : Njord.getInstance().getAllRoutes()) {
+                List<Method> allRoutes = Njord.getInstance().getAllRoutes();
+                
+                // PASS 1: Check for exact static matches (routes without parameters)
+                for (Method routeMethod : allRoutes) {
                     if (routeMethod.isAnnotationPresent(Route.class)) {
                         Route route = routeMethod.getAnnotation(Route.class);
                         
@@ -275,25 +280,61 @@ public class Yggdrasill {
                             continue;
                         }
                         
-                        // Check if the route pattern matches
-                        Map<String, String> pathParams = matchRoutePattern(route.endpoint(), endPoint);
-                        if (pathParams != null) {
-                            Logger.debug("Route matched: {} {} -> {}.{}", 
-                                route.method(), route.endpoint(), 
-                                routeMethod.getDeclaringClass().getSimpleName(), routeMethod.getName());
-                            
-                            // Store path parameters
-                            context.pathParams = pathParams;
-                            
-                            // Get controller instance and invoke the route method
-                            String controllerName = routeMethod.getDeclaringClass().getSimpleName();
-                            Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
-                            if (controllerInstance == null) {
-                                Logger.error("Controller instance not found: {}", controllerName);
-                                return false;
+                        // Only check routes with NO parameters (static routes)
+                        if (!route.endpoint().contains(":")) {
+                            if (route.endpoint().equals(endPoint)) {
+                                Logger.debug("Static route matched: {} {} -> {}.{}", 
+                                    route.method(), route.endpoint(), 
+                                    routeMethod.getDeclaringClass().getSimpleName(), routeMethod.getName());
+                                
+                                // No path parameters for static routes
+                                context.pathParams = new LinkedHashMap<>();
+                                
+                                // Get controller instance and invoke the route method
+                                String controllerName = routeMethod.getDeclaringClass().getSimpleName();
+                                Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
+                                if (controllerInstance == null) {
+                                    Logger.error("Controller instance not found: {}", controllerName);
+                                    return false;
+                                }
+                                
+                                return invokeRouteMethod(context, routeMethod, controllerInstance);
                             }
-                            
-                            return invokeRouteMethod(context, routeMethod, controllerInstance);
+                        }
+                    }
+                }
+                
+                // PASS 2: Check for parameterized routes (routes with parameters)
+                for (Method routeMethod : allRoutes) {
+                    if (routeMethod.isAnnotationPresent(Route.class)) {
+                        Route route = routeMethod.getAnnotation(Route.class);
+                        
+                        // Check if the route method matches
+                        if (!method.equals(route.method())) {
+                            continue;
+                        }
+                        
+                        // Only check routes WITH parameters (parameterized routes)
+                        if (route.endpoint().contains(":")) {
+                            Map<String, String> pathParams = matchRoutePattern(route.endpoint(), endPoint);
+                            if (pathParams != null) {
+                                Logger.debug("Parameterized route matched: {} {} -> {}.{}", 
+                                    route.method(), route.endpoint(), 
+                                    routeMethod.getDeclaringClass().getSimpleName(), routeMethod.getName());
+                                
+                                // Store path parameters
+                                context.pathParams = pathParams;
+                                
+                                // Get controller instance and invoke the route method
+                                String controllerName = routeMethod.getDeclaringClass().getSimpleName();
+                                Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
+                                if (controllerInstance == null) {
+                                    Logger.error("Controller instance not found: {}", controllerName);
+                                    return false;
+                                }
+                                
+                                return invokeRouteMethod(context, routeMethod, controllerInstance);
+                            }
                         }
                     }
                 }

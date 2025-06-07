@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.ruitx.www.controller.PasteitController;
 import org.ruitx.www.controller.APIController;
+import org.ruitx.www.controller.AdminController;
 import org.ruitx.www.controller.AuthController;
 import org.ruitx.www.controller.BackofficeController;
 import org.ruitx.www.controller.JobController;
@@ -18,6 +19,7 @@ public class RoutesConfig {
             new PasteitController(),
             new BackofficeController(),
             new APIController(),
-            new JobController()
+            new JobController(),
+            new AdminController()
     );
 }
