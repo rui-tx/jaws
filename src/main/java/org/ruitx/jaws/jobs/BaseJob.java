@@ -17,14 +17,16 @@ public abstract class BaseJob implements Job {
     private final int priority;
     private final int maxRetries;
     private final long timeoutMs;
+    private final ExecutionMode executionMode;
     private final Map<String, Object> payload;
     
     /**
-     * Constructor for creating a new job
+     * Constructor for creating a new job with execution mode
      */
-    protected BaseJob(String type, int priority, int maxRetries, long timeoutMs, Map<String, Object> payload) {
+    protected BaseJob(String type, ExecutionMode executionMode, int priority, int maxRetries, long timeoutMs, Map<String, Object> payload) {
         this.id = UUID.randomUUID().toString();
         this.type = type;
+        this.executionMode = executionMode != null ? executionMode : ExecutionMode.DEFAULT;
         this.priority = priority;
         this.maxRetries = maxRetries;
         this.timeoutMs = timeoutMs;
@@ -35,10 +37,24 @@ public abstract class BaseJob implements Job {
     }
     
     /**
-     * Constructor for jobs with default settings
+     * Constructor for creating a new job (backward compatible - defaults to PARALLEL)
+     */
+    protected BaseJob(String type, int priority, int maxRetries, long timeoutMs, Map<String, Object> payload) {
+        this(type, ExecutionMode.DEFAULT, priority, maxRetries, timeoutMs, payload);
+    }
+    
+    /**
+     * Constructor for jobs with execution mode and default settings
+     */
+    protected BaseJob(String type, ExecutionMode executionMode, Map<String, Object> payload) {
+        this(type, executionMode, 5, 3, 30000L, payload); // Default: priority 5, 3 retries, 30s timeout
+    }
+    
+    /**
+     * Constructor for jobs with default settings (backward compatible - defaults to PARALLEL)
      */
     protected BaseJob(String type, Map<String, Object> payload) {
-        this(type, 5, 3, 30000L, payload); // Default: priority 5, 3 retries, 30s timeout
+        this(type, ExecutionMode.DEFAULT, 5, 3, 30000L, payload); // Default: priority 5, 3 retries, 30s timeout
     }
     
     @Override
@@ -64,6 +80,11 @@ public abstract class BaseJob implements Job {
     @Override
     public long getTimeoutMs() {
         return timeoutMs;
+    }
+    
+    @Override
+    public ExecutionMode getExecutionMode() {
+        return executionMode;
     }
     
     @Override
@@ -121,6 +142,6 @@ public abstract class BaseJob implements Job {
     
     @Override
     public String toString() {
-        return String.format("Job{id='%s', type='%s', priority=%d}", id, type, priority);
+        return String.format("Job{id='%s', type='%s', priority=%d, mode=%s}", id, type, priority, executionMode);
     }
 } 

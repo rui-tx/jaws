@@ -7,6 +7,7 @@ import org.ruitx.jaws.jobs.JobResult;
 import org.ruitx.www.jobs.ExternalApiJob;
 import org.ruitx.www.jobs.HeavyComputationJob;
 import org.ruitx.www.jobs.ImageProcessingJob;
+import org.ruitx.www.jobs.SequentialPingJob;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +43,73 @@ public class JobController extends Bragi {
     // ========================================
     // Job Queueing Endpoints (Sync - queue jobs and return immediately)
     // ========================================
+    
+    /**
+     * Queue a sequential ping job - Perfect for testing sequential execution!
+     * 
+     * This endpoint demonstrates sequential job processing:
+     * - Submit multiple pings and they'll run one at a time
+     * - Each ping waits for the previous one to complete
+     * - Great for testing the sequential queue system
+     */
+    @Route(endpoint = API_ENDPOINT + "sequential-ping", method = POST, responseType = JSON)
+    public void queueSequentialPing() {
+        try {
+            // Extract parameters from request body if available
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("clientId", getClientIpAddress());
+            payload.put("submittedBy", getCurrentToken().isEmpty() ? "anonymous" : getCurrentToken());
+            
+            // Optional parameters from request body
+            String requestBody = getRequestContext().getRequestBody();
+            if (requestBody != null && !requestBody.trim().isEmpty()) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> bodyParams = getMapper().readValue(requestBody, Map.class);
+                    payload.putAll(bodyParams);
+                } catch (Exception e) {
+                    // If body parsing fails, continue with default values
+                }
+            }
+            
+            // Set defaults if not provided
+            if (!payload.containsKey("message")) {
+                payload.put("message", "Sequential Ping Test");
+            }
+            if (!payload.containsKey("delayMs")) {
+                payload.put("delayMs", 3000); // 3 second default delay
+            }
+            if (!payload.containsKey("pingNumber")) {
+                payload.put("pingNumber", 1);
+            }
+            
+            // Create and submit job
+            SequentialPingJob job = new SequentialPingJob(payload);
+            String jobId = jobQueue.submit(job);
+            
+            // Return immediate response with job tracking info
+            Map<String, Object> response = new HashMap<>();
+            response.put("jobId", jobId);
+            response.put("status", "QUEUED");
+            response.put("executionMode", "SEQUENTIAL");
+            response.put("message", "Sequential ping job queued - will execute one at a time");
+            response.put("pingInfo", Map.of(
+                "message", payload.get("message"),
+                "delayMs", payload.get("delayMs"),
+                "pingNumber", payload.get("pingNumber")
+            ));
+            response.put("endpoints", Map.of(
+                "status", "/api/jobs/status/" + jobId,
+                "result", "/api/jobs/result/" + jobId
+            ));
+            response.put("tip", "Submit multiple pings quickly to see them process sequentially!");
+            
+            sendSucessfulResponse(ACCEPTED, response);
+            
+        } catch (Exception e) {
+            sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to queue sequential ping job: " + e.getMessage());
+        }
+    }
     
     /**
      * Queue a heavy computation job
@@ -190,6 +258,53 @@ public class JobController extends Bragi {
             
         } catch (Exception e) {
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to queue image processing job: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Simple GET endpoint to test sequential ping processing
+     * 
+     * This endpoint will submit 3 sequential pings quickly to demonstrate
+     * how they process one at a time. Perfect for testing!
+     * 
+     * GET /api/jobs/test-sequential-pings
+     */
+    @Route(endpoint = API_ENDPOINT + "test-sequential-pings", method = GET, responseType = JSON)
+    public void testSequentialPings() {
+        try {
+            // Submit 3 sequential pings with different delays
+            Map<String, String> jobIds = new HashMap<>();
+            
+            for (int i = 1; i <= 3; i++) {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("clientId", getClientIpAddress());
+                payload.put("submittedBy", "test-endpoint");
+                payload.put("message", "Test Sequential Ping");
+                payload.put("delayMs", 2000 + (i * 1000)); // 3s, 4s, 5s delays
+                payload.put("pingNumber", i);
+                
+                SequentialPingJob job = new SequentialPingJob(payload);
+                String jobId = jobQueue.submit(job);
+                jobIds.put("ping" + i, jobId);
+            }
+            
+            // Return response with all job IDs
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Submitted 3 sequential ping jobs for testing");
+            response.put("executionMode", "SEQUENTIAL");
+            response.put("jobIds", jobIds);
+            response.put("info", "These jobs will execute one at a time, in order. Check each job's status individually.");
+            response.put("endpoints", Map.of(
+                "stats", "/api/jobs/stats",
+                "status", "/api/jobs/status/{jobId}",
+                "result", "/api/jobs/result/{jobId}"
+            ));
+            response.put("tip", "Watch the logs to see sequential execution in action!");
+            
+            sendSucessfulResponse(OK, response);
+            
+        } catch (Exception e) {
+            sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to test sequential pings: " + e.getMessage());
         }
     }
     

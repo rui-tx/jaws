@@ -83,10 +83,15 @@ public class JobRegistry {
      * These will be implemented later as we migrate from the current async system
      */
     private void registerDefaultJobs() {
-        // Register the job classes we've implemented
+        // Parallel processing jobs (existing)
         register("heavy-computation", org.ruitx.www.jobs.HeavyComputationJob.class);
         register("external-api-call", org.ruitx.www.jobs.ExternalApiJob.class);
         register("image-processing", org.ruitx.www.jobs.ImageProcessingJob.class);
+        
+        // Sequential processing jobs
+        register("database-migration", org.ruitx.www.jobs.DatabaseMigrationJob.class);
+        register("filesystem-cleanup", org.ruitx.www.jobs.FileSystemCleanupJob.class);
+        register("sequential-ping", org.ruitx.www.jobs.SequentialPingJob.class);
         
         // These will be implemented next:
         // register("urgent-task", UrgentTaskJob.class);

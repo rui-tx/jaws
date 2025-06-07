@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * - Clean separation between web layer and job layer
  * - Much simpler database schema
  * - Industry-standard job queue patterns
+ * - Support for both parallel and sequential execution modes
  */
 public class JobQueue implements Runnable {
     
@@ -37,6 +38,7 @@ public class JobQueue implements Runnable {
     private final JobRegistry jobRegistry;
     private final ExecutorService workerPool;
     private final PriorityBlockingQueue<JobInstance> jobQueue;
+    private final SequentialJobQueue sequentialJobQueue;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicInteger activeWorkers = new AtomicInteger(0);
     private final ScheduledExecutorService cleanupScheduler;
@@ -53,6 +55,7 @@ public class JobQueue implements Runnable {
         this.jobQueue = new PriorityBlockingQueue<>(queueCapacity, 
             Comparator.comparingInt((JobInstance ji) -> ji.job.getPriority())
                      .thenComparingLong(ji -> ji.createdAt));
+        this.sequentialJobQueue = new SequentialJobQueue();
         this.cleanupScheduler = Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "job-cleanup"));
         
@@ -79,18 +82,28 @@ public class JobQueue implements Runnable {
     
     /**
      * Submit a job for processing
+     * Routes to appropriate queue based on execution mode
      */
     public String submit(Job job) {
         try {
             // Persist to database first
             persistJob(job);
             
-            // Add to in-memory queue for processing
-            jobQueue.offer(new JobInstance(job));
+            // Route to appropriate queue based on execution mode
+            if (job.getExecutionMode() == ExecutionMode.SEQUENTIAL) {
+                boolean queued = sequentialJobQueue.submit(job);
+                if (!queued) {
+                    throw new RuntimeException("Sequential queue is full");
+                }
+                Logger.info("Job submitted to sequential queue: {}", job);
+            } else {
+                // Add to parallel processing queue
+                jobQueue.offer(new JobInstance(job));
+                Logger.info("Job submitted to parallel queue: {}", job);
+            }
             
             totalJobs.incrementAndGet();
             
-            Logger.info("Job submitted: {}", job);
             return job.getId();
             
         } catch (Exception e) {
@@ -151,17 +164,20 @@ public class JobQueue implements Runnable {
         if (running.compareAndSet(false, true)) {
             Logger.info("Starting JobQueue processing system...");
             
-            // Start worker threads
+            // Start parallel worker threads
             for (int i = 0; i < DEFAULT_WORKER_THREADS; i++) {
                 workerPool.execute(new JobWorker());
             }
+            
+            // Start sequential processing
+            sequentialJobQueue.start();
             
             // Start cleanup scheduler
             cleanupScheduler.scheduleAtFixedRate(this::cleanupExpiredData, 
                                                CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS, 
                                                TimeUnit.MILLISECONDS);
             
-            Logger.info("JobQueue started with {} workers", DEFAULT_WORKER_THREADS);
+            Logger.info("JobQueue started with {} parallel workers and 1 sequential worker", DEFAULT_WORKER_THREADS);
         }
     }
     
@@ -173,6 +189,7 @@ public class JobQueue implements Runnable {
             Logger.info("Shutting down JobQueue processing system...");
             
             workerPool.shutdown();
+            sequentialJobQueue.shutdown();
             cleanupScheduler.shutdown();
             
             try {
@@ -200,9 +217,15 @@ public class JobQueue implements Runnable {
         stats.put("totalJobs", totalJobs.get());
         stats.put("completedJobs", completedJobs.get());
         stats.put("failedJobs", failedJobs.get());
-        stats.put("queueSize", jobQueue.size());
-        stats.put("activeWorkers", activeWorkers.get());
+        stats.put("parallelQueueSize", jobQueue.size());
+        stats.put("sequentialQueueSize", sequentialJobQueue.getQueueSize());
+        stats.put("activeParallelWorkers", activeWorkers.get());
+        stats.put("sequentialProcessing", sequentialJobQueue.isProcessingJob());
         stats.put("running", running.get());
+        
+        // Add sequential queue statistics
+        Map<String, Object> sequentialStats = sequentialJobQueue.getStatistics();
+        stats.put("sequential", sequentialStats);
         
         return stats;
     }
@@ -221,6 +244,7 @@ public class JobQueue implements Runnable {
                     max_retries INTEGER DEFAULT 3,
                     current_retries INTEGER DEFAULT 0,
                     timeout_ms BIGINT DEFAULT 30000,
+                    execution_mode VARCHAR(20) DEFAULT 'PARALLEL',
                     status VARCHAR(20) DEFAULT 'PENDING',
                     created_at BIGINT NOT NULL,
                     started_at BIGINT,
@@ -257,7 +281,7 @@ public class JobQueue implements Runnable {
             String payloadJson = Odin.getMapper().writeValueAsString(job.getPayload());
             
             mimir.executeSql(
-                "INSERT INTO JOBS (id, type, payload, priority, max_retries, current_retries, timeout_ms, status, created_at, client_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO JOBS (id, type, payload, priority, max_retries, current_retries, timeout_ms, execution_mode, status, created_at, client_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 job.getId(),
                 job.getType(),
                 payloadJson,
@@ -265,6 +289,7 @@ public class JobQueue implements Runnable {
                 job.getMaxRetries(),
                 0, // current_retries starts at 0
                 job.getTimeoutMs(),
+                job.getExecutionMode().name(),
                 JobStatus.PENDING.name(),
                 Instant.now().toEpochMilli(),
                 job.getClientId(),
@@ -278,7 +303,8 @@ public class JobQueue implements Runnable {
     private void loadPendingJobs() {
         try {
             List<Row> rows = mimir.getRows("SELECT * FROM JOBS WHERE status IN ('PENDING', 'PROCESSING') ORDER BY priority, created_at");
-            int loaded = 0;
+            int parallelLoaded = 0;
+            int sequentialLoaded = 0;
             
             for (Row row : rows) {
                 try {
@@ -289,15 +315,22 @@ public class JobQueue implements Runnable {
                     // Create job instance using registry
                     Job job = jobRegistry.createJob(jobType, payload);
                     if (job != null) {
-                        jobQueue.offer(new JobInstance(job));
-                        loaded++;
+                        // Route to appropriate queue based on execution mode
+                        if (job.getExecutionMode() == ExecutionMode.SEQUENTIAL) {
+                            sequentialJobQueue.submit(job);
+                            sequentialLoaded++;
+                        } else {
+                            jobQueue.offer(new JobInstance(job));
+                            parallelLoaded++;
+                        }
                     }
                 } catch (Exception e) {
                     Logger.error("Failed to load pending job from row: {}", e.getMessage());
                 }
             }
             
-            Logger.info("Loaded {} pending jobs from database", loaded);
+            Logger.info("Loaded {} parallel jobs and {} sequential jobs from database", 
+                       parallelLoaded, sequentialLoaded);
         } catch (Exception e) {
             Logger.error("Failed to load pending jobs: {}", e.getMessage());
         }
@@ -387,7 +420,7 @@ public class JobQueue implements Runnable {
             activeWorkers.incrementAndGet();
             
             try {
-                Logger.info("Processing job: {}", job);
+                Logger.info("Processing parallel job: {}", job);
                 
                 // Update status to processing
                 updateJobStatus(job.getId(), JobStatus.PROCESSING, null, Instant.now().toEpochMilli(), null);
@@ -399,10 +432,10 @@ public class JobQueue implements Runnable {
                 updateJobStatus(job.getId(), JobStatus.COMPLETED, null, null, Instant.now().toEpochMilli());
                 
                 completedJobs.incrementAndGet();
-                Logger.info("Completed job: {}", job.getId());
+                Logger.info("Completed parallel job: {}", job.getId());
                 
             } catch (Exception e) {
-                Logger.error("Failed to process job {}: {}", job.getId(), e.getMessage(), e);
+                Logger.error("Failed to process parallel job {}: {}", job.getId(), e.getMessage(), e);
                 
                 // Mark as failed
                 updateJobStatus(job.getId(), JobStatus.FAILED, e.getMessage(), null, Instant.now().toEpochMilli());

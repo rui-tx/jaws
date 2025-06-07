@@ -44,6 +44,14 @@ public interface Job {
     Map<String, Object> getPayload();
     
     /**
+     * Execution mode - determines whether job runs in parallel or sequential queue
+     * Defaults to PARALLEL for backward compatibility
+     */
+    default ExecutionMode getExecutionMode() {
+        return ExecutionMode.DEFAULT;
+    }
+    
+    /**
      * Execute the job logic.
      * 
      * This method should contain all the business logic that was previously
