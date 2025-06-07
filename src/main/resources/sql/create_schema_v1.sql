@@ -65,3 +65,49 @@ CREATE INDEX IF NOT EXISTS idx_paste_created_at ON PASTE (created_at);
 CREATE INDEX IF NOT EXISTS idx_paste_expires_at ON PASTE (expires_at);
 CREATE INDEX IF NOT EXISTS idx_paste_user_id ON PASTE (user_id);
 
+-- Async Request Support Tables
+CREATE TABLE IF NOT EXISTS ASYNC_REQUEST (
+    id              TEXT PRIMARY KEY,           -- Unique request ID (UUID)
+    endpoint        TEXT NOT NULL,              -- Target endpoint
+    method          TEXT NOT NULL,              -- HTTP method
+    headers         TEXT,                       -- JSON serialized headers
+    body            TEXT,                       -- Request body
+    client_id       TEXT,                       -- Client identifier (for response routing)
+    user_id         INTEGER,                    -- Optional user context
+    priority        INTEGER DEFAULT 5,          -- Priority level (1-10, 1=highest)
+    max_retries     INTEGER DEFAULT 3,          -- Maximum retry attempts
+    current_retries INTEGER DEFAULT 0,          -- Current retry count
+    timeout_ms      INTEGER DEFAULT 30000,      -- Timeout in milliseconds
+    status          TEXT DEFAULT 'PENDING',     -- PENDING, PROCESSING, COMPLETED, FAILED, TIMEOUT
+    created_at      INTEGER NOT NULL,           -- When request was created
+    started_at      INTEGER,                    -- When processing started
+    completed_at    INTEGER,                    -- When processing completed
+    error_message   TEXT,                       -- Error details if failed
+    metadata        TEXT,                       -- Additional metadata as JSON
+    controller_class TEXT,                      -- Route optimization: controller class name
+    method_name     TEXT,                       -- Route optimization: method name
+    path_params     TEXT,                       -- Route optimization: JSON serialized path parameters
+    FOREIGN KEY (user_id) REFERENCES USER (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS ASYNC_RESPONSE (
+    id              TEXT PRIMARY KEY,           -- Response ID (same as request ID)
+    request_id      TEXT NOT NULL,              -- Link to request
+    status_code     INTEGER,                    -- HTTP status code
+    headers         TEXT,                       -- JSON serialized response headers
+    body            TEXT,                       -- Response body
+    content_type    TEXT,                       -- Response content type
+    created_at      INTEGER NOT NULL,           -- When response was generated
+    expires_at      INTEGER,                    -- When response expires (for cleanup)
+    FOREIGN KEY (request_id) REFERENCES ASYNC_REQUEST (id) ON DELETE CASCADE
+);
+
+-- Indexes for async tables performance
+CREATE INDEX IF NOT EXISTS idx_async_request_status ON ASYNC_REQUEST (status);
+CREATE INDEX IF NOT EXISTS idx_async_request_created_at ON ASYNC_REQUEST (created_at);
+CREATE INDEX IF NOT EXISTS idx_async_request_priority ON ASYNC_REQUEST (priority, created_at);
+CREATE INDEX IF NOT EXISTS idx_async_request_client_id ON ASYNC_REQUEST (client_id);
+CREATE INDEX IF NOT EXISTS idx_async_request_controller_method ON ASYNC_REQUEST (controller_class, method_name);
+CREATE INDEX IF NOT EXISTS idx_async_response_expires_at ON ASYNC_RESPONSE (expires_at);
+CREATE INDEX IF NOT EXISTS idx_async_response_request_id ON ASYNC_RESPONSE (request_id);
+
