@@ -415,6 +415,9 @@ public class JobController extends Bragi {
             case COMPLETED -> "Job has been completed successfully";
             case FAILED -> "Job processing failed";
             case TIMEOUT -> "Job processing timed out";
+            case RETRY_SCHEDULED -> "Job is scheduled for retry";
+            case DEAD_LETTER -> "Job was permanently failed and moved to dead letter queue";
+            default -> "Unknown job status";
         };
     }
 } 

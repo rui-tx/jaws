@@ -30,6 +30,7 @@ public class SequentialJobQueue {
     private final Mimir mimir = new Mimir();
     private final BlockingQueue<Job> sequentialQueue;
     private final ExecutorService singleWorker;
+    private final RetryManager retryManager;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean processingJob = new AtomicBoolean(false);
     
@@ -37,11 +38,13 @@ public class SequentialJobQueue {
     private final AtomicInteger totalJobs = new AtomicInteger(0);   
     private final AtomicInteger completedJobs = new AtomicInteger(0);
     private final AtomicInteger failedJobs = new AtomicInteger(0);
+    private final AtomicInteger retriedJobs = new AtomicInteger(0);
     
     public SequentialJobQueue() {
         this.sequentialQueue = new LinkedBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
         this.singleWorker = Executors.newSingleThreadExecutor(
             r -> new Thread(r, "sequential-job-worker"));
+        this.retryManager = new RetryManager();
         
         Logger.info("SequentialJobQueue initialized with queue capacity of {}", DEFAULT_QUEUE_CAPACITY);
     }
@@ -109,6 +112,7 @@ public class SequentialJobQueue {
             "totalJobs", totalJobs.get(),
             "completedJobs", completedJobs.get(),
             "failedJobs", failedJobs.get(),
+            "retriedJobs", retriedJobs.get(),
             "queueSize", sequentialQueue.size(),
             "processingJob", processingJob.get(),
             "running", running.get()
@@ -178,9 +182,24 @@ public class SequentialJobQueue {
             } catch (Exception e) {
                 Logger.error("Failed to process sequential job {}: {}", job.getId(), e.getMessage(), e);
                 
-                // Mark as failed
-                updateJobStatus(job.getId(), JobQueue.JobStatus.FAILED, e.getMessage(), null, Instant.now().toEpochMilli());
-                failedJobs.incrementAndGet();
+                // Get current retry count from database (needed for accurate decision)
+                int currentRetries = retryManager.getCurrentRetryCount(job.getId());
+                
+                // Determine if we should retry this job
+                RetryManager.RetryDecision decision = retryManager.shouldRetry(
+                    job.getId(), e, currentRetries, job.getMaxRetries());
+                
+                if (decision.shouldRetry()) {
+                    // Schedule for retry with exponential backoff
+                    retryManager.scheduleRetry(job.getId(), decision.getRetryDelayMs(), e);
+                    retriedJobs.incrementAndGet();
+                    Logger.info("Sequential job {} scheduled for retry: {}", job.getId(), decision.getReason());
+                } else {
+                    // Mark as permanently failed
+                    retryManager.markAsPermanentlyFailed(job.getId(), e, decision.getReason());
+                    failedJobs.incrementAndGet();
+                    Logger.warn("Sequential job {} permanently failed: {}", job.getId(), decision.getReason());
+                }
                 
             } finally {
                 processingJob.set(false);

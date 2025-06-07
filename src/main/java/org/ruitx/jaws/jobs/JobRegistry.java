@@ -93,6 +93,9 @@ public class JobRegistry {
         register("filesystem-cleanup", org.ruitx.www.jobs.FileSystemCleanupJob.class);
         register("sequential-ping", org.ruitx.www.jobs.SequentialPingJob.class);
         
+        // Test jobs
+        register("retry-test", org.ruitx.www.jobs.RetryTestJob.class);
+        
         // These will be implemented next:
         // register("urgent-task", UrgentTaskJob.class);
         // register("user-processing", UserProcessingJob.class);

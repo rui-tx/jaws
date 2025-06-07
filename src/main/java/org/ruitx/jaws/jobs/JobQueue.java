@@ -39,6 +39,7 @@ public class JobQueue implements Runnable {
     private final ExecutorService workerPool;
     private final PriorityBlockingQueue<JobInstance> jobQueue;
     private final SequentialJobQueue sequentialJobQueue;
+    private final RetryManager retryManager;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicInteger activeWorkers = new AtomicInteger(0);
     private final ScheduledExecutorService cleanupScheduler;
@@ -47,6 +48,7 @@ public class JobQueue implements Runnable {
     private final AtomicInteger totalJobs = new AtomicInteger(0);   
     private final AtomicInteger completedJobs = new AtomicInteger(0);
     private final AtomicInteger failedJobs = new AtomicInteger(0);
+    private final AtomicInteger retriedJobs = new AtomicInteger(0);
     
     private JobQueue(int workerThreads, int queueCapacity) {
         this.jobRegistry = new JobRegistry();
@@ -56,10 +58,10 @@ public class JobQueue implements Runnable {
             Comparator.comparingInt((JobInstance ji) -> ji.job.getPriority())
                      .thenComparingLong(ji -> ji.createdAt));
         this.sequentialJobQueue = new SequentialJobQueue();
+        this.retryManager = new RetryManager();
         this.cleanupScheduler = Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "job-cleanup"));
         
-        initializeDatabase();
         loadPendingJobs();
         
         Logger.info("JobQueue initialized with {} worker threads and queue capacity of {}", 
@@ -217,6 +219,7 @@ public class JobQueue implements Runnable {
         stats.put("totalJobs", totalJobs.get());
         stats.put("completedJobs", completedJobs.get());
         stats.put("failedJobs", failedJobs.get());
+        stats.put("retriedJobs", retriedJobs.get());
         stats.put("parallelQueueSize", jobQueue.size());
         stats.put("sequentialQueueSize", sequentialJobQueue.getQueueSize());
         stats.put("activeParallelWorkers", activeWorkers.get());
@@ -227,54 +230,19 @@ public class JobQueue implements Runnable {
         Map<String, Object> sequentialStats = sequentialJobQueue.getStatistics();
         stats.put("sequential", sequentialStats);
         
+        // Add retry statistics
+        RetryManager.RetryStatistics retryStats = retryManager.getRetryStatistics();
+        Map<String, Object> retryStatsMap = Map.of(
+            "retryScheduledJobs", retryStats.getRetryScheduledJobs(),
+            "permanentlyFailedJobs", retryStats.getPermanentlyFailedJobs(),
+            "totalRetryAttempts", retryStats.getTotalRetryAttempts()
+        );
+        stats.put("retry", retryStatsMap);
+        
         return stats;
     }
     
     // Private helper methods
-    
-    private void initializeDatabase() {
-        try {
-            // Create JOBS table if it doesn't exist
-            mimir.executeSql("""
-                CREATE TABLE IF NOT EXISTS JOBS (
-                    id VARCHAR(36) PRIMARY KEY,
-                    type VARCHAR(100) NOT NULL,
-                    payload TEXT,
-                    priority INTEGER DEFAULT 5,
-                    max_retries INTEGER DEFAULT 3,
-                    current_retries INTEGER DEFAULT 0,
-                    timeout_ms BIGINT DEFAULT 30000,
-                    execution_mode VARCHAR(20) DEFAULT 'PARALLEL',
-                    status VARCHAR(20) DEFAULT 'PENDING',
-                    created_at BIGINT NOT NULL,
-                    started_at BIGINT,
-                    completed_at BIGINT,
-                    error_message TEXT,
-                    client_id VARCHAR(100),
-                    user_id INTEGER
-                )
-            """);
-            
-            // Create JOB_RESULTS table if it doesn't exist
-            mimir.executeSql("""
-                CREATE TABLE IF NOT EXISTS JOB_RESULTS (
-                    id VARCHAR(36) PRIMARY KEY,
-                    job_id VARCHAR(36) NOT NULL,
-                    status_code INTEGER DEFAULT 200,
-                    headers TEXT,
-                    body TEXT,
-                    content_type VARCHAR(100),
-                    created_at BIGINT NOT NULL,
-                    expires_at BIGINT NOT NULL
-                )
-            """);
-            
-            Logger.info("Job database tables initialized");
-        } catch (Exception e) {
-            Logger.error("Failed to initialize job database: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to initialize job database", e);
-        }
-    }
     
     private void persistJob(Job job) {
         try {
@@ -377,7 +345,7 @@ public class JobQueue implements Runnable {
      * Job status enum
      */
     public enum JobStatus {
-        PENDING, PROCESSING, COMPLETED, FAILED, TIMEOUT
+        PENDING, PROCESSING, COMPLETED, FAILED, TIMEOUT, RETRY_SCHEDULED, DEAD_LETTER
     }
     
     /**
@@ -437,9 +405,24 @@ public class JobQueue implements Runnable {
             } catch (Exception e) {
                 Logger.error("Failed to process parallel job {}: {}", job.getId(), e.getMessage(), e);
                 
-                // Mark as failed
-                updateJobStatus(job.getId(), JobStatus.FAILED, e.getMessage(), null, Instant.now().toEpochMilli());
-                failedJobs.incrementAndGet();
+                // Get current retry count from database (needed for accurate decision)
+                int currentRetries = retryManager.getCurrentRetryCount(job.getId());
+                
+                // Determine if we should retry this job
+                RetryManager.RetryDecision decision = retryManager.shouldRetry(
+                    job.getId(), e, currentRetries, job.getMaxRetries());
+                
+                if (decision.shouldRetry()) {
+                    // Schedule for retry with exponential backoff
+                    retryManager.scheduleRetry(job.getId(), decision.getRetryDelayMs(), e);
+                    retriedJobs.incrementAndGet();
+                    Logger.info("Parallel job {} scheduled for retry: {}", job.getId(), decision.getReason());
+                } else {
+                    // Mark as permanently failed
+                    retryManager.markAsPermanentlyFailed(job.getId(), e, decision.getReason());
+                    failedJobs.incrementAndGet();
+                    Logger.warn("Parallel job {} permanently failed: {}", job.getId(), decision.getReason());
+                }
                 
             } finally {
                 activeWorkers.decrementAndGet();
