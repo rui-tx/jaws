@@ -15,29 +15,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * RetryScheduler - Background service for processing delayed retries
+ * JobRetryScheduler - Background service for processing delayed retries
  * 
  * This class handles the scheduled retry processing for jobs that have been marked
  * as RETRY_SCHEDULED. It periodically polls the database for jobs ready to retry
  * and re-queues them to the appropriate job queue.
- * 
- * Key features:
- * - Configurable retry check interval (default: 30 seconds)
- * - Batch processing for efficiency
- * - Proper error handling and logging
- * - Integration with both parallel and sequential queues
- * - Statistics tracking for monitoring
- * - Graceful shutdown with job completion
  */
-public class RetryScheduler {
+public class JobRetryScheduler {
     
     private static final long DEFAULT_CHECK_INTERVAL_MS = 30000L; // 30 seconds
     private static final int DEFAULT_BATCH_SIZE = 50; // Process up to 50 retries at once
     
     private final Mimir mimir = new Mimir();
-    private final JobRegistry jobRegistry = new JobRegistry();
-    private final RetryManager retryManager = new RetryManager();
-    private final DeadLetterQueue deadLetterQueue = new DeadLetterQueue();
+    private final JobRegistry jobRegistry;
+    private final JobRetryManager retryManager = new JobRetryManager();
+    private final DeadLetterQueue deadLetterQueue;
     
     private final long checkIntervalMs;
     private final int batchSize;
@@ -52,25 +44,30 @@ public class RetryScheduler {
     private final AtomicInteger movedToDeadLetter = new AtomicInteger(0);
     
     /**
-     * Constructor with default settings
+     * Constructor with default settings and shared DLQ
      */
-    public RetryScheduler() {
-        this(DEFAULT_CHECK_INTERVAL_MS, DEFAULT_BATCH_SIZE);
+    public JobRetryScheduler(DeadLetterQueue sharedDeadLetterQueue) {
+        this(sharedDeadLetterQueue, DEFAULT_CHECK_INTERVAL_MS, DEFAULT_BATCH_SIZE);
     }
     
     /**
-     * Constructor with custom settings
+     * Constructor with custom settings and shared DLQ
      * 
+     * @param sharedDeadLetterQueue Shared DeadLetterQueue instance
      * @param checkIntervalMs How often to check for ready retries (milliseconds)
      * @param batchSize Maximum number of retries to process per batch
      */
-    public RetryScheduler(long checkIntervalMs, int batchSize) {
+    public JobRetryScheduler(DeadLetterQueue sharedDeadLetterQueue, long checkIntervalMs, int batchSize) {
+        // Use singleton JobRegistry instance
+        this.jobRegistry = JobRegistry.getInstance();
+        this.deadLetterQueue = sharedDeadLetterQueue; // Use shared instance
+        
         this.checkIntervalMs = checkIntervalMs;
         this.batchSize = batchSize;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "retry-scheduler"));
         
-        Logger.info("RetryScheduler initialized with {}ms interval and batch size {}", 
+        Logger.info("JobRetryScheduler initialized with {}ms interval, batch size {}, and shared DLQ", 
                    checkIntervalMs, batchSize);
     }
     
@@ -80,7 +77,7 @@ public class RetryScheduler {
      */
     public void start() {
         if (running.compareAndSet(false, true)) {
-            Logger.info("Starting RetryScheduler...");
+            Logger.info("Starting JobRetryScheduler...");
             
             // Schedule the retry processing task
             scheduler.scheduleAtFixedRate(
@@ -90,9 +87,9 @@ public class RetryScheduler {
                 TimeUnit.MILLISECONDS
             );
             
-            Logger.info("RetryScheduler started successfully");
+            Logger.info("JobRetryScheduler started successfully");
         } else {
-            Logger.warn("RetryScheduler is already running");
+            Logger.warn("JobRetryScheduler is already running");
         }
     }
     
@@ -102,14 +99,14 @@ public class RetryScheduler {
      */
     public void stop() {
         if (running.compareAndSet(true, false)) {
-            Logger.info("Stopping RetryScheduler...");
+            Logger.info("Stopping JobRetryScheduler...");
             
             scheduler.shutdown();
             
             try {
                 // Wait for current processing to complete (up to 60 seconds)
                 if (!scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
-                    Logger.warn("RetryScheduler did not terminate gracefully, forcing shutdown");
+                    Logger.warn("JobRetryScheduler did not terminate gracefully, forcing shutdown");
                     scheduler.shutdownNow();
                 }
             } catch (InterruptedException e) {
@@ -117,7 +114,7 @@ public class RetryScheduler {
                 Thread.currentThread().interrupt();
             }
             
-            Logger.info("RetryScheduler stopped successfully");
+            Logger.info("JobRetryScheduler stopped successfully");
         }
     }
     
@@ -129,7 +126,7 @@ public class RetryScheduler {
     }
     
     /**
-     * Get retry scheduler statistics
+     * Get JobRetryScheduler statistics
      */
     public RetrySchedulerStatistics getStatistics() {
         return new RetrySchedulerStatistics(
@@ -269,10 +266,9 @@ public class RetryScheduler {
                 return false;
             }
             
-            // Submit the job to the appropriate queue
             JobQueue jobQueue = JobQueue.getInstance();
-            
-            // Submit normally - JobQueue will route to the correct queue based on execution mode
+
+            // JobQueue will route to the correct queue based on execution mode
             jobQueue.submit(retryJob);
             
             successfulRetries.incrementAndGet();

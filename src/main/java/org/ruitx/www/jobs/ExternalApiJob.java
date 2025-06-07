@@ -2,6 +2,7 @@ package org.ruitx.www.jobs;
 
 import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.jobs.BaseJob;
+import org.ruitx.jaws.jobs.CircuitBreaker;
 import org.ruitx.jaws.jobs.JobResultStore;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
@@ -27,6 +28,34 @@ import static org.ruitx.jaws.types.TypeDefinition.LIST_POST;
  * This job fetches data from external APIs without depending on the web framework.
  * It implements its own HTTP client instead of depending on Bragi.
  * 
+ * Now includes circuit breaker protection to prevent cascading failures when
+ * external APIs are down or experiencing issues.
+ * 
+ * CIRCUIT BREAKER INTEGRATION:
+ * - Each unique API endpoint gets its own circuit breaker instance
+ * - Circuit breaker states: CLOSED (normal), OPEN (failing fast), HALF_OPEN (testing recovery)
+ * - Failure tracking: HTTP errors, timeouts, and non-JSON responses trigger circuit breaker
+ * - Protection: When circuit is open, jobs fail fast with 503 status without making API calls
+ * - Recovery: Circuit automatically transitions to HALF_OPEN after timeout, then CLOSED if calls succeed
+ * - Monitoring: Circuit breaker state and statistics are included in job results
+ * 
+ * USAGE EXAMPLES:
+ * 
+ * 1. Normal API call (circuit breaker CLOSED):
+ *    JobQueue.getInstance().submit(new ExternalApiJob(Map.of(
+ *        "url", "https://api.example.com/data"
+ *    )));
+ * 
+ * 2. When API is failing (circuit breaker OPEN):
+ *    - Multiple failures will open the circuit
+ *    - Subsequent jobs fail fast with CircuitBreakerOpenException
+ *    - No actual API calls are made until circuit recovers
+ * 
+ * 3. Monitoring circuit breaker state:
+ *    - Check job results for "circuitBreaker" field containing current state
+ *    - Use admin endpoints: GET /admin/api/circuit-breakers
+ *    - Circuit breaker name format: "external-api-{domain}"
+ * 
  * Migration from:
  * @Route(endpoint = API_ENDPOINT + "fetch-external-data", method = POST)
  * @Async(timeout = 30000, priority = 5, maxRetries = 2)
@@ -36,16 +65,26 @@ public class ExternalApiJob extends BaseJob {
     
     public static final String JOB_TYPE = "external-api-call";
     
+    private final CircuitBreaker circuitBreaker;
+    
     /**
      * Constructor - jobs must have a constructor that takes Map<String, Object>
      */
     public ExternalApiJob(Map<String, Object> payload) {
         super(JOB_TYPE, 5, 2, 30000L, payload); // priority 5, 2 retries, 30s timeout
+        
+        // Initialize circuit breaker for external API protection
+        // Each unique API endpoint gets its own circuit breaker instance
+        String url = payload.get("url") != null ? payload.get("url").toString() : "jsonplaceholder";
+        String serviceName = extractServiceName(url);
+        this.circuitBreaker = CircuitBreaker.forExternalAPI("external-api-" + serviceName);
+        
+        Logger.debug("ExternalApiJob created with circuit breaker for service: {}", serviceName);
     }
-    
+
     @Override
     public void execute() throws Exception {
-        Logger.info("Starting external API job: {}", getId());
+        Logger.info("Starting external API job: {} with circuit breaker protection", getId());
         
         try {
             // Get URL from payload, default to the original URL
@@ -59,8 +98,8 @@ public class ExternalApiJob extends BaseJob {
             Logger.info("Simulating network delay of {} ms...", networkDelay);
             Thread.sleep(networkDelay);
             
-            // Make the API call using our own HTTP client (no framework dependency!)
-            APIResponse<List<Post>> response = callExternalAPI(url);
+            // Make the API call with circuit breaker protection
+            APIResponse<List<Post>> response = callExternalAPIWithCircuitBreaker(url);
 
             if (!response.success()) {
                 // Store error result
@@ -80,6 +119,16 @@ public class ExternalApiJob extends BaseJob {
             result.put("jobType", getType());
             result.put("networkDelay", networkDelay + " ms");
             
+            // Add circuit breaker state to result for monitoring
+            CircuitBreaker.CircuitBreakerStats stats = circuitBreaker.getStatistics();
+            result.put("circuitBreaker", Map.of(
+                "serviceName", stats.serviceName,
+                "state", stats.state.name(),
+                "successfulCalls", stats.successfulCalls,
+                "failedCalls", stats.failedCalls,
+                "lastStateChange", stats.lastStateChangeTime
+            ));
+            
             // Additional metadata from payload
             if (getString("requestedBy") != null) {
                 result.put("requestedBy", getString("requestedBy"));
@@ -89,7 +138,17 @@ public class ExternalApiJob extends BaseJob {
             String jsonResult = Odin.getMapper().writeValueAsString(result);
             JobResultStore.storeSuccess(getId(), jsonResult);
             
-            Logger.info("External API job completed successfully: {}", getId());
+            Logger.info("External API job completed successfully: {} (circuit breaker state: {})", 
+                       getId(), stats.state.name());
+            
+        } catch (CircuitBreaker.CircuitBreakerOpenException e) {
+            // Circuit breaker is open - fail fast without making the API call
+            Logger.warn("External API job failed due to open circuit breaker: {} - {}", getId(), e.getMessage());
+            
+            // Store circuit breaker error result
+            JobResultStore.storeError(getId(), 503, 
+                "Service temporarily unavailable due to circuit breaker protection: " + e.getMessage());
+            throw e;
             
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -108,6 +167,16 @@ public class ExternalApiJob extends BaseJob {
     }
     
     /**
+     * API call method with circuit breaker protection
+     */
+    private APIResponse<List<Post>> callExternalAPIWithCircuitBreaker(String url) throws Exception {
+        return circuitBreaker.execute(() -> {
+            Logger.debug("Making API call through circuit breaker to: {}", url);
+            return callExternalAPI(url);
+        });
+    }
+    
+    /**
      * Framework-agnostic API call method
      */
     private APIResponse<List<Post>> callExternalAPI(String url) {
@@ -122,32 +191,54 @@ public class ExternalApiJob extends BaseJob {
             
             if (response.statusCode() != 200 && response.statusCode() != 201) {
                 Logger.error("API request failed with status code: {}", response.statusCode());
-                return APIResponse.error(
-                        String.valueOf(response.statusCode()),
-                        "Server returned error status: " + response.statusCode()
-                );
+                
+                // Throw exception for circuit breaker to track failures
+                throw new IOException("API returned error status: " + response.statusCode());
             }
 
             String contentType = response.headers().firstValue("content-type").orElse("");
             if (!contentType.contains("application/json")) {
                 Logger.error("Unexpected content type: {}", contentType);
-                return APIResponse.error(
-                        String.valueOf(response.statusCode()),
-                        "Server returned non-JSON response"
-                );
+                
+                // Throw exception for circuit breaker to track failures
+                throw new IOException("Server returned non-JSON response: " + contentType);
             }
             
             // Parse the response
             List<Post> posts = Odin.getMapper().readValue(response.body(), LIST_POST);
+            Logger.debug("Successfully parsed {} posts from API response", posts.size());
+            
             return APIResponse.success(String.valueOf(response.statusCode()), "Data fetched successfully", posts);
 
         } catch (IOException | InterruptedException e) {
             Logger.error("HTTP request failed: {}", e.getMessage());
-            return APIResponse.error(
-                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-                    "Failed to fetch data from API"
-            );
+            // Re-throw so circuit breaker can track the failure
+            throw new RuntimeException("Failed to fetch data from API: " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Extract service name from URL for circuit breaker identification
+     */
+    private String extractServiceName(String url) {
+        if (url == null || url.isEmpty()) {
+            return "unknown";
+        }
+        
+        try {
+            // Extract domain from URL for service identification
+            URI uri = URI.create(url);
+            String host = uri.getHost();
+            if (host != null) {
+                // Remove www. prefix and use domain as service name
+                return host.startsWith("www.") ? host.substring(4) : host;
+            }
+        } catch (Exception e) {
+            Logger.debug("Failed to parse URL for service name: {}", url);
+        }
+        
+        // Fallback to a hash of the URL
+        return "service-" + Math.abs(url.hashCode() % 10000);
     }
     
     /**

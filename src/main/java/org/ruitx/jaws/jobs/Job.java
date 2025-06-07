@@ -5,9 +5,7 @@ import java.util.Map;
 /**
  * Core interface for background jobs.
  * 
- * This replaces the complex route-based async system with a clean,
- * framework-agnostic job system. Jobs are self-contained units of work
- * that carry all the data they need to execute.
+ * Jobs are self-contained units of work that carry all the data they need to execute.
  */
 public interface Job {
     
@@ -45,7 +43,7 @@ public interface Job {
     
     /**
      * Execution mode - determines whether job runs in parallel or sequential queue
-     * Defaults to PARALLEL for backward compatibility
+     * Defaults to PARALLEL
      */
     default ExecutionMode getExecutionMode() {
         return ExecutionMode.DEFAULT;

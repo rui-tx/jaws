@@ -7,104 +7,140 @@ import java.time.Instant;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * RetryManager - Handles job retry logic with exponential backoff and jitter
+ * JobRetryManager - Handles job retry logic with error classification
  * 
- * This class implements production-ready retry mechanisms:
- * - Exponential backoff: 1s, 4s, 16s, 64s, 256s (capped at 5 minutes)
- * - Jitter: ±25% random variation to prevent thundering herd
- * - Error classification: Different strategies for permanent vs transient errors
- * - Database persistence: Tracks retry attempts and scheduling
- * 
- * Compatible with both parallel and sequential job queues.
  */
-public class RetryManager {
+public class JobRetryManager {
     
-    private static final long BASE_DELAY_MS = 1000L; // 1 second base delay
-    private static final long MAX_DELAY_MS = 300000L; // 5 minutes maximum delay
-    private static final double JITTER_FACTOR = 0.25; // ±25% jitter
-    private static final int EXPONENTIAL_BASE = 4; // 4x multiplier per retry
+    // Default fallback values (used when JobErrorClassifier doesn't provide specific values)
+    private static final long DEFAULT_BASE_DELAY_MS = 1000L; // 1 second base delay
+    private static final long DEFAULT_MAX_DELAY_MS = 300000L; // 5 minutes maximum delay
+    private static final double DEFAULT_JITTER_FACTOR = 0.25; // ±25% jitter
+    private static final int DEFAULT_EXPONENTIAL_BASE = 4; // 4x multiplier per retry
     
     private final Mimir mimir = new Mimir();
+    private final JobErrorClassifier errorClassifier = new JobErrorClassifier();
     
     /**
-     * Retry decision result
+     * Retry decision result with enhanced information
      */
     public static class RetryDecision {
         private final boolean shouldRetry;
         private final long retryDelayMs;
         private final String reason;
-        private final ErrorClassifier.ErrorType errorType;
+        private final JobErrorClassifier.ErrorType errorType;
+        private final String strategy;
+        private final int suggestedMaxRetries;
         
-        public RetryDecision(boolean shouldRetry, long retryDelayMs, String reason, ErrorClassifier.ErrorType errorType) {
+        public RetryDecision(boolean shouldRetry, long retryDelayMs, String reason, 
+                           JobErrorClassifier.ErrorType errorType, String strategy, int suggestedMaxRetries) {
             this.shouldRetry = shouldRetry;
             this.retryDelayMs = retryDelayMs;
             this.reason = reason;
             this.errorType = errorType;
+            this.strategy = strategy;
+            this.suggestedMaxRetries = suggestedMaxRetries;
         }
         
         public boolean shouldRetry() { return shouldRetry; }
         public long getRetryDelayMs() { return retryDelayMs; }
         public String getReason() { return reason; }
-        public ErrorClassifier.ErrorType getErrorType() { return errorType; }
+        public JobErrorClassifier.ErrorType getErrorType() { return errorType; }
+        public String getStrategy() { return strategy; }
+        public int getSuggestedMaxRetries() { return suggestedMaxRetries; }
     }
     
     /**
-     * Determine if a failed job should be retried and calculate the delay
+     * Determine if a failed job should be retried using error classification
      * 
      * @param jobId The job that failed
+     * @param jobType The type of job that failed (for context-aware classification)
      * @param exception The exception that caused the failure
      * @param currentRetries Current number of retry attempts
      * @param maxRetries Maximum allowed retries for this job
      * @return RetryDecision with retry logic and delay calculation
      */
-    public RetryDecision shouldRetry(String jobId, Throwable exception, int currentRetries, int maxRetries) {
+    public RetryDecision shouldRetry(String jobId, String jobType, Throwable exception, int currentRetries, int maxRetries) {
         
-        // Classify the error to determine retry eligibility
-        ErrorClassifier.ErrorType errorType = ErrorClassifier.classify(exception, currentRetries, maxRetries);
+        // Use error classification with job context
+        JobErrorClassifier.ClassificationResult classification = 
+            errorClassifier.classify(exception, jobType, currentRetries, maxRetries);
+        
+        // TODO: Make this a better system
+        //errorClassifier.recordErrorClassification(jobId, jobType, exception, classification);
         
         // Check if we should retry based on error classification
-        if (errorType == ErrorClassifier.ErrorType.PERMANENT) {
-            String reason = String.format("Permanent error: %s (no retry)", exception.getClass().getSimpleName());
-            return new RetryDecision(false, 0, reason, errorType);
+        if (!classification.shouldRetry()) {
+            String reason = String.format("No retry: %s", classification.getReason());
+            return new RetryDecision(false, 0, reason, classification.getErrorType(), 
+                                   classification.getStrategy(), classification.getSuggestedMaxRetries());
         }
         
-        // Check retry count limits
-        if (currentRetries >= maxRetries) {
-            String reason = String.format("Max retries exceeded: %d/%d", currentRetries, maxRetries);
-            return new RetryDecision(false, 0, reason, errorType);
+        long delayMs;
+        if (classification.getSuggestedBaseDelayMs() > 0) {
+            delayMs = calculateAdvancedRetryDelay(currentRetries, classification);
+        } else {
+            // Fallback
+            delayMs = calculateRetryDelay(currentRetries);
         }
         
-        // Calculate exponential backoff delay with jitter
-        long delayMs = calculateRetryDelay(currentRetries);
-        
-        String reason = String.format("Transient error (retry %d/%d in %dms): %s", 
-                                     currentRetries + 1, maxRetries, delayMs, 
+        String reason = String.format("%s (retry %d/%d in %dms, strategy: %s): %s", 
+                                     classification.getReason(),
+                                     currentRetries + 1, 
+                                     Math.max(maxRetries, classification.getSuggestedMaxRetries()),
+                                     delayMs, 
+                                     classification.getStrategy(),
                                      exception.getClass().getSimpleName());
         
-        Logger.info("Job {} will be retried: {}", jobId, reason);
-        return new RetryDecision(true, delayMs, reason, errorType);
+        Logger.info("Job {} will be retried with strategy: {}", jobId, reason);
+        return new RetryDecision(true, delayMs, reason, classification.getErrorType(), 
+                               classification.getStrategy(), classification.getSuggestedMaxRetries());
+    }
+    
+    public RetryDecision shouldRetry(String jobId, Throwable exception, int currentRetries, int maxRetries) {
+        return shouldRetry(jobId, "generic", exception, currentRetries, maxRetries);
     }
     
     /**
-     * Calculate exponential backoff delay with jitter
+     * Calculate retry delay using error classification suggestions
+     */
+    private long calculateAdvancedRetryDelay(int retryCount, JobErrorClassifier.ClassificationResult classification) {
+        long baseDelay = classification.getSuggestedBaseDelayMs();
+        double backoffMultiplier = classification.getSuggestedBackoffMultiplier();
+        
+        // Calculate delay with suggested parameters
+        long calculatedDelay = (long) (baseDelay * Math.pow(backoffMultiplier, retryCount));
+        calculatedDelay = Math.min(calculatedDelay, DEFAULT_MAX_DELAY_MS);
+        
+        // Add jitter: ±25% random variation
+        long jitterRange = (long) (calculatedDelay * DEFAULT_JITTER_FACTOR);
+        long jitter = ThreadLocalRandom.current().nextLong(-jitterRange, jitterRange + 1);
+        
+        // Ensure minimum delay of 100ms
+        long finalDelay = Math.max(calculatedDelay + jitter, 100L);
+        
+        Logger.debug("Error classification retry delay calculation: base={}ms, multiplier={}, jitter={}ms, final={}ms (attempt {})", 
+                    baseDelay, backoffMultiplier, jitter, finalDelay, retryCount + 1);
+        
+        return finalDelay;
+    }
+
+    /**
+     * Calculate exponential backoff delay with jitter (fallback method)
      * Formula: baseDelay * (exponentialBase ^ retryCount) + jitter
      * Jitter prevents thundering herd when many jobs fail simultaneously
      */
     public long calculateRetryDelay(int retryCount) {
         // Calculate base exponential delay: 1s, 4s, 16s, 64s, 256s...
-        long baseDelay = BASE_DELAY_MS * (long) Math.pow(EXPONENTIAL_BASE, retryCount);
-        
-        // Cap at maximum delay
-        baseDelay = Math.min(baseDelay, MAX_DELAY_MS);
-        
-        // Add jitter: ±25% random variation
-        long jitterRange = (long) (baseDelay * JITTER_FACTOR);
+        long baseDelay = DEFAULT_BASE_DELAY_MS * (long) Math.pow(DEFAULT_EXPONENTIAL_BASE, retryCount);
+        baseDelay = Math.min(baseDelay, DEFAULT_MAX_DELAY_MS);
+
+        long jitterRange = (long) (baseDelay * DEFAULT_JITTER_FACTOR);
         long jitter = ThreadLocalRandom.current().nextLong(-jitterRange, jitterRange + 1);
         
-        // Ensure minimum delay of 100ms
         long finalDelay = Math.max(baseDelay + jitter, 100L);
         
-        Logger.debug("Calculated retry delay: base={}ms, jitter={}ms, final={}ms (attempt {})", 
+        Logger.debug("Fallback retry delay: base={}ms, jitter={}ms, final={}ms (attempt {})", 
                     baseDelay, jitter, finalDelay, retryCount + 1);
         
         return finalDelay;
@@ -200,7 +236,6 @@ public class RetryManager {
     
     /**
      * Check if enough time has passed for a scheduled retry
-     * This will be used by the RetryScheduler in Phase 2
      */
     public boolean isRetryReady(String jobId) {
         try {
@@ -223,7 +258,6 @@ public class RetryManager {
     
     /**
      * Get statistics about retry operations
-     * This will be integrated into the main JobQueue statistics
      */
     public RetryStatistics getRetryStatistics() {
         try {

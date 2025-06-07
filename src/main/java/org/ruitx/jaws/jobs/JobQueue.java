@@ -12,18 +12,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * JobQueue - The New Job Processing System
+ * JobQueue
  * 
- * This replaces Frigg's complex route-based async system with a clean,
- * framework-agnostic job queue. No more route resolution, no more mocking!
+ * This class is the main entry point for the job queue system.
+ * It is responsible for submitting jobs, processing them, and managing their status.
  * 
- * Key improvements over Frigg:
- * - Jobs are self-contained (no route resolution needed)
- * - No web framework dependency in workers
- * - Clean separation between web layer and job layer
- * - Much simpler database schema
- * - Industry-standard job queue patterns
- * - Support for both parallel and sequential execution modes
+ * It uses a priority queue to process jobs in the order of their priority.
+ * 
  */
 public class JobQueue implements Runnable {
     
@@ -39,9 +34,9 @@ public class JobQueue implements Runnable {
     private final ExecutorService workerPool;
     private final PriorityBlockingQueue<JobInstance> jobQueue;
     private final SequentialJobQueue sequentialJobQueue;
-    private final RetryManager retryManager;
+    private final JobRetryManager retryManager;
     private final DeadLetterQueue deadLetterQueue;
-    private final RetryScheduler retryScheduler;
+    private final JobRetryScheduler retryScheduler;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicInteger activeWorkers = new AtomicInteger(0);
     private final ScheduledExecutorService cleanupScheduler;
@@ -51,25 +46,27 @@ public class JobQueue implements Runnable {
     private final AtomicInteger completedJobs = new AtomicInteger(0);
     private final AtomicInteger failedJobs = new AtomicInteger(0);
     private final AtomicInteger retriedJobs = new AtomicInteger(0);
-    
-    private JobQueue(int workerThreads, int queueCapacity) {
-        this.jobRegistry = new JobRegistry();
-        this.workerPool = Executors.newFixedThreadPool(workerThreads, 
+        
+    private JobQueue(Map<String, Object> config) {
+        // Get singleton JobRegistry instance
+        this.jobRegistry = JobRegistry.getInstance();
+        
+        this.workerPool = Executors.newFixedThreadPool(DEFAULT_WORKER_THREADS, 
             r -> new Thread(r, "job-worker-" + Thread.currentThread().threadId()));
-        this.jobQueue = new PriorityBlockingQueue<>(queueCapacity, 
+        this.jobQueue = new PriorityBlockingQueue<>(DEFAULT_QUEUE_CAPACITY, 
             Comparator.comparingInt((JobInstance ji) -> ji.job.getPriority())
                      .thenComparingLong(ji -> ji.createdAt));
-        this.sequentialJobQueue = new SequentialJobQueue();
-        this.retryManager = new RetryManager();
+        this.retryManager = new JobRetryManager();
         this.deadLetterQueue = new DeadLetterQueue();
-        this.retryScheduler = new RetryScheduler();
+        this.sequentialJobQueue = new SequentialJobQueue(this.deadLetterQueue);
+        this.retryScheduler = new JobRetryScheduler(this.deadLetterQueue);
         this.cleanupScheduler = Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "job-cleanup"));
         
         loadPendingJobs();
         
-        Logger.info("JobQueue initialized with {} worker threads and queue capacity of {}", 
-                   workerThreads, queueCapacity);
+        Logger.info("JobQueue initialized with {} worker threads, queue capacity of {}, and shared DLQ", 
+                   DEFAULT_WORKER_THREADS, DEFAULT_QUEUE_CAPACITY);
     }
     
     /**
@@ -79,7 +76,7 @@ public class JobQueue implements Runnable {
         if (instance == null) {
             synchronized (instanceLock) {
                 if (instance == null) {
-                    instance = new JobQueue(DEFAULT_WORKER_THREADS, DEFAULT_QUEUE_CAPACITY);
+                    instance = new JobQueue(new HashMap<>());
                 }
             }
         }
@@ -92,10 +89,8 @@ public class JobQueue implements Runnable {
      */
     public String submit(Job job) {
         try {
-            // Persist to database first
             persistJob(job);
             
-            // Route to appropriate queue based on execution mode
             if (job.getExecutionMode() == ExecutionMode.SEQUENTIAL) {
                 boolean queued = sequentialJobQueue.submit(job);
                 if (!queued) {
@@ -103,7 +98,6 @@ public class JobQueue implements Runnable {
                 }
                 Logger.info("Job submitted to sequential queue: {}", job);
             } else {
-                // Add to parallel processing queue
                 jobQueue.offer(new JobInstance(job));
                 Logger.info("Job submitted to parallel queue: {}", job);
             }
@@ -240,7 +234,7 @@ public class JobQueue implements Runnable {
         
         // Add retry statistics
         try {
-            RetryManager.RetryStatistics retryStats = retryManager.getRetryStatistics();
+            JobRetryManager.RetryStatistics retryStats = retryManager.getRetryStatistics();
             Map<String, Object> retryStatsMap = new HashMap<>();
             retryStatsMap.put("retryScheduledJobs", retryStats.getRetryScheduledJobs());
             retryStatsMap.put("permanentlyFailedJobs", retryStats.getPermanentlyFailedJobs());
@@ -277,7 +271,7 @@ public class JobQueue implements Runnable {
         
         // Add Retry Scheduler statistics
         try {
-            RetryScheduler.RetrySchedulerStatistics schedulerStats = retryScheduler.getStatistics();
+            JobRetryScheduler.RetrySchedulerStatistics schedulerStats = retryScheduler.getStatistics();
             Map<String, Object> schedulerStatsMap = new HashMap<>();
             schedulerStatsMap.put("totalRetriesProcessed", schedulerStats.getTotalRetriesProcessed());
             schedulerStatsMap.put("successfulRetries", schedulerStats.getSuccessfulRetries());
@@ -447,13 +441,8 @@ public class JobQueue implements Runnable {
             try {
                 Logger.info("Processing parallel job: {}", job);
                 
-                // Update status to processing
                 updateJobStatus(job.getId(), JobStatus.PROCESSING, null, Instant.now().toEpochMilli(), null);
-                
-                // Execute the job
-                job.execute();
-                
-                // Mark as completed
+                job.execute();                
                 updateJobStatus(job.getId(), JobStatus.COMPLETED, null, null, Instant.now().toEpochMilli());
                 
                 completedJobs.incrementAndGet();
@@ -462,20 +451,18 @@ public class JobQueue implements Runnable {
             } catch (Exception e) {
                 Logger.error("Failed to process parallel job {}: {}", job.getId(), e.getMessage(), e);
                 
-                // Get current retry count from database (needed for accurate decision)
                 int currentRetries = retryManager.getCurrentRetryCount(job.getId());
+                JobRetryManager.RetryDecision decision = retryManager.shouldRetry(
+                    job.getId(), job.getType(), e, currentRetries, job.getMaxRetries());
                 
-                // Determine if we should retry this job
-                RetryManager.RetryDecision decision = retryManager.shouldRetry(
-                    job.getId(), e, currentRetries, job.getMaxRetries());
-                
-                if (decision.shouldRetry()) {
-                    // Schedule for retry with exponential backoff
+                // Schedule for retry
+                if (decision.shouldRetry()) {    
                     retryManager.scheduleRetry(job.getId(), decision.getRetryDelayMs(), e);
                     retriedJobs.incrementAndGet();
                     Logger.info("Parallel job {} scheduled for retry: {}", job.getId(), decision.getReason());
                 } else {
-                    // Mark as permanently failed and move to Dead Letter Queue
+                    
+                    // Mark as permanently failed and move to DLQ
                     retryManager.markAsPermanentlyFailed(job.getId(), e, decision.getReason());
                     deadLetterQueue.moveToDeadLetterQueue(job.getId(), decision.getReason());
                     failedJobs.incrementAndGet();
@@ -508,7 +495,7 @@ public class JobQueue implements Runnable {
     /**
      * Get access to the Retry Scheduler for admin operations
      */
-    public RetryScheduler getRetryScheduler() {
+    public JobRetryScheduler getRetryScheduler() {
         return retryScheduler;
     }
 } 

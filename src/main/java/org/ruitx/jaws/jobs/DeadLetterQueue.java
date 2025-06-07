@@ -12,20 +12,16 @@ import java.util.*;
  * DeadLetterQueue - Manages permanently failed jobs and provides manual retry functionality
  * 
  * This class handles jobs that have exhausted all retry attempts or failed with permanent errors.
- * It provides production-ready dead letter queue functionality:
- * 
- * - Automatic DLQ insertion when jobs permanently fail
- * - Manual retry functionality for admin intervention
- * - DLQ statistics and monitoring
- * - Batch operations for DLQ management
- * - Retention policies and cleanup
- * 
- * Compatible with both parallel and sequential job queues.
  */
 public class DeadLetterQueue {
     
     private final Mimir mimir = new Mimir();
-    private final JobRegistry jobRegistry = new JobRegistry();
+    private final JobRegistry jobRegistry;
+    
+    public DeadLetterQueue() {
+        // Use singleton JobRegistry instance
+        this.jobRegistry = JobRegistry.getInstance();
+    }
     
     /**
      * Dead Letter Queue entry representation
@@ -120,13 +116,9 @@ public class DeadLetterQueue {
             
             // Determine if job can be manually retried
             boolean canBeRetried = determineIfRetryable(failureReason, jobType);
-            
-            // Generate DLQ entry ID
             String dlqId = UUID.randomUUID().toString();
             
-            // Insert into Dead Letter Queue
             String retryHistoryJson = Odin.getMapper().writeValueAsString(retryHistory);
-            
             int inserted = mimir.executeSql("""
                 INSERT INTO DEAD_LETTER_QUEUE 
                 (id, original_job_id, job_type, execution_mode, payload, priority, 
@@ -191,8 +183,6 @@ public class DeadLetterQueue {
             
             // The new job already has a new UUID from the BaseJob constructor
             String newJobId = newJob.getId();
-            
-            // Reset retry count if requested
             int initialRetries = resetRetryCount ? 0 : entry.getRetryAttempts();
             
             // Insert the new job into the JOBS table

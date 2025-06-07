@@ -10,7 +10,6 @@ public enum ExecutionMode {
     
     /**
      * Process jobs in parallel using multiple worker threads.
-     * This is the default mode for backward compatibility.
      */
     PARALLEL,
     
@@ -21,7 +20,7 @@ public enum ExecutionMode {
     SEQUENTIAL;
     
     /**
-     * Default execution mode for backward compatibility
+     * Default execution mode
      */
     public static final ExecutionMode DEFAULT = PARALLEL;
 } 

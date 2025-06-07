@@ -10,9 +10,6 @@ import java.util.UUID;
 
 /**
  * JobResultStore handles the persistence of job results.
- * 
- * This provides a clean interface for jobs to store their results
- * without depending on web framework concepts.
  */
 public class JobResultStore {
     

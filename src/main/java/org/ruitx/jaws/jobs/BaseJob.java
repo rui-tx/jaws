@@ -37,21 +37,21 @@ public abstract class BaseJob implements Job {
     }
     
     /**
-     * Constructor for creating a new job (backward compatible - defaults to PARALLEL)
+     * Constructor for creating a new job, defaults to PARALLEL
      */
     protected BaseJob(String type, int priority, int maxRetries, long timeoutMs, Map<String, Object> payload) {
         this(type, ExecutionMode.DEFAULT, priority, maxRetries, timeoutMs, payload);
     }
     
     /**
-     * Constructor for jobs with execution mode and default settings
+     * Constructor for jobs with execution mode and default settings, defaults to PARALLEL
      */
     protected BaseJob(String type, ExecutionMode executionMode, Map<String, Object> payload) {
         this(type, executionMode, 5, 3, 30000L, payload); // Default: priority 5, 3 retries, 30s timeout
     }
     
     /**
-     * Constructor for jobs with default settings (backward compatible - defaults to PARALLEL)
+     * Constructor for jobs with default settings, defaults to PARALLEL
      */
     protected BaseJob(String type, Map<String, Object> payload) {
         this(type, ExecutionMode.DEFAULT, 5, 3, 30000L, payload); // Default: priority 5, 3 retries, 30s timeout

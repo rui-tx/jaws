@@ -6,9 +6,6 @@ import java.util.Map;
 
 /**
  * Represents the result of a job execution.
- * 
- * This replaces AsyncResponse with a cleaner, more focused design
- * that doesn't depend on HTTP response semantics.
  */
 public class JobResult {
     
