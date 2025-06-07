@@ -1,0 +1,129 @@
+<section class="section is-title-bar">
+    <div class="level">
+        <div class="level-left">
+            <div class="level-item">
+                <ul>
+                    <li th:text="${currentUser}">User Name</li>
+                    <li>Jobs</li>
+                </ul>
+            </div>
+        </div>
+        <div class="level-right">
+            <div class="buttons is-right">
+                <div class="field has-addons">
+                    <div class="control">
+                        <div class="select">
+                            <select id="status-filter">
+                                <option value="">All Statuses</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="PROCESSING">Processing</option>
+                                <option value="COMPLETED">Completed</option>
+                                <option value="FAILED">Failed</option>
+                                <option value="TIMEOUT">Timeout</option>
+                                <option value="RETRY_SCHEDULED">Retry Scheduled</option>
+                                <option value="DEAD_LETTER">Dead Letter</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control">
+                        <button class="button is-primary" id="filter-button">
+                            <span class="icon"><i class="mdi mdi-filter"></i></span>
+                            <span>Filter</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="hero is-hero-bar">
+    <div class="hero-body">
+        <div class="level">
+            <div class="level-left">
+                <div class="level-item"><h1 class="title">
+                    Job Queue Management
+                </h1></div>
+            </div>
+            <div class="level-right" style="display: none;">
+                <div class="level-item"></div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="section is-main-section">
+    <div class="card has-table has-mobile-sort-spaced">
+        <header class="card-header">
+            <p class="card-header-title">
+                <span class="icon"><i class="mdi mdi-briefcase-clock-outline"></i></span>
+                Jobs
+            </p>
+            <a class="card-header-icon"
+               hx-get="/htmx/backoffice/jobs"
+               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+               hx-indicator="#jobs-spinner"
+               hx-swap="innerHTML transition:true"
+               hx-target="#jobs-table-body"
+               hx-trigger="click" title="Refresh jobs list">
+                <span class="icon"><i class="mdi mdi-reload"></i></span>
+            </a>
+        </header>
+
+        <div class="card-content">
+            <div class="b-table has-pagination">
+                <div class="table-wrapper has-mobile-cards">
+                    <table class="table is-fullwidth is-striped is-hoverable is-sortable is-fullwidth">
+                        <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Type / ID</th>
+                            <th>Priority / Mode</th>
+                            <th>Created</th>
+                            <th>Retries</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody hx-get="/htmx/backoffice/jobs"
+                               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                               hx-indicator="#jobs-spinner"
+                               hx-swap="innerHTML transition:true"
+                               hx-trigger="load"
+                               id="jobs-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="loading-container htmx-indicator" id="jobs-spinner">
+            <img alt="Loading..." class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterButton = document.getElementById('filter-button');
+    const statusFilter = document.getElementById('status-filter');
+    const jobsTableBody = document.getElementById('jobs-table-body');
+
+    if (filterButton && statusFilter && jobsTableBody) {
+        filterButton.addEventListener('click', function () {
+            const status = statusFilter.value;
+            const url = status ? `/htmx/backoffice/jobs?status=${encodeURIComponent(status)}` : '/htmx/backoffice/jobs';
+            
+            htmx.ajax('GET', url, {
+                target: '#jobs-table-body',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+                }
+            });
+        });
+
+        // Allow Enter key to trigger filter
+        statusFilter.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                filterButton.click();
+            }
+        });
+    }
+});
+</script> 

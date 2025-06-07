@@ -1,0 +1,270 @@
+<section class="section is-title-bar">
+    <div class="level">
+        <div class="level-left">
+            <div class="level-item">
+                <ul>
+                    <li th:text="${currentUser}">User Name</li>
+                    <li><a href="/backoffice/jobs">Jobs</a></li>
+                    <li th:text="${jobId}">Job ID</li>
+                </ul>
+            </div>
+        </div>
+        <div class="level-right">
+            <div class="buttons is-right">
+                <a href="/backoffice/jobs" class="button is-light">
+                    <span class="icon"><i class="mdi mdi-arrow-left"></i></span>
+                    <span>Back to Jobs</span>
+                </a>
+                <!-- Conditional reprocess button -->
+                <button class="button is-warning" 
+                        th:if="${jobStatus == 'FAILED' or jobStatus == 'DEAD_LETTER'}"
+                        hx-post="/htmx/backoffice/jobs/{jobId}/reprocess" 
+                        th:attr="hx-post='/htmx/backoffice/jobs/' + ${jobId} + '/reprocess'"
+                        hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                        hx-swap="innerHTML"
+                        hx-target="#reprocess-result"
+                        hx-confirm="Are you sure you want to reprocess this job?">
+                    <span class="icon"><i class="mdi mdi-refresh"></i></span>
+                    <span>Reprocess Job</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="hero is-hero-bar">
+    <div class="hero-body">
+        <div class="level">
+            <div class="level-left">
+                <div class="level-item">
+                    <h1 class="title">Job Details</h1>
+                    <div class="subtitle">
+                        <!-- Status tag with conditional styling -->
+                        <span class="tag is-warning" th:if="${jobStatus == 'PENDING'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="tag is-info" th:if="${jobStatus == 'PROCESSING'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="tag is-success" th:if="${jobStatus == 'COMPLETED'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="tag is-danger" th:if="${jobStatus == 'FAILED'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="tag is-danger" th:if="${jobStatus == 'TIMEOUT'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="tag is-warning" th:if="${jobStatus == 'RETRY_SCHEDULED'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="tag is-dark" th:if="${jobStatus == 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="tag is-light" th:if="${jobStatus != 'PENDING' and jobStatus != 'PROCESSING' and jobStatus != 'COMPLETED' and jobStatus != 'FAILED' and jobStatus != 'TIMEOUT' and jobStatus != 'RETRY_SCHEDULED' and jobStatus != 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                        
+                        <span th:text="${jobType}" class="has-text-weight-bold ml-2">Job Type</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section is-main-section">
+    <!-- Reprocess result notification area -->
+    <div id="reprocess-result" class="mb-4"></div>
+
+    <div class="columns">
+        <!-- Left Column - Basic Information -->
+        <div class="column is-half">
+            <div class="card">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        <span class="icon"><i class="mdi mdi-information-outline"></i></span>
+                        Basic Information
+                    </p>
+                </header>
+                <div class="card-content">
+                    <div class="content">
+                        <div class="field">
+                            <label class="label">Job ID</label>
+                            <div class="control">
+                                <input class="input" type="text" th:value="${jobId}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label class="label">Type</label>
+                            <div class="control">
+                                <input class="input" type="text" th:value="${jobType}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label class="label">Status</label>
+                            <div class="control">
+                                <!-- Status tag with conditional styling -->
+                                <span class="tag is-medium is-warning" th:if="${jobStatus == 'PENDING'}" th:text="${jobStatus}">STATUS</span>
+                                <span class="tag is-medium is-info" th:if="${jobStatus == 'PROCESSING'}" th:text="${jobStatus}">STATUS</span>
+                                <span class="tag is-medium is-success" th:if="${jobStatus == 'COMPLETED'}" th:text="${jobStatus}">STATUS</span>
+                                <span class="tag is-medium is-danger" th:if="${jobStatus == 'FAILED'}" th:text="${jobStatus}">STATUS</span>
+                                <span class="tag is-medium is-danger" th:if="${jobStatus == 'TIMEOUT'}" th:text="${jobStatus}">STATUS</span>
+                                <span class="tag is-medium is-warning" th:if="${jobStatus == 'RETRY_SCHEDULED'}" th:text="${jobStatus}">STATUS</span>
+                                <span class="tag is-medium is-dark" th:if="${jobStatus == 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                                <span class="tag is-medium is-light" th:if="${jobStatus != 'PENDING' and jobStatus != 'PROCESSING' and jobStatus != 'COMPLETED' and jobStatus != 'FAILED' and jobStatus != 'TIMEOUT' and jobStatus != 'RETRY_SCHEDULED' and jobStatus != 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label class="label">Execution Mode</label>
+                            <div class="control">
+                                <span class="tag" th:text="${jobExecutionMode}">PARALLEL</span>
+                            </div>
+                        </div>
+
+                        <div class="columns">
+                            <div class="column">
+                                <div class="field">
+                                    <label class="label">Priority</label>
+                                    <div class="control">
+                                        <input class="input" type="text" th:value="${jobPriority}" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <div class="field">
+                                    <label class="label">Timeout (ms)</label>
+                                    <div class="control">
+                                        <input class="input" type="text" th:value="${jobTimeoutMs}" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="columns">
+                            <div class="column">
+                                <div class="field">
+                                    <label class="label">Current Retries</label>
+                                    <div class="control">
+                                        <span class="tag" th:text="${jobCurrentRetries + '/' + jobMaxRetries}">0/3</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <div class="field">
+                                    <label class="label">Max Retries</label>
+                                    <div class="control">
+                                        <input class="input" type="text" th:value="${jobMaxRetries}" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Timestamps -->
+        <div class="column is-half">
+            <div class="card">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        <span class="icon"><i class="mdi mdi-clock-outline"></i></span>
+                        Timestamps
+                    </p>
+                </header>
+                <div class="card-content">
+                    <div class="content">
+                        <div class="field">
+                            <label class="label">Created At</label>
+                            <div class="control">
+                                <input class="input" type="text" th:value="${jobCreatedAt}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="field" th:if="${!#strings.isEmpty(jobStartedAt)}">
+                            <label class="label">Started At</label>
+                            <div class="control">
+                                <input class="input" type="text" th:value="${jobStartedAt}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="field" th:if="${!#strings.isEmpty(jobCompletedAt)}">
+                            <label class="label">Completed At</label>
+                            <div class="control">
+                                <input class="input" type="text" th:value="${jobCompletedAt}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="field" th:if="${!#strings.isEmpty(jobClientId)}">
+                            <label class="label">Client ID</label>
+                            <div class="control">
+                                <input class="input" type="text" th:value="${jobClientId}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="field" th:if="${!#strings.isEmpty(jobUserId)}">
+                            <label class="label">User ID</label>
+                            <div class="control">
+                                <input class="input" type="text" th:value="${jobUserId}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Message Section -->
+    <div class="card mt-4" th:if="${!#strings.isEmpty(jobErrorMessage)}">
+        <header class="card-header">
+            <p class="card-header-title">
+                <span class="icon has-text-danger"><i class="mdi mdi-alert-circle-outline"></i></span>
+                Error Message
+            </p>
+        </header>
+        <div class="card-content">
+            <div class="content">
+                <div class="notification is-danger is-light">
+                    <pre th:text="${jobErrorMessage}">Error message will be displayed here</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payload Section -->
+    <div class="card mt-4">
+        <header class="card-header">
+            <p class="card-header-title">
+                <span class="icon"><i class="mdi mdi-code-json"></i></span>
+                Job Payload
+            </p>
+            <button class="card-header-icon" id="format-json-btn">
+                <span class="icon"><i class="mdi mdi-code-braces"></i></span>
+            </button>
+        </header>
+        <div class="card-content">
+            <div class="content">
+                <div class="field">
+                    <div class="control">
+                        <textarea class="textarea" rows="10" id="job-payload" th:text="${jobPayload}" readonly>{}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const formatJsonBtn = document.getElementById('format-json-btn');
+    const payloadTextarea = document.getElementById('job-payload');
+
+    if (formatJsonBtn && payloadTextarea) {
+        formatJsonBtn.addEventListener('click', function () {
+            try {
+                const jsonStr = payloadTextarea.value;
+                const parsed = JSON.parse(jsonStr);
+                const formatted = JSON.stringify(parsed, null, 2);
+                payloadTextarea.value = formatted;
+                
+                // Adjust textarea height to fit content
+                payloadTextarea.style.height = 'auto';
+                payloadTextarea.style.height = (payloadTextarea.scrollHeight + 10) + 'px';
+            } catch (e) {
+                console.warn('Invalid JSON, cannot format:', e);
+            }
+        });
+
+        // Auto-format on page load
+        formatJsonBtn.click();
+    }
+});
+</script> 

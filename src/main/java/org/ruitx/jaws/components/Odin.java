@@ -26,8 +26,10 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
  * <li>Yggdrasill is the server that listens for incoming connections</li>
  * <li>Bifrost is the middleware that processes the requests</li>
  * <li>Heimdall is a file watcher that watches for changes in the www path</li>
+ * <li>Mimir is a utility class/ORM that interfaces with the database</li>
  * <li>Njord is a dynamic router that routes requests to controllers</li>
  * <li>Norns is a cron job that runs scheduled tasks</li>
+ * <li>Freyr is the job queue processing system</li>
  * <li>Hel is the shutdown hook that stops the server</li>
  * </ul>
  */
@@ -53,7 +55,7 @@ public final class Odin {
         createMimir();
         createNjord();
         createFreyr();
-        
+
         List<Thread> threads = Arrays.asList(
                 createYggdrasill(),
                 createHeimdall(),
@@ -127,12 +129,12 @@ public final class Odin {
         return new Thread(norns, "norns");
     }
 
-        // Freyr, the job queue processing system
-        private static void createFreyr() {
-            Freyr freyr = Freyr.getInstance();
-            freyr.start();
-            Logger.info("Freyr started successfully");
-        }
+    // Freyr, the job queue processing system
+    private static void createFreyr() {
+        Freyr freyr = Freyr.getInstance();
+        freyr.start();
+        Logger.info("Freyr started successfully");
+    }
 
     // Hel is the shutdown hook that gracefully stops all services
     private static void createHel(ExecutorService executor) {

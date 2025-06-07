@@ -33,7 +33,7 @@ public class JobController extends Bragi {
             // Extract parameters from request body if available
             Map<String, Object> payload = new HashMap<>();
             payload.put("clientId", getClientIpAddress());
-            payload.put("submittedBy", getCurrentToken().isEmpty() ? "anonymous" : getCurrentToken());
+            payload.put("submittedBy", getCurrentToken() != null ? getCurrentToken() : "anonymous");
             
             // Optional parameters from request body
             String requestBody = getRequestContext().getRequestBody();

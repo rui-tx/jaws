@@ -36,6 +36,38 @@
     </div>
 </section>
 <section class="section is-main-section">
+    <!-- Job Statistics Section -->
+    <div class="card mb-6">
+        <header class="card-header">
+            <p class="card-header-title">
+                <span class="icon"><i class="mdi mdi-chart-line"></i></span>
+                Job Queue Statistics
+            </p>
+            <a class="card-header-icon"
+               hx-get="/htmx/backoffice/job-stats"
+               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+               hx-indicator="#job-stats-spinner"
+               hx-swap="innerHTML transition:true"
+               hx-target="#job-stats-content"
+               hx-trigger="click" title="Refresh job statistics">
+                <span class="icon"><i class="mdi mdi-reload"></i></span>
+            </a>
+        </header>
+        <div class="card-content">
+            <div id="job-stats-content"
+                 hx-get="/htmx/backoffice/job-stats"
+                 hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                 hx-indicator="#job-stats-spinner"
+                 hx-swap="innerHTML transition:true"
+                 hx-trigger="load">
+                <!-- Job statistics will be loaded here -->
+            </div>
+            <div class="loading-container htmx-indicator" id="job-stats-spinner">
+                <img alt="Loading..." class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
+            </div>
+        </div>
+    </div>
+
     <div class="card has-table has-mobile-sort-spaced">
         <header class="card-header">
             <p class="card-header-title">
@@ -44,6 +76,7 @@
             </p>
             <a class="card-header-icon"
                hx-get="/htmx/backoffice/users"
+               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
                hx-indicator="#users-spinner"
                hx-swap="innerHTML transition:true"
                hx-target="#users-table-body"
@@ -67,6 +100,7 @@
                         </tr>
                         </thead>
                         <tbody hx-get="/htmx/backoffice/users"
+                               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
                                hx-indicator="#users-spinner"
                                hx-swap="innerHTML transition:true"
                                hx-trigger="load"
