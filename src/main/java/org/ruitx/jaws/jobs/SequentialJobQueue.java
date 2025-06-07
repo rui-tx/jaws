@@ -31,6 +31,7 @@ public class SequentialJobQueue {
     private final BlockingQueue<Job> sequentialQueue;
     private final ExecutorService singleWorker;
     private final RetryManager retryManager;
+    private final DeadLetterQueue deadLetterQueue;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean processingJob = new AtomicBoolean(false);
     
@@ -45,6 +46,7 @@ public class SequentialJobQueue {
         this.singleWorker = Executors.newSingleThreadExecutor(
             r -> new Thread(r, "sequential-job-worker"));
         this.retryManager = new RetryManager();
+        this.deadLetterQueue = new DeadLetterQueue();
         
         Logger.info("SequentialJobQueue initialized with queue capacity of {}", DEFAULT_QUEUE_CAPACITY);
     }
@@ -195,10 +197,11 @@ public class SequentialJobQueue {
                     retriedJobs.incrementAndGet();
                     Logger.info("Sequential job {} scheduled for retry: {}", job.getId(), decision.getReason());
                 } else {
-                    // Mark as permanently failed
+                    // Mark as permanently failed and move to Dead Letter Queue
                     retryManager.markAsPermanentlyFailed(job.getId(), e, decision.getReason());
+                    deadLetterQueue.moveToDeadLetterQueue(job.getId(), decision.getReason());
                     failedJobs.incrementAndGet();
-                    Logger.warn("Sequential job {} permanently failed: {}", job.getId(), decision.getReason());
+                    Logger.warn("Sequential job {} permanently failed and moved to DLQ: {}", job.getId(), decision.getReason());
                 }
                 
             } finally {

@@ -40,6 +40,8 @@ public class JobQueue implements Runnable {
     private final PriorityBlockingQueue<JobInstance> jobQueue;
     private final SequentialJobQueue sequentialJobQueue;
     private final RetryManager retryManager;
+    private final DeadLetterQueue deadLetterQueue;
+    private final RetryScheduler retryScheduler;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicInteger activeWorkers = new AtomicInteger(0);
     private final ScheduledExecutorService cleanupScheduler;
@@ -59,6 +61,8 @@ public class JobQueue implements Runnable {
                      .thenComparingLong(ji -> ji.createdAt));
         this.sequentialJobQueue = new SequentialJobQueue();
         this.retryManager = new RetryManager();
+        this.deadLetterQueue = new DeadLetterQueue();
+        this.retryScheduler = new RetryScheduler();
         this.cleanupScheduler = Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "job-cleanup"));
         
@@ -174,12 +178,15 @@ public class JobQueue implements Runnable {
             // Start sequential processing
             sequentialJobQueue.start();
             
+            // Start retry scheduler
+            retryScheduler.start();
+            
             // Start cleanup scheduler
             cleanupScheduler.scheduleAtFixedRate(this::cleanupExpiredData, 
                                                CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS, 
                                                TimeUnit.MILLISECONDS);
             
-            Logger.info("JobQueue started with {} parallel workers and 1 sequential worker", DEFAULT_WORKER_THREADS);
+            Logger.info("JobQueue started with {} parallel workers, 1 sequential worker, and retry scheduler", DEFAULT_WORKER_THREADS);
         }
     }
     
@@ -192,6 +199,7 @@ public class JobQueue implements Runnable {
             
             workerPool.shutdown();
             sequentialJobQueue.shutdown();
+            retryScheduler.stop();
             cleanupScheduler.shutdown();
             
             try {
@@ -231,13 +239,62 @@ public class JobQueue implements Runnable {
         stats.put("sequential", sequentialStats);
         
         // Add retry statistics
-        RetryManager.RetryStatistics retryStats = retryManager.getRetryStatistics();
-        Map<String, Object> retryStatsMap = Map.of(
-            "retryScheduledJobs", retryStats.getRetryScheduledJobs(),
-            "permanentlyFailedJobs", retryStats.getPermanentlyFailedJobs(),
-            "totalRetryAttempts", retryStats.getTotalRetryAttempts()
-        );
-        stats.put("retry", retryStatsMap);
+        try {
+            RetryManager.RetryStatistics retryStats = retryManager.getRetryStatistics();
+            Map<String, Object> retryStatsMap = new HashMap<>();
+            retryStatsMap.put("retryScheduledJobs", retryStats.getRetryScheduledJobs());
+            retryStatsMap.put("permanentlyFailedJobs", retryStats.getPermanentlyFailedJobs());
+            retryStatsMap.put("totalRetryAttempts", retryStats.getTotalRetryAttempts());
+            stats.put("retry", retryStatsMap);
+        } catch (Exception e) {
+            Logger.warn("Failed to get retry statistics: {}", e.getMessage());
+            Map<String, Object> fallbackRetryStats = new HashMap<>();
+            fallbackRetryStats.put("retryScheduledJobs", 0);
+            fallbackRetryStats.put("permanentlyFailedJobs", 0);
+            fallbackRetryStats.put("totalRetryAttempts", 0);
+            stats.put("retry", fallbackRetryStats);
+        }
+        
+        // Add Dead Letter Queue statistics
+        try {
+            DeadLetterQueue.DLQStatistics dlqStats = deadLetterQueue.getStatistics();
+            Map<String, Object> dlqStatsMap = new HashMap<>();
+            dlqStatsMap.put("totalEntries", dlqStats.getTotalEntries());
+            dlqStatsMap.put("retryableEntries", dlqStats.getRetryableEntries());
+            dlqStatsMap.put("entriesByType", dlqStats.getEntriesByType() != null ? dlqStats.getEntriesByType() : new HashMap<>());
+            // Handle potential null value for oldestEntryTimestamp
+            dlqStatsMap.put("oldestEntryTimestamp", dlqStats.getOldestEntryTimestamp());
+            stats.put("deadLetterQueue", dlqStatsMap);
+        } catch (Exception e) {
+            Logger.warn("Failed to get DLQ statistics: {}", e.getMessage());
+            Map<String, Object> fallbackDlqStats = new HashMap<>();
+            fallbackDlqStats.put("totalEntries", 0);
+            fallbackDlqStats.put("retryableEntries", 0);
+            fallbackDlqStats.put("entriesByType", new HashMap<>());
+            fallbackDlqStats.put("oldestEntryTimestamp", null);
+            stats.put("deadLetterQueue", fallbackDlqStats);
+        }
+        
+        // Add Retry Scheduler statistics
+        try {
+            RetryScheduler.RetrySchedulerStatistics schedulerStats = retryScheduler.getStatistics();
+            Map<String, Object> schedulerStatsMap = new HashMap<>();
+            schedulerStatsMap.put("totalRetriesProcessed", schedulerStats.getTotalRetriesProcessed());
+            schedulerStatsMap.put("successfulRetries", schedulerStats.getSuccessfulRetries());
+            schedulerStatsMap.put("failedRetries", schedulerStats.getFailedRetries());
+            schedulerStatsMap.put("movedToDeadLetter", schedulerStats.getMovedToDeadLetter());
+            schedulerStatsMap.put("running", schedulerStats.isRunning());
+            stats.put("retryScheduler", schedulerStatsMap);
+        } catch (Exception e) {
+            Logger.warn("Failed to get retry scheduler statistics: {}", e.getMessage());
+            Map<String, Object> fallbackSchedulerStats = new HashMap<>();
+            fallbackSchedulerStats.put("totalRetriesProcessed", 0);
+            fallbackSchedulerStats.put("successfulRetries", 0);
+            fallbackSchedulerStats.put("failedRetries", 0);
+            fallbackSchedulerStats.put("movedToDeadLetter", 0);
+            fallbackSchedulerStats.put("running", false);
+            stats.put("retryScheduler", fallbackSchedulerStats);
+        }
         
         return stats;
     }
@@ -418,10 +475,11 @@ public class JobQueue implements Runnable {
                     retriedJobs.incrementAndGet();
                     Logger.info("Parallel job {} scheduled for retry: {}", job.getId(), decision.getReason());
                 } else {
-                    // Mark as permanently failed
+                    // Mark as permanently failed and move to Dead Letter Queue
                     retryManager.markAsPermanentlyFailed(job.getId(), e, decision.getReason());
+                    deadLetterQueue.moveToDeadLetterQueue(job.getId(), decision.getReason());
                     failedJobs.incrementAndGet();
-                    Logger.warn("Parallel job {} permanently failed: {}", job.getId(), decision.getReason());
+                    Logger.warn("Parallel job {} permanently failed and moved to DLQ: {}", job.getId(), decision.getReason());
                 }
                 
             } finally {
@@ -438,5 +496,19 @@ public class JobQueue implements Runnable {
                 Logger.error("Failed to update job status for {}: {}", jobId, e.getMessage());
             }
         }
+    }
+    
+    /**
+     * Get access to the Dead Letter Queue for admin operations
+     */
+    public DeadLetterQueue getDeadLetterQueue() {
+        return deadLetterQueue;
+    }
+    
+    /**
+     * Get access to the Retry Scheduler for admin operations
+     */
+    public RetryScheduler getRetryScheduler() {
+        return retryScheduler;
     }
 } 
