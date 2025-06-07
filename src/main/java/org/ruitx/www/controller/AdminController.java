@@ -184,13 +184,12 @@ public class AdminController extends Bragi {
         try {
             DeadLetterQueue.DLQStatistics stats = deadLetterQueue.getStatistics();
             
-            Map<String, Object> response = Map.of(
-                "totalEntries", stats.getTotalEntries(),
-                "retryableEntries", stats.getRetryableEntries(),
-                "nonRetryableEntries", stats.getTotalEntries() - stats.getRetryableEntries(),
-                "entriesByType", stats.getEntriesByType() != null ? stats.getEntriesByType() : Map.of(),
-                "oldestEntryTimestamp", stats.getOldestEntryTimestamp()
-            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("totalEntries", stats.getTotalEntries());
+            response.put("retryableEntries", stats.getRetryableEntries());
+            response.put("nonRetryableEntries", stats.getTotalEntries() - stats.getRetryableEntries());
+            response.put("entriesByType", stats.getEntriesByType() != null ? stats.getEntriesByType() : Map.of());
+            response.put("oldestEntryTimestamp", stats.getOldestEntryTimestamp()); // This can be null
             
             sendSucessfulResponse(OK, response);
             
