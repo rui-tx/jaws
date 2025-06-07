@@ -11,23 +11,24 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * SequentialPingJob - Simple sequential job for testing the sequential processing system
+ * ParallelPingJob - Simple parallel job for testing the parallel processing system
+ * 
  */
-public class SequentialPingJob extends BaseJob {
+public class ParallelPingJob extends BaseJob {
     
-    public static final String JOB_TYPE = "sequential-ping";
+    public static final String JOB_TYPE = "parallel-ping";
     
     /**
-     * Constructor - uses SEQUENTIAL execution mode
+     * Constructor - uses PARALLEL execution mode
      */
-    public SequentialPingJob(Map<String, Object> payload) {
-        // Using SEQUENTIAL execution mode with high priority (1) and short timeout
-        super(JOB_TYPE, ExecutionMode.SEQUENTIAL, 1, 1, 15000L, payload); // priority 1, 1 retry, 15s timeout
+    public ParallelPingJob(Map<String, Object> payload) {
+        // Using PARALLEL execution mode with high priority (1) and short timeout
+        super(JOB_TYPE, ExecutionMode.PARALLEL, 1, 1, 15000L, payload); // priority 1, 1 retry, 15s timeout
     }
     
     @Override
     public void execute() throws Exception {
-        Logger.info("Starting sequential ping job: {}", getId());
+        Logger.info("Starting parallel ping job: {}", getId());
         
         try {
             // Get ping parameters from payload
@@ -36,7 +37,7 @@ public class SequentialPingJob extends BaseJob {
             Integer pingNumber = getInteger("pingNumber");
             
             // Default values
-            if (message == null) message = "Sequential Ping";
+            if (message == null) message = "Parallel Ping";
             if (delayMs == null) delayMs = 2000; // 2 second default delay
             if (pingNumber == null) pingNumber = 1;
             
@@ -69,17 +70,17 @@ public class SequentialPingJob extends BaseJob {
             String jsonResult = Odin.getMapper().writeValueAsString(result);
             JobResultStore.storeSuccess(getId(), jsonResult);
             
-            Logger.info("Sequential ping job completed: {} (ping #{}, delay: {}ms)", getId(), pingNumber, delayMs);
+            Logger.info("Parallel ping job completed: {} (ping #{}, delay: {}ms)", getId(), pingNumber, delayMs);
             
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Logger.warn("Sequential ping job was interrupted: {}", getId());
+            Logger.warn("Parallel ping job was interrupted: {}", getId());
             
             // Store error result
             JobResultStore.storeError(getId(), 500, "Ping was interrupted");
             throw e;
         } catch (Exception e) {
-            Logger.error("Sequential ping job failed: {}", e.getMessage(), e);
+            Logger.error("Parallel ping job failed: {}", e.getMessage(), e);
             
             // Store error result with details
             String errorMessage = String.format("Ping failed: %s", e.getMessage());

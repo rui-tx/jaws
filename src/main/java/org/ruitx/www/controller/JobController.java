@@ -5,6 +5,7 @@ import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.components.freyr.JobResult;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.www.jobs.ExternalApiJob;
+import org.ruitx.www.jobs.ParallelPingJob;
 import org.ruitx.www.jobs.SequentialPingJob;
 
 import java.util.HashMap;
@@ -25,6 +26,65 @@ public class JobController extends Bragi {
     
     public JobController() {
         this.jobQueue = Freyr.getInstance();
+    }
+
+    @Route(endpoint = API_ENDPOINT + "parallel-ping", method = POST, responseType = JSON)
+    public void queueParallelPing() {
+        try {
+            // Extract parameters from request body if available
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("clientId", getClientIpAddress());
+            payload.put("submittedBy", getCurrentToken() != null ? getCurrentToken() : "anonymous");
+            
+            // Optional parameters from request body
+            String requestBody = getRequestContext().getRequestBody();
+            if (requestBody != null && !requestBody.trim().isEmpty()) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> bodyParams = getMapper().readValue(requestBody, Map.class);
+                    payload.putAll(bodyParams);
+                } catch (Exception e) {
+                    // If body parsing fails, continue with default values
+                }
+            }
+            
+            // Set defaults if not provided
+            if (!payload.containsKey("message")) {
+                payload.put("message", "Parallel Ping Test");
+            }
+            if (!payload.containsKey("delayMs")) {
+                payload.put("delayMs", 3000); // 3 second default delay
+            }
+            if (!payload.containsKey("pingNumber")) {
+                payload.put("pingNumber", 1);
+            }
+            
+            // Create and submit job
+            ParallelPingJob job = new ParallelPingJob(payload);
+            String jobId = jobQueue.submit(job);
+            
+            // Return immediate response with job tracking info
+            Map<String, Object> response = new HashMap<>();
+            response.put("jobId", jobId);
+            response.put("status", "QUEUED");
+            response.put("executionMode", "SEQUENTIAL");
+            response.put("message", "Parallel ping job queued - will execute in parallel");
+            response.put("pingInfo", Map.of(
+                "message", payload.get("message"),
+                "delayMs", payload.get("delayMs"),
+                "pingNumber", payload.get("pingNumber")
+            ));
+            response.put("endpoints", Map.of(
+                "status", "/api/jobs/status/" + jobId,
+                "result", "/api/jobs/result/" + jobId
+            ));
+            response.put("tip", "Submit multiple pings quickly to see them process in parallel!");
+            
+            sendSucessfulResponse(ACCEPTED, response);
+            
+        } catch (Exception e) {
+            sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to queue parallel ping job: " + e.getMessage());
+        }
     }
 
     @Route(endpoint = API_ENDPOINT + "sequential-ping", method = POST, responseType = JSON)

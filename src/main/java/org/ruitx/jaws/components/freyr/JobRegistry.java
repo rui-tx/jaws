@@ -2,8 +2,8 @@ package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.www.jobs.ExternalApiJob;
-import org.ruitx.www.jobs.RetryTestJob;
 import org.ruitx.www.jobs.SequentialPingJob;
+import org.ruitx.www.jobs.ParallelPingJob;
 import org.tinylog.Logger;
 
 import java.lang.reflect.Constructor;
@@ -28,7 +28,7 @@ public class JobRegistry {
         register("sequential-ping", SequentialPingJob.class);
 
         // Parallel
-        register("retry-test", RetryTestJob.class);
+        register("parallel-ping", ParallelPingJob.class);
 
         // External 
         register("external-api-call", ExternalApiJob.class);
