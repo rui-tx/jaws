@@ -20,6 +20,7 @@ Among other features, these are the main ones
 - **JWT**: Generate access and refresh tokens with ease
 - **Robust HTTP Server**: Built on Eclipse Jetty 
 - **Middleware System**: Extensible middleware for cross-cutting concerns
+- **Async**: A job system for async processing
 
 
 ## Setup
@@ -73,6 +74,7 @@ JAWS is built with a modular system. Every module is responsible for one aspect 
 
 - `Bifrost`: Middlware implementation
 - `Bragi`: The base for all controllers. Contains methods to respond to the client
+- `Freyr`: Asynchronous job queue system with priority queuing and retry mechanisms
 - `Heimdall`: A file watcher that monitors changes in the specified directory
 - `Hermod`: HTML parser that handles template processing and page assembly
 - `Yggdrassil`: The unified HTTP server with integrated request handling, middleware support, and direct controller routing
@@ -87,8 +89,21 @@ JAWS is built with a modular system. Every module is responsible for one aspect 
 
 JAWS uses a typical server request/response logic, like this:
 
+**Sync request**
 ```
 [HTTP Request] → [Yggdrassil (Jetty)] → [Middleware Chain] → [Route Discovery] → [Controller Execution] → [Response]
+```
+
+**Async request**
+```
+[HTTP Request] → [Yggdrassil (Jetty)] → [Middleware Chain] → [Route Discovery] → [Controller] → [Job Submission to Freyr] → [Immediate Response with Job ID]
+                                                                                                          *   
+            *       
+[Job Persistence to Mimir(db)] → [Freyr Queue System] → [Job Processing]
+     ↓
+[Job Execution] → [Result Storage] → [Status Updates in Database]
+     ↓
+[Client Polling] → [Status/Result Endpoints] → [Job Results Retrieved]
 ```
 
 ### Bifrost
@@ -136,6 +151,91 @@ public void testGetExternalAPI() {
 ```
 
 ```callApi```, ```sendErrorResponse``` and ```sendSucessfulResponse``` are all methods from ```Bragi```
+
+### Freyr
+
+```Freyr``` is an asynchronous job queue system that provides powerful background job processing capabilities. It supports both parallel and sequential job execution, priority-based processing, automatic retry mechanisms with exponential backoff and job monitoring and statistics.
+
+**Key Features:**
+- **Dual Queue System**: Separate parallel and sequential job processing queues
+- **Priority-Based Processing**: Jobs are processed based on their priority levels
+- **Retry Management**: Automatic retry with exponential backoff and dead letter queue
+- **Persistent Job Storage**: Jobs are persisted to SQLite database for reliability
+
+**Job Types:**
+- **Parallel Jobs**: Execute concurrently using multiple worker threads
+- **Sequential Jobs**: Execute one at a time in FIFO order for tasks requiring strict ordering
+
+**Example**
+
+```java
+public class ExternalApiJob extends BaseJob {
+    public static final String JOB_TYPE = "external-api-call";
+    
+    public ExternalApiJob(Map<String, Object> payload) {
+        super(JOB_TYPE, 5, 2, 30000L, payload); // priority 5, 2 retries, 30s timeout
+    }
+
+    @Override
+    public void execute() throws Exception {
+        String url = getString("url");
+        // Perform API call
+        APIResponse<List<Post>> response = callExternal(url);
+        
+        if (response.success()) {
+            JobResultStore.storeSuccess(getId(), responseData);
+        } else {
+            JobResultStore.storeError(getId(), response.code(), response.info());
+        }
+    }
+}
+```
+
+```java
+public class JobRegistryConfig {
+    public static void registerJobs() {
+        JobRegistry registry = JobRegistry.getInstance();
+        registry.registerJob("external-api-call", ExternalApiJob.class);
+        registry.registerJob("parallel-ping", ParallelPingJob.class);
+        registry.registerJob("sequential-ping", SequentialPingJob.class);
+    }
+}
+```
+
+```java
+@Route(endpoint = API_ENDPOINT + "submit-job", method = POST, responseType = JSON)
+public void submitJob() {
+    Map<String, Object> payload = Map.of(
+        "url", "https://api.example.com/data",
+        "requestedBy", getCurrentToken()
+    );
+    
+    Freyr jobQueue = Freyr.getInstance();
+    String jobId = jobQueue.submit(new ExternalApiJob(payload));
+    
+    sendSucessfulResponse(OK, Map.of("jobId", jobId, "status", "submitted"));
+}
+
+@Route(endpoint = API_ENDPOINT + "job-status/:id", method = GET, responseType = JSON)
+public void getJobStatus() {
+    String jobId = getPathParam("id");
+    Freyr jobQueue = Freyr.getInstance();
+    
+    JobStatus status = jobQueue.getJobStatus(jobId);
+    JobResult result = jobQueue.getJobResult(jobId);
+    
+    Map<String, Object> response = new HashMap<>();
+    response.put("jobId", jobId);
+    response.put("status", status.name());
+    if (result != null) {
+        response.put("result", result);
+    }
+    
+    sendSucessfulResponse(OK, response);
+}
+```
+
+The job system automatically handles persistence, retry logic and provides monitoring capabilities. Failed jobs are automatically retried with exponential backoff, and permanently failed jobs are moved to a dead letter queue for manual inspection.
 
 ### Heimdall
 
@@ -463,4 +563,3 @@ first tried the famous *vibe coding*
 ## License
 
 This project is licensed under the MIT License.
-

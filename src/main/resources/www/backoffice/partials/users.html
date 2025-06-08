@@ -1,216 +1,306 @@
-<section class="section is-title-bar">
-    <div class="level">
-        <div class="level-left">
-            <div class="level-item">
-                <ul>
-                    <li th:text="${currentUser}">User Name</li>
-                    <li>Users</li>
-                </ul>
-            </div>
+<!-- Breadcrumb Section -->
+<section class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2">
+                    <li>
+                        <span class="text-sm font-medium text-gray-900" th:text="${currentUser}">User Name</span>
+                    </li>
+                    <li>
+                        <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                        <span class="text-sm text-gray-500">Users</span>
+                    </li>
+                </ol>
+            </nav>
         </div>
-        <div class="level-right">
-            <div class="buttons is-right">
-                <button class="button is-primary jb-modal" data-target="create-user-modal">
-                    <span class="icon"><i class="mdi mdi-account-plus"></i></span> <span>New user</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</section>
-<section class="hero is-hero-bar">
-    <div class="hero-body">
-        <div class="level">
-            <div class="level-left">
-                <div class="level-item"><h1 class="title">
-                    Users Management
-                </h1></div>
-            </div>
-            <div class="level-right" style="display: none;">
-                <div class="level-item"></div>
-            </div>
+        <div class="flex items-center space-x-3">
+            <button class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" onclick="openModal('create-user-modal')">
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-1.5-6.75h3a2.25 2.25 0 012.25 2.25v3a2.25 2.25 0 01-2.25 2.25h-3m-6 0a2.25 2.25 0 01-2.25-2.25v-3a2.25 2.25 0 012.25-2.25h3M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                New user
+            </button>
         </div>
     </div>
 </section>
-<section class="section is-main-section">
-    <div class="card has-table has-mobile-sort-spaced">
-        <header class="card-header">
-            <p class="card-header-title">
-                <span class="icon"><i class="mdi mdi-account-multiple"></i></span>
-                Users
-            </p>
-            <a class="card-header-icon"
-               hx-get="/htmx/backoffice/users"
-               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-               hx-indicator="#users-spinner"
-               hx-swap="innerHTML transition:true"
-               hx-target="#users-table-body"
-               hx-trigger="click, load from:#create-user-modal afterSubmit" title="Refresh users list">
-                <span class="icon"><i class="mdi mdi-reload"></i></span>
-            </a>
-        </header>
 
-        <div class="card-content">
-            <div class="b-table has-pagination">
-                <div class="table-wrapper has-mobile-cards">
-                    <table class="table is-fullwidth is-striped is-hoverable is-sortable is-fullwidth">
-                        <thead>
-                        <tr>
-                            <th></th>
-                            <th>Username/Email</th>
-                            <th>Full Name</th>
-                            <th>Created</th>
-                            <th></th>
-                        </tr>
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+    <div class="px-6 py-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Users Management</h1>
+                <p class="mt-2 text-primary-100">Manage user accounts and permissions</p>
+            </div>
+            <div class="hidden lg:block">
+                <!-- Hero icon -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content Section -->
+<section class="px-6 py-6">
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Users</h2>
+            </div>
+            <button 
+                class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                hx-get="/htmx/backoffice/users"
+                hx-headers='{"Content-Type": "application/json"}'
+                hx-indicator="#users-spinner"
+                hx-swap="innerHTML transition:true"
+                hx-target="#users-table-body"
+                hx-trigger="click">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div class="overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username/Email</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                            </tr>
                         </thead>
-                        <tbody hx-get="/htmx/backoffice/users"
-                               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-                               hx-indicator="#users-spinner"
-                               hx-swap="innerHTML transition:true"
-                               hx-trigger="load"
-                               id="users-table-body">
+                        <tbody 
+                            class="bg-white divide-y divide-gray-200"
+                            hx-get="/htmx/backoffice/users"
+                            hx-headers='{"Content-Type": "application/json"}'
+                            hx-indicator="#users-spinner"
+                            hx-swap="innerHTML transition:true"
+                            hx-trigger="intersect once"
+                            id="users-table-body">
+                            <!-- Default loading content -->
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    <div class="flex items-center justify-center">
+                                        <svg class="animate-spin h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Loading users...
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-        <div class="loading-container htmx-indicator" id="users-spinner">
-            <img alt="Loading..." class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
+        
+        <div class="flex justify-center py-4 htmx-indicator" id="users-spinner">
+            <img alt="Loading..." class="h-8 w-8" src="https://htmx.org/img/bars.svg"/>
         </div>
     </div>
 </section>
 
-<div class="modal" id="create-user-modal">
-    <div class="modal-background jb-modal-close"></div>
-    <div class="modal-card">
-        <header class="modal-card-head">
-            <p class="modal-card-title">Create New User</p>
-            <button aria-label="close" class="delete jb-modal-close"></button>
-        </header>
-        <section class="modal-card-body">
-            <form id="create-user-form">
-                <div class="field">
-                    <label class="label" for="new-username">Username</label>
-                    <div class="control has-icons-left">
-                        <input class="input" id="new-username" name="username" placeholder="e.g. user" required>
-                        <span class="icon is-small is-left">
-                <i class="mdi mdi-email"></i>
-            </span>
+<!-- Create User Modal -->
+<div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden" id="create-user-modal">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Create New User</h3>
+            <button type="button" class="text-gray-400 hover:text-gray-500" onclick="closeModal('create-user-modal')">
+                <span class="sr-only">Close</span>
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <form id="create-user-form" class="p-6 space-y-4">
+            <div>
+                <label for="new-username" class="block text-sm font-medium text-gray-700">Username</label>
+                <div class="mt-1 relative">
+                    <input 
+                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pl-10" 
+                        id="new-username" 
+                        name="username" 
+                        placeholder="e.g. user" 
+                        required>
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
                     </div>
                 </div>
+            </div>
 
-                <div class="field">
-                    <label class="label" for="new-first-name">First Name</label>
-                    <div class="control has-icons-left">
-                        <input class="input" id="new-first-name" name="firstName" placeholder="e.g. Alex" required
-                               type="text">
-                        <span class="icon is-small is-left">
-                <i class="mdi mdi-account"></i>
-            </span>
+            <div>
+                <label for="new-first-name" class="block text-sm font-medium text-gray-700">First Name</label>
+                <div class="mt-1 relative">
+                    <input 
+                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pl-10" 
+                        id="new-first-name" 
+                        name="firstName" 
+                        placeholder="e.g. Alex" 
+                        required
+                        type="text">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                        </svg>
                     </div>
                 </div>
+            </div>
 
-                <div class="field">
-                    <label class="label" for="new-last-name">Last Name</label>
-                    <div class="control has-icons-left">
-                        <input class="input" id="new-last-name" name="lastName" placeholder="e.g. Smith" required
-                               type="text">
-                        <span class="icon is-small is-left">
-                <i class="mdi mdi-account"></i>
-            </span>
+            <div>
+                <label for="new-last-name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                <div class="mt-1 relative">
+                    <input 
+                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pl-10" 
+                        id="new-last-name" 
+                        name="lastName" 
+                        placeholder="e.g. Smith" 
+                        required
+                        type="text">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                        </svg>
                     </div>
                 </div>
+            </div>
 
-                <div class="field">
-                    <label class="label" for="new-password">Password</label>
-                    <div class="control has-icons-left">
-                        <input class="input" id="new-password" minlength="8" name="password"
-                               placeholder="Min. 8 characters"
-                               required type="password">
-                        <span class="icon is-small is-left">
-                <i class="mdi mdi-lock"></i>
-            </span>
+            <div>
+                <label for="new-password" class="block text-sm font-medium text-gray-700">Password</label>
+                <div class="mt-1 relative">
+                    <input 
+                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pl-10" 
+                        id="new-password" 
+                        name="password" 
+                        placeholder="••••••••" 
+                        required
+                        type="password">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159-.026-1.658.33L10.5 16.5l-1.902-1.902a.75.75 0 00-.878-.187 18 18 0 01-7.29 2.71l1.92 1.92c.36.36.36.94 0 1.3L0 21.75l3.75-3.75a.75.75 0 011.06 0L6.72 19.92a18 18 0 002.71-7.29.75.75 0 00-.187-.878L7.5 10.5l1.902-1.902a1.5 1.5 0 01.33-1.658A5.999 5.999 0 0115 1.5a3 3 0 013 3z" />
+                        </svg>
                     </div>
                 </div>
+            </div>
 
-                <div class="field">
-                    <label class="label" for="new-password-confirmation">Confirm Password</label>
-                    <div class="control has-icons-left">
-                        <input class="input" id="new-password-confirmation" minlength="8" name="password_confirmation"
-                               placeholder="Retype password" required type="password">
-                        <span class="icon is-small is-left">
-                <i class="mdi mdi-lock-check"></i>
-            </span>
+            <div>
+                <label for="new-password-confirmation" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                <div class="mt-1 relative">
+                    <input 
+                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pl-10" 
+                        id="new-password-confirmation" 
+                        name="password_confirmation" 
+                        placeholder="••••••••" 
+                        required
+                        type="password">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159-.026-1.658.33L10.5 16.5l-1.902-1.902a.75.75 0 00-.878-.187 18 18 0 01-7.29 2.71l1.92 1.92c.36.36.36.94 0 1.3L0 21.75l3.75-3.75a.75.75 0 011.06 0L6.72 19.92a18 18 0 002.71-7.29.75.75 0 00-.187-.878L7.5 10.5l1.902-1.902a1.5 1.5 0 01.33-1.658A5.999 5.999 0 0115 1.5a3 3 0 013 3z" />
+                        </svg>
                     </div>
                 </div>
-                <div class="mt-3 content" id="create-user-message"></div>
-                <div class="loading-container" id="create-user-spinner"
-                     style="position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); display: none;">
-                    <img alt="Submitting..." class="loading-spinner is-small" src="https://htmx.org/img/bars.svg"/>
-                </div>
+            </div>
 
-                <footer class="modal-card-foot">
-                    <button class="button jb-modal-close">Cancel</button>
-                    <button class="button is-success" type="submit">Create User</button>
-                </footer>
-            </form>
+            <!-- Message display area -->
+            <div id="create-user-message" class="hidden">
+                <!-- Success/error messages will be displayed here -->
+            </div>
 
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    const createUserForm = document.getElementById('create-user-form');
-                    const createUserMessage = document.getElementById('create-user-message');
-                    const createUserSpinner = document.getElementById('create-user-spinner');
+            <!-- Spinner -->
+            <div class="flex justify-center py-4 hidden" id="create-user-spinner">
+                <img alt="Submitting..." class="h-6 w-6" src="https://htmx.org/img/bars.svg"/>
+            </div>
 
-                    if (createUserForm) {
-                        createUserForm.addEventListener('submit', function (event) {
-                            event.preventDefault();
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50" onclick="closeModal('create-user-modal')">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700">Create User</button>
+            </div>
+        </form>
 
-                            createUserSpinner.style.display = 'block'; // Show the spinner
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const createUserForm = document.getElementById('create-user-form');
+                const createUserMessage = document.getElementById('create-user-message');
+                const createUserSpinner = document.getElementById('create-user-spinner');
 
-                            const form = this;
-                            const formData = new FormData(form);
-                            const data = {
-                                username: formData.get('username'),
-                                firstName: formData.get('firstName'),
-                                lastName: formData.get('lastName'),
-                                password: formData.get('password'),
-                                passwordConfirmation: formData.get('password_confirmation')
-                            };
+                if (createUserForm) {
+                    createUserForm.addEventListener('submit', function (event) {
+                        event.preventDefault();
 
-                            console.log(JSON.stringify(data));
+                        createUserSpinner.classList.remove('hidden'); // Show the spinner
 
-                            fetch('/backoffice/users', {  // Use fetch instead of htmx.ajax
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : ''
-                                },
-                                body: JSON.stringify(data)
+                        const form = this;
+                        const formData = new FormData(form);
+                        const data = {
+                            username: formData.get('username'),
+                            firstName: formData.get('firstName'),
+                            lastName: formData.get('lastName'),
+                            password: formData.get('password'),
+                            passwordConfirmation: formData.get('password_confirmation')
+                        };
+
+                        console.log(JSON.stringify(data));
+
+                        fetch('/backoffice/users', {  // Use fetch instead of htmx.ajax
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : ''
+                            },
+                            body: JSON.stringify(data)
+                        })
+                            .then(response => {
+                                createUserSpinner.classList.add('hidden'); // Hide the spinner
+
+                                if (response.ok) {
+                                    return response.text().then(text => {
+                                        // Success - close modal and refresh table
+                                        closeModal('create-user-modal');
+                                        form.reset();
+
+                                        // Trigger refresh of users table
+                                        const refreshButton = document.querySelector('[hx-target="#users-table-body"]');
+                                        if (refreshButton) {
+                                            refreshButton.click();
+                                        }
+
+                                        // Show success message
+                                        createUserMessage.innerHTML = '<div class="bg-green-50 border border-green-200 rounded-md p-3"><div class="text-sm text-green-800">User created successfully!</div></div>';
+                                        createUserMessage.classList.remove('hidden');
+                                        setTimeout(() => {
+                                            createUserMessage.classList.add('hidden');
+                                        }, 3000);
+                                    });
+                                } else {
+                                    return response.text().then(text => {
+                                        // Error - show error message
+                                        createUserMessage.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-md p-3"><div class="text-sm text-red-800">' + (text || 'Error creating user') + '</div></div>';
+                                        createUserMessage.classList.remove('hidden');
+                                    });
+                                }
                             })
-                                .then(response => {
-                                    createUserSpinner.style.display = 'none'; // Hide spinner
-                                    if (!response.ok) {
-                                        return response.text().then(text => {
-                                            throw new Error(text)
-                                        });
-                                    }
-                                    return response.text();
-                                })
-                                .then(data => {
-                                    createUserMessage.innerHTML = data; // Update message
-                                    // Clear the form.
-                                    form.reset();
-
-                                })
-                                .catch(error => {
-                                    createUserSpinner.style.display = 'none'; // Hide spinner on error too
-                                    createUserMessage.innerHTML = `<div class="notification is-danger">${error}</div>`;
-                                });
-                        });
-                    }
-                });
-            </script>
-
-        </section>
-
+                            .catch(error => {
+                                createUserSpinner.classList.add('hidden'); // Hide the spinner
+                                console.error('Error:', error);
+                                createUserMessage.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-md p-3"><div class="text-sm text-red-800">Network error. Please try again.</div></div>';
+                                createUserMessage.classList.remove('hidden');
+                            });
+                    });
+                }
+            });
+        </script>
     </div>
 </div>

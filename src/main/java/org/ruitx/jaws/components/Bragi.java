@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Part;
 import org.ruitx.jaws.exceptions.APIParsingException;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.RequestType;
@@ -250,6 +251,40 @@ public abstract class Bragi {
     protected String getBodyParam(String name) {
         Yggdrasill.RequestContext context = requestContext.get();
         return context != null && context.getBodyParams() != null ? context.getBodyParams().get(name) : null;
+    }
+
+    /**
+     * Get a multipart file from the request.
+     *
+     * @param name the name of the file input field
+     * @return the Part object representing the uploaded file, or null if not found
+     */
+    protected Part getMultipartFile(String name) {
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null && context.getMultipartFiles() != null ? context.getMultipartFiles().get(name) : null;
+    }
+
+    /**
+     * Get all multipart files from the request.
+     *
+     * @return a map of field names to Part objects
+     */
+    protected Map<String, Part> getMultipartFiles() {
+        Yggdrasill.RequestContext context = requestContext.get();
+        return context != null && context.getMultipartFiles() != null ? context.getMultipartFiles() : new HashMap<>();
+    }
+
+    /**
+     * Check if the request is a multipart form data request.
+     *
+     * @return true if the request contains multipart data
+     */
+    protected boolean isMultipartRequest() {
+        Yggdrasill.RequestContext context = requestContext.get();
+        if (context == null) return false;
+        
+        String contentType = context.getHeader("Content-Type");
+        return contentType != null && contentType.contains("multipart/form-data");
     }
 
     /**

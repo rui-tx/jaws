@@ -1,9 +1,12 @@
 package org.ruitx.jaws.components;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
 import org.ruitx.www.service.AuthService;
+import org.ruitx.www.service.ImageService;
 import org.ruitx.www.service.PasteService;
 import org.tinylog.Logger;
 
@@ -24,8 +27,10 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
  * <li>Yggdrasill is the server that listens for incoming connections</li>
  * <li>Bifrost is the middleware that processes the requests</li>
  * <li>Heimdall is a file watcher that watches for changes in the www path</li>
+ * <li>Mimir is a utility class/ORM that interfaces with the database</li>
  * <li>Njord is a dynamic router that routes requests to controllers</li>
  * <li>Norns is a cron job that runs scheduled tasks</li>
+ * <li>Freyr is the job queue processing system</li>
  * <li>Hel is the shutdown hook that stops the server</li>
  * </ul>
  */
@@ -50,6 +55,8 @@ public final class Odin {
 
         createMimir();
         createNjord();
+        createFreyr();
+
         List<Thread> threads = Arrays.asList(
                 createYggdrasill(),
                 createHeimdall(),
@@ -120,13 +127,30 @@ public final class Odin {
                 10,
                 TimeUnit.MINUTES
         );
+        norns.registerTask(
+                "clean-old-images",
+                () -> new ImageService().cleanOldImages(),
+                1,
+                TimeUnit.HOURS
+        );
         return new Thread(norns, "norns");
+    }
+
+    // Freyr, the job queue processing system
+    private static void createFreyr() {
+        Freyr freyr = Freyr.getInstance();
+        freyr.start();
+        Logger.info("Freyr started successfully");
     }
 
     // Hel is the shutdown hook that gracefully stops all services
     private static void createHel(ExecutorService executor) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Logger.info("Shutdown hook triggered, stopping services...");
+            
+            // Stop Freyr gracefully
+            Freyr jobQueue = Freyr.getInstance();
+            jobQueue.shutdown();
             
             // Stop Yggdrasill gracefully
             if (yggdrasill != null) {

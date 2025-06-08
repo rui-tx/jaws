@@ -25,6 +25,8 @@ public class Heimdall implements Runnable {
     @Override
     public void run() {
         try {
+
+            Logger.info("Heimdall started");
             WatchService watchService = FileSystems.getDefault().newWatchService();
             registerAll(path, watchService);
 
@@ -67,7 +69,7 @@ public class Heimdall implements Runnable {
                                 Logger.info("Heimdall ignored directory: " + path);
                                 return;
                             }
-                            Logger.info("Heimdall is now watching: " + path);
+                            Logger.trace("Heimdall is now watching: " + path);
                             path.register(watchService, ENTRY_MODIFY, ENTRY_CREATE, ENTRY_DELETE);
                         } catch (IOException e) {
                             Logger.error("Failed to register directory: " + path + " due to: " + e.getMessage());

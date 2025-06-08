@@ -41,6 +41,27 @@ function logout() {
         });
 }
 
+// Function to check if token is expired
+function isTokenExpired(token) {
+    if (!token) return true;
+    
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+        return payload.exp && payload.exp < currentTime;
+    } catch (error) {
+        console.error('Error parsing token:', error);
+        return true; // Treat malformed tokens as expired
+    }
+}
+
+// Function to clear expired tokens
+function clearExpiredTokens() {
+    console.log('Clearing expired tokens...');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+}
 
 let refreshing = false;
 
@@ -86,6 +107,27 @@ async function refreshAccessToken() {
 window.fetch = async function (url, options = {}) {
     let token = localStorage.getItem('auth_token');
 
+    // Check if token is expired before making any request
+    if (token && isTokenExpired(token)) {
+        console.log('Token is expired, attempting refresh before request...');
+        if (!refreshing) {
+            refreshing = true;
+            try {
+                token = await refreshAccessToken();
+            } catch (error) {
+                console.error('Token refresh failed:', error);
+                clearExpiredTokens();
+                // Only redirect if not already on login page
+                if (!window.location.pathname.includes('login')) {
+                    window.location.href = '/backoffice/login.html';
+                }
+                throw error;
+            } finally {
+                refreshing = false;
+            }
+        }
+    }
+
     // Add auth header if token exists and it's not a request to the auth server itself
     // to prevent sending tokens to login/refresh endpoints unnecessarily or causing issues.
     const isAuthEndpoint = url.startsWith('/api/v1/auth/');
@@ -120,7 +162,11 @@ window.fetch = async function (url, options = {}) {
         } catch (error) {
             console.error('Error during token refresh or retrying request:', error); // Debug log
             // If refresh fails, logout
-            logout(); // This will redirect to login
+            clearExpiredTokens();
+            // Only redirect if not already on login page
+            if (!window.location.pathname.includes('login')) {
+                window.location.href = '/backoffice/login.html';
+            }
             throw error; // Re-throw error to be caught by the original fetch's caller
         } finally {
             refreshing = false;
@@ -139,18 +185,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname.endsWith('/login.html') || window.location.pathname.endsWith('/login')) {
         console.log('Currently on login page.'); // Debug log
         const authToken = localStorage.getItem('auth_token');
-        if (authToken) {
-            console.log('User is already logged in. Redirecting to dashboard.'); // Debug log
-            // You can also add a quick validation ping to your server here to ensure the token is still valid
-            // e.g., fetch('/api/v1/auth/validate-token').then(res => if (res.ok) { redirect } else { localStorage.clear(); })
+        if (authToken && !isTokenExpired(authToken)) {
+            console.log('User is already logged in with valid token. Redirecting to dashboard.'); // Debug log
             window.location.href = '/backoffice'; // Or your desired authenticated page
             return; // Stop further execution on this page if redirecting
+        } else if (authToken && isTokenExpired(authToken)) {
+            console.log('User has expired token, clearing and staying on login page.'); // Debug log
+            clearExpiredTokens();
         } else {
             console.log('User is not logged in. Displaying login page.'); // Debug log
         }
     }
     // --- END LOGIN PAGE REDIRECT LOGIC ---
-
 
     console.log('Setting up logout handlers...'); // Debug log
 
