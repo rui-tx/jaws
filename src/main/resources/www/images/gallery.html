@@ -1,0 +1,542 @@
+<div class="gallery-container">
+    <div th:if="${galleryContent}" th:utext="${galleryContent}"></div>
+</div>
+
+<!-- Image Variants Modal -->
+<div id="imageModal" class="modal">
+    <div class="modal-backdrop" onclick="closeImageModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Image Variants</h2>
+            <span class="close" onclick="closeImageModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="modalImageContainer">
+                <div class="loading">Loading variants...</div>
+            </div>
+            <div id="variantTabs" class="variant-tabs">
+                <!-- Tabs will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.gallery-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.nav-links {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.nav-links a {
+    margin: 0 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.nav-links a:hover {
+    background-color: #5a6268;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.image-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.image-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.image-preview {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5rem;
+}
+
+.status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background-color: #ffc107;
+    color: #856404;
+}
+
+.status-processing {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.status-completed {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-failed {
+    background-color: #dc3545;
+    color: white;
+}
+
+.image-info {
+    padding: 1rem;
+}
+
+.image-info h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.image-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.image-meta span {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid #e9ecef;
+}
+
+.image-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.empty-gallery {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+}
+
+.empty-gallery h3 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 1rem;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+    margin: 2rem 0;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 999;
+}
+
+.modal-content {
+    position: relative;
+    background-color: #fff;
+    margin: 2% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 1000px;
+    max-height: 90vh;
+    overflow: hidden;
+    z-index: 1001;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #ddd;
+    background-color: #f8f9fa;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
+}
+
+#modalImageContainer {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+#modalImageContainer img {
+    max-width: 100%;
+    max-height: 500px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.variant-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.variant-tab {
+    padding: 0.5rem 1rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #fff;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.variant-tab:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.variant-tab.active {
+    border-color: #007bff;
+    background-color: #007bff;
+    color: white;
+}
+
+.variant-info {
+    text-align: center;
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-style: italic;
+}
+
+.modal-error {
+    color: #dc3545;
+    text-align: center;
+    padding: 2rem;
+    background-color: #f8d7da;
+    border-radius: 4px;
+    margin: 1rem 0;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 5% auto;
+        max-height: 85vh;
+    }
+    
+    .variant-tabs {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .variant-tab {
+        width: 200px;
+        text-align: center;
+    }
+}
+
+/* Show modal */
+.modal.show {
+    display: block;
+}
+
+.modal.show .modal-content {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+</style>
+
+<script>
+function viewImage(imageId) {
+    openImageModal(imageId);
+}
+
+function openImageModal(imageId) {
+    const modal = document.getElementById('imageModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalImageContainer = document.getElementById('modalImageContainer');
+    const variantTabs = document.getElementById('variantTabs');
+    
+    // Show modal
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    
+    // Reset content
+    modalTitle.textContent = 'Loading Image...';
+    modalImageContainer.innerHTML = '<div class="loading">Loading variants...</div>';
+    variantTabs.innerHTML = '';
+    
+    // Fetch image data and variants
+    Promise.all([
+        fetch(`/api/images/${imageId}`).then(response => response.json()),
+        fetch(`/api/images/${imageId}/variants`).then(response => response.json())
+    ]).then(([imageResponse, variantsResponse]) => {
+        if (!imageResponse.success) {
+            throw new Error(imageResponse.info || 'Failed to load image');
+        }
+        
+        if (!variantsResponse.success) {
+            throw new Error(variantsResponse.info || 'Failed to load variants');
+        }
+        
+        const image = imageResponse.data;
+        const variants = variantsResponse.data;
+        
+        // Update modal title
+        modalTitle.textContent = image.originalFilename;
+        
+        // Create variant tabs (original + variants)
+        const allVariants = [
+            {
+                id: 'original',
+                variantType: 'original',
+                width: image.width,
+                height: image.height,
+                fileSize: image.fileSize,
+                mimeType: image.mimeType
+            },
+            ...variants
+        ];
+        
+        // Sort variants by size (original, large, medium, thumbnail)
+        const sizeOrder = { original: 0, large: 1, medium: 2, thumbnail: 3 };
+        allVariants.sort((a, b) => (sizeOrder[a.variantType] || 99) - (sizeOrder[b.variantType] || 99));
+        
+        // Create tabs
+        variantTabs.innerHTML = allVariants.map((variant, index) => {
+            const sizeText = variant.width && variant.height ? `${variant.width}×${variant.height}` : 'Unknown';
+            const sizeKB = variant.fileSize ? `${Math.round(variant.fileSize / 1024)}KB` : 'Unknown';
+            const label = variant.variantType === 'original' ? 'Original' : variant.variantType.charAt(0).toUpperCase() + variant.variantType.slice(1);
+            
+            return `
+                <div class="variant-tab ${index === 0 ? 'active' : ''}" 
+                     onclick="showVariant('${imageId}', '${variant.variantType}', this)"
+                     data-variant="${variant.variantType}">
+                    <strong>${label}</strong><br>
+                    <small>${sizeText} • ${sizeKB}</small>
+                </div>
+            `;
+        }).join('');
+        
+        // Show the first variant (original)
+        showVariant(imageId, 'original', document.querySelector('.variant-tab.active'));
+        
+    }).catch(error => {
+        console.error('Error loading image data:', error);
+        modalImageContainer.innerHTML = `<div class="modal-error">Failed to load image: ${error.message}</div>`;
+        modalTitle.textContent = 'Error';
+    });
+}
+
+function showVariant(imageId, variantType, tabElement) {
+    const modalImageContainer = document.getElementById('modalImageContainer');
+    
+    // Update active tab
+    document.querySelectorAll('.variant-tab').forEach(tab => tab.classList.remove('active'));
+    tabElement.classList.add('active');
+    
+    // Show loading
+    modalImageContainer.innerHTML = '<div class="loading">Loading image...</div>';
+    
+    // Build image URL
+    const imageUrl = variantType === 'original' 
+        ? `/api/images/${imageId}/serve`
+        : `/api/images/${imageId}/serve?variant=${variantType}`;
+    
+    // Create and load image
+    const img = new Image();
+    img.onload = function() {
+        modalImageContainer.innerHTML = `
+            <img src="${imageUrl}" alt="${variantType} variant" />
+            <div class="variant-info">
+                <strong>${variantType === 'original' ? 'Original Image' : variantType.charAt(0).toUpperCase() + variantType.slice(1) + ' Variant'}</strong><br>
+                Dimensions: ${this.naturalWidth} × ${this.naturalHeight} pixels
+            </div>
+        `;
+    };
+    
+    img.onerror = function() {
+        modalImageContainer.innerHTML = `<div class="modal-error">Failed to load ${variantType} image</div>`;
+    };
+    
+    img.src = imageUrl;
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = ''; // Restore scrolling
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImageModal();
+    }
+});
+
+function deleteImage(imageId) {
+    if (confirm('Are you sure you want to delete this image and all its variants?')) {
+        fetch(`/api/images/${imageId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the image card from the gallery
+                const imageCard = document.querySelector(`[data-image-id="${imageId}"]`);
+                if (imageCard) {
+                    imageCard.remove();
+                }
+                alert('Image deleted successfully');
+                // Close modal if it's open
+                closeImageModal();
+            } else {
+                alert('Failed to delete image: ' + data.info);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting image');
+        });
+    }
+}
+</script> 

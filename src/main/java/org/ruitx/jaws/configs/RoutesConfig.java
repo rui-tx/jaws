@@ -7,6 +7,7 @@ import org.ruitx.www.controller.APIController;
 import org.ruitx.www.controller.AdminController;
 import org.ruitx.www.controller.AuthController;
 import org.ruitx.www.controller.BackofficeController;
+import org.ruitx.www.controller.ImageController;
 import org.ruitx.www.controller.JobController;
 
 public class RoutesConfig {
@@ -20,6 +21,7 @@ public class RoutesConfig {
             new BackofficeController(),
             new APIController(),
             new JobController(),
+            new ImageController(),
             new AdminController()
     );
 }

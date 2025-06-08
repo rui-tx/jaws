@@ -6,6 +6,7 @@ import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
 import org.ruitx.www.service.AuthService;
+import org.ruitx.www.service.ImageService;
 import org.ruitx.www.service.PasteService;
 import org.tinylog.Logger;
 
@@ -125,6 +126,12 @@ public final class Odin {
                 () -> new PasteService().cleanExpiredPastes(),
                 10,
                 TimeUnit.MINUTES
+        );
+        norns.registerTask(
+                "clean-old-images",
+                () -> new ImageService().cleanOldImages(),
+                1,
+                TimeUnit.HOURS
         );
         return new Thread(norns, "norns");
     }

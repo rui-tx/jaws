@@ -2,6 +2,7 @@ package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.www.jobs.ExternalApiJob;
+import org.ruitx.www.jobs.ImageResizeJob;
 import org.ruitx.www.jobs.SequentialPingJob;
 import org.ruitx.www.jobs.ParallelPingJob;
 import org.tinylog.Logger;
@@ -32,6 +33,9 @@ public class JobRegistry {
 
         // External 
         register("external-api-call", ExternalApiJob.class);
+
+        // Image Processing
+        register(ImageResizeJob.JOB_TYPE, ImageResizeJob.class);
 
         Logger.info("JobRegistry initialized with {} job types", jobTypes.size());
     }

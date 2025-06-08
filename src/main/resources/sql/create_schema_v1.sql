@@ -198,3 +198,55 @@ CREATE INDEX IF NOT EXISTS idx_dlq_job_type ON DEAD_LETTER_QUEUE (job_type);
 CREATE INDEX IF NOT EXISTS idx_dlq_can_be_retried ON DEAD_LETTER_QUEUE (can_be_retried);
 CREATE INDEX IF NOT EXISTS idx_dlq_original_job_id ON DEAD_LETTER_QUEUE (original_job_id);
 
+-- =============================================
+-- IMAGE PROCESSING SYSTEM
+-- =============================================
+
+-- Images table - stores information about uploaded images
+CREATE TABLE IF NOT EXISTS IMAGES (
+    id               TEXT    PRIMARY KEY,      -- Unique image ID (UUID)
+    original_filename TEXT   NOT NULL,         -- Original filename when uploaded
+    file_path        TEXT    NOT NULL,         -- Path to original file
+    file_size        INTEGER NOT NULL,         -- File size in bytes
+    mime_type        TEXT    NOT NULL,         -- MIME type (image/jpeg, image/png, etc.)
+    width            INTEGER,                  -- Image width in pixels
+    height           INTEGER,                  -- Image height in pixels
+    status           TEXT    DEFAULT 'pending', -- pending, processing, completed, failed
+    upload_date      INTEGER NOT NULL,         -- Upload timestamp
+    processed_date   INTEGER,                  -- When processing completed
+    user_session     TEXT,                     -- Session ID of uploader (for anonymous uploads)
+    user_id          INTEGER,                  -- Optional user who uploaded
+    metadata_removed INTEGER DEFAULT 0,        -- Whether EXIF data was removed (0=no, 1=yes)
+    FOREIGN KEY (user_id) REFERENCES USER (id) ON DELETE SET NULL
+);
+
+-- Image variants table - stores different sizes/formats of processed images
+CREATE TABLE IF NOT EXISTS IMAGE_VARIANTS (
+    id              TEXT    PRIMARY KEY,      -- Unique variant ID (UUID)
+    image_id        TEXT    NOT NULL,         -- Reference to original image
+    variant_type    TEXT    NOT NULL,         -- thumbnail, medium, large, webp, etc.
+    file_path       TEXT    NOT NULL,         -- Path to variant file
+    file_size       INTEGER NOT NULL,         -- File size in bytes
+    width           INTEGER,                  -- Variant width in pixels
+    height          INTEGER,                  -- Variant height in pixels
+    mime_type       TEXT    NOT NULL,         -- MIME type of variant
+    created_date    INTEGER NOT NULL,         -- When variant was created
+    FOREIGN KEY (image_id) REFERENCES IMAGES (id) ON DELETE CASCADE
+);
+
+-- =============================================
+-- INDEXES FOR IMAGE SYSTEM PERFORMANCE
+-- =============================================
+
+-- Image indexes
+CREATE INDEX IF NOT EXISTS idx_images_status ON IMAGES (status);
+CREATE INDEX IF NOT EXISTS idx_images_upload_date ON IMAGES (upload_date);
+CREATE INDEX IF NOT EXISTS idx_images_user_id ON IMAGES (user_id);
+CREATE INDEX IF NOT EXISTS idx_images_user_session ON IMAGES (user_session);
+CREATE INDEX IF NOT EXISTS idx_images_mime_type ON IMAGES (mime_type);
+
+-- Image variant indexes
+CREATE INDEX IF NOT EXISTS idx_image_variants_image_id ON IMAGE_VARIANTS (image_id);
+CREATE INDEX IF NOT EXISTS idx_image_variants_type ON IMAGE_VARIANTS (variant_type);
+CREATE INDEX IF NOT EXISTS idx_image_variants_created_date ON IMAGE_VARIANTS (created_date);
+

@@ -4,19 +4,23 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.interfaces.MiddlewareChain;
 import org.ruitx.jaws.strings.DefaultHTML;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
@@ -159,6 +163,16 @@ public class Yggdrasill {
     private void setupDynamicRouteHandling(ServletContextHandler context) {
         // Create and add the main request handling servlet
         ServletHolder jawsServlet = new ServletHolder("jaws", new JawsServlet());
+        
+        // Configure multipart support for file uploads
+        MultipartConfigElement multipartConfig = new MultipartConfigElement(
+            "uploads/temp",  // temp file directory
+            10 * 1024 * 1024,  // max file size (10MB)
+            20 * 1024 * 1024,  // max request size (20MB)
+            5 * 1024 * 1024    // file size threshold for writing to disk (5MB)
+        );
+        jawsServlet.getRegistration().setMultipartConfig(multipartConfig);
+        
         context.addServlet(jawsServlet, "/*");
     }
 
@@ -375,10 +389,12 @@ public class Yggdrasill {
                             
                             // For POST/PUT/PATCH requests that expect a request body parameter,
                             // we need to ensure proper JSON content type and non-empty body
+                            // UNLESS it's a multipart request (which is handled differently)
                             String httpMethod = context.request.getMethod().toUpperCase();
                             boolean expectsRequestBody = httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH");
+                            boolean isMultipartRequest = contentType != null && contentType.contains("multipart/form-data");
                             
-                            if (expectsRequestBody) {
+                            if (expectsRequestBody && !isMultipartRequest) {
                                 // Check for missing Content-Type header
                                 if (contentType == null || !contentType.contains("application/json")) {
                                     APIResponse<String> response = APIResponse.error(
@@ -400,8 +416,8 @@ public class Yggdrasill {
                                 }
                             }
 
-                            // If we have a request body, process it
-                            if (!requestBodyTrimmed.isEmpty()) {
+                            // If we have a request body, process it (only for non-multipart requests)
+                            if (!requestBodyTrimmed.isEmpty() && !isMultipartRequest) {
                                 try {
                                     ObjectMapper mapper = Odin.getMapper();
 
@@ -453,9 +469,10 @@ public class Yggdrasill {
                                     sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
                                     return true;
                                 }
-                            } else if (parameterTypes.length > 0 && expectsRequestBody) {
+                            } else if (parameterTypes.length > 0 && expectsRequestBody && !isMultipartRequest) {
                                 // If we reach here, it means we have parameters expected but no body was provided
                                 // This shouldn't happen due to the checks above, but let's be safe
+                                // Skip this check for multipart requests as they're handled differently
                                 APIResponse<String> response = APIResponse.error(
                                         ResponseCode.BAD_REQUEST.getCodeAndMessage(),
                                         "Request body is required but was not provided"
@@ -798,6 +815,7 @@ public class Yggdrasill {
         private Map<String, String> queryParams = new LinkedHashMap<>();
         private Map<String, String> bodyParams = new LinkedHashMap<>();
         private Map<String, String> pathParams = new LinkedHashMap<>();
+        private Map<String, Part> multipartFiles = new LinkedHashMap<>();
         private String currentToken;
         private String requestBody;
 
@@ -815,8 +833,8 @@ public class Yggdrasill {
             // Extract and store token
             extractAndStoreToken();
             
-            // Read request body
-            readRequestBody();
+            // Read request body or multipart data
+            readRequestData();
         }
 
         /**
@@ -854,16 +872,25 @@ public class Yggdrasill {
         /**
          * Reads the request body from the Jetty request.
          */
-        private void readRequestBody() {
+        private void readRequestData() {
             try {
-                requestBody = request.getReader().lines().collect(Collectors.joining("\n"));
-                
-                // Extract body parameters if it's form data
                 String contentType = request.getContentType();
-                if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
-                    bodyParams = extractBodyParameters(requestBody);
-                } else if (contentType != null && contentType.contains("application/json")) {
-                    bodyParams = parseJsonBody(requestBody);
+                
+                // For multipart requests, do NOT read the body as text
+                // The multipart data should only be accessed through request.getParts()
+                if (contentType != null && contentType.contains("multipart/form-data")) {
+                    requestBody = ""; // Set empty for multipart requests
+                    multipartFiles = extractMultipartFiles(request);
+                } else {
+                    // For non-multipart requests, read the body as text
+                    requestBody = request.getReader().lines().collect(Collectors.joining("\n"));
+                    
+                    // Extract body parameters if it's form data
+                    if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+                        bodyParams = extractBodyParameters(requestBody);
+                    } else if (contentType != null && contentType.contains("application/json")) {
+                        bodyParams = parseJsonBody(requestBody);
+                    }
                 }
             } catch (IOException e) {
                 Logger.error("Error reading request body: {}", e.getMessage());
@@ -957,11 +984,38 @@ public class Yggdrasill {
             this.currentToken = null;
         }
 
+        /**
+         * Extracts multipart files from the request.
+         */
+        private Map<String, Part> extractMultipartFiles(HttpServletRequest request) {
+            Map<String, Part> files = new LinkedHashMap<>();
+            try {
+                if (request.getContentType() != null && request.getContentType().contains("multipart/form-data")) {
+                    for (Part part : request.getParts()) {
+                        if (part.getSubmittedFileName() != null) {
+                            // This is a file upload
+                            files.put(part.getName(), part);
+                        } else {
+                            // This is a form field - add to bodyParams
+                            try (Scanner scanner = new Scanner(part.getInputStream(), StandardCharsets.UTF_8)) {
+                                String value = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+                                this.bodyParams.put(part.getName(), value);
+                            }
+                        }
+                    }
+                }
+            } catch (IOException | ServletException e) {
+                Logger.error("Error extracting multipart files: {}", e.getMessage());
+            }
+            return files;
+        }
+
         // Getter methods 
         public String getCurrentToken() { return currentToken; }
         public Map<String, String> getQueryParams() { return queryParams; }
         public Map<String, String> getBodyParams() { return bodyParams; }
         public Map<String, String> getPathParams() { return pathParams; }
+        public Map<String, Part> getMultipartFiles() { return multipartFiles; }
         public Map<String, String> getHeaders() { return headers; }
         public HttpServletRequest getRequest() { return request; }
         public HttpServletResponse getResponse() { return response; }
