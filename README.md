@@ -68,6 +68,8 @@ After starting JAWS, you can access the server using a web browser or an HTTP cl
 curl http://localhost:8080
 ```
 
+> Note: You can test the online version of **JAWS** at the link in the about section. The login for the backoffice is **admin** - **admin1234!**
+
 ## About JAWS
 
 JAWS is built with a modular system. Every module is responsible for one aspect of the server.
