@@ -34,7 +34,7 @@
                     th:if="${jobStatus == 'FAILED' or jobStatus == 'DEAD_LETTER'}"
                     hx-post="/htmx/backoffice/jobs/{jobId}/reprocess" 
                     th:attr="hx-post='/htmx/backoffice/jobs/' + ${jobId} + '/reprocess'"
-                    hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                    hx-headers='{"Content-Type": "application/json"}'
                     hx-swap="innerHTML"
                     hx-target="#reprocess-result"
                     hx-confirm="Are you sure you want to reprocess this job?">

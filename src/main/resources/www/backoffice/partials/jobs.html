@@ -66,7 +66,7 @@
             <button 
                 class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 hx-get="/htmx/backoffice/jobs"
-                hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                hx-headers='{"Content-Type": "application/json"}'
                 hx-indicator="#jobs-spinner"
                 hx-swap="innerHTML transition:true"
                 hx-target="#jobs-table-body"
@@ -95,11 +95,23 @@
                         <tbody 
                             class="bg-white divide-y divide-gray-200"
                             hx-get="/htmx/backoffice/jobs"
-                            hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                            hx-headers='{"Content-Type": "application/json"}'
                             hx-indicator="#jobs-spinner"
                             hx-swap="innerHTML transition:true"
-                            hx-trigger="load"
+                            hx-trigger="intersect once"
                             id="jobs-table-body">
+                            <!-- Default loading content -->
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    <div class="flex items-center justify-center">
+                                        <svg class="animate-spin h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Loading jobs...
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

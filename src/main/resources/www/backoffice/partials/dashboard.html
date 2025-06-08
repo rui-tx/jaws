@@ -51,7 +51,7 @@
             <button 
                 class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 hx-get="/htmx/backoffice/job-stats"
-                hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                hx-headers='{"Content-Type": "application/json"}'
                 hx-indicator="#job-stats-spinner"
                 hx-swap="innerHTML transition:true"
                 hx-target="#job-stats-content"
@@ -65,11 +65,17 @@
         <div class="p-6">
             <div id="job-stats-content"
                  hx-get="/htmx/backoffice/job-stats"
-                 hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                 hx-headers='{"Content-Type": "application/json"}'
                  hx-indicator="#job-stats-spinner"
                  hx-swap="innerHTML transition:true"
-                 hx-trigger="load">
+                 hx-trigger="intersect once">
                 <!-- Job statistics will be loaded here -->
+                <div class="text-center py-8 text-gray-500">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                    </svg>
+                    <p class="mt-2">Loading job statistics...</p>
+                </div>
             </div>
             <div class="flex justify-center py-4 htmx-indicator" id="job-stats-spinner">
                 <img alt="Loading..." class="h-8 w-8" src="https://htmx.org/img/bars.svg"/>
@@ -89,7 +95,7 @@
             <button 
                 class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 hx-get="/htmx/backoffice/users"
-                hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                hx-headers='{"Content-Type": "application/json"}'
                 hx-indicator="#users-spinner"
                 hx-swap="innerHTML transition:true"
                 hx-target="#users-table-body"
@@ -116,11 +122,23 @@
                         <tbody 
                             class="bg-white divide-y divide-gray-200"
                             hx-get="/htmx/backoffice/users"
-                            hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                            hx-headers='{"Content-Type": "application/json"}'
                             hx-indicator="#users-spinner"
                             hx-swap="innerHTML transition:true"
-                            hx-trigger="load"
+                            hx-trigger="intersect once"
                             id="users-table-body">
+                            <!-- Default loading content -->
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                    <div class="flex items-center justify-center">
+                                        <svg class="animate-spin h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Loading users...
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
