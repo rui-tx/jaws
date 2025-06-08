@@ -6,7 +6,7 @@ import org.thymeleaf.context.WebContext;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.web.servlet.JakartaServletWebApplication;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -59,11 +59,11 @@ public final class Hermod {
         if (HERMOD_DEVELOPMENT_MODE) {
             fileResolver.setCacheable(false);
             fileResolver.setCacheTTLMs(0L);
-            Logger.trace("Hermod template caching disabled for live reload");
+            JawsLogger.trace("Hermod template caching disabled for live reload");
         } else {
             fileResolver.setCacheable(true);
             fileResolver.setCacheTTLMs(HERMOD_TEMPLATE_CACHE_TTL);
-            Logger.trace("Hermod template caching enabled (TTL: " + HERMOD_TEMPLATE_CACHE_TTL + "ms)");
+            JawsLogger.trace("Hermod template caching enabled (TTL: " + HERMOD_TEMPLATE_CACHE_TTL + "ms)");
         }
         
         fileResolver.setOrder(1);
@@ -192,7 +192,7 @@ public final class Hermod {
         }
         
         // Otherwise, just return content
-        Logger.trace("Received template content. Template: {}", template);
+        JawsLogger.trace("Received template content. Template: {}", template);
         return template;
     }
 
@@ -208,7 +208,7 @@ public final class Hermod {
             return templateEngine.process(templatePath, context);
             
         } catch (Exception e) {
-            Logger.error("Error processing Thymeleaf template '{}': {}", templatePath, e.getMessage());
+            JawsLogger.error("Error processing Thymeleaf template '{}': {}", templatePath, e.getMessage());
             return "Error processing template: " + templatePath;
         }
     }
@@ -261,7 +261,7 @@ public final class Hermod {
             
             return templateEngine.process(baseTemplatePath, context);
         } catch (Exception e) {
-            Logger.error("Error assembling page: " + e.getMessage(), e);
+            JawsLogger.error("Error assembling page: " + e.getMessage(), e);
             throw new IOException("Failed to assemble page", e);
         }
     }
@@ -283,7 +283,7 @@ public final class Hermod {
             
             return templateEngine.process(baseTemplatePath, context);
         } catch (Exception e) {
-            Logger.error("Error assembling page with content: " + e.getMessage(), e);
+            JawsLogger.error("Error assembling page with content: " + e.getMessage(), e);
             throw new IOException("Failed to assemble page with content", e);
         }
     }
@@ -302,7 +302,7 @@ public final class Hermod {
             WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
             return templateEngine.process(templatePath, context);
         } catch (Exception e) {
-            Logger.error("Error rendering template: " + e.getMessage(), e);
+            JawsLogger.error("Error rendering template: " + e.getMessage(), e);
             throw new IOException("Failed to render template", e);
         }
     }

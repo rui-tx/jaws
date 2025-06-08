@@ -1,7 +1,7 @@
 package org.ruitx.jaws.utils;
 
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,7 +50,7 @@ public class ThymeleafUtils {
         Path path = Paths.get(ApplicationConfig.WWW_PATH + partialPath);
         
         if (!Files.exists(path) || Files.isDirectory(path)) {
-            Logger.warn("Partial template not found: {}", partialPath);
+            JawsLogger.warn("Partial template not found: {}", partialPath);
             return "";
         }
 
@@ -59,7 +59,7 @@ public class ThymeleafUtils {
             // For now, return raw content. Later we can make this recursive with Thymeleaf processing
             return content;
         } catch (IOException e) {
-            Logger.error("Error reading partial template {}: {}", partialPath, e.getMessage());
+            JawsLogger.error("Error reading partial template {}: {}", partialPath, e.getMessage());
             return "";
         }
     }

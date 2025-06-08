@@ -8,7 +8,7 @@ import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.dto.admin.*;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -72,7 +72,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, entryDTOs);
             
         } catch (Exception e) {
-            Logger.error("Failed to get DLQ entries: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get DLQ entries: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve DLQ entries");
         }
     }
@@ -96,7 +96,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, entryDTO);
             
         } catch (Exception e) {
-            Logger.error("Failed to get DLQ entry: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get DLQ entry: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve DLQ entry");
         }
     }
@@ -122,7 +122,7 @@ public class AdminController extends Bragi {
                     "resetRetryCount", resetRetryCount
                 );
                 
-                Logger.info("Admin manual retry: DLQ entry {} retried as job {} (reset: {})", 
+                JawsLogger.info("Admin manual retry: DLQ entry {} retried as job {} (reset: {})", 
                           dlqEntryId, newJobId, resetRetryCount);
                 
                 sendSucessfulResponse(OK, result);
@@ -131,7 +131,7 @@ public class AdminController extends Bragi {
             }
             
         } catch (Exception e) {
-            Logger.error("Failed to retry DLQ entry: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to retry DLQ entry: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retry job from DLQ");
         }
     }
@@ -164,13 +164,13 @@ public class AdminController extends Bragi {
                 "resetRetryCount", resetRetryCount
             );
             
-            Logger.info("Admin batch retry: {} successful, {} failed out of {} total", 
+            JawsLogger.info("Admin batch retry: {} successful, {} failed out of {} total", 
                        successful, failed, dlqEntryIds.size());
             
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to batch retry DLQ entries: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to batch retry DLQ entries: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to batch retry DLQ entries");
         }
     }
@@ -194,7 +194,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to get DLQ statistics: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get DLQ statistics: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve DLQ statistics");
         }
     }
@@ -216,12 +216,12 @@ public class AdminController extends Bragi {
                 "message", String.format("Cleaned up %d old DLQ entries", deletedCount)
             );
             
-            Logger.info("Admin DLQ cleanup: {} entries deleted (retention: {} days)", deletedCount, retentionDays);
+            JawsLogger.info("Admin DLQ cleanup: {} entries deleted (retention: {} days)", deletedCount, retentionDays);
             
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to cleanup DLQ: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to cleanup DLQ: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to cleanup DLQ entries");
         }
     }
@@ -248,7 +248,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, stats);
             
         } catch (Exception e) {
-            Logger.error("Failed to get circuit breaker statistics: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get circuit breaker statistics: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve circuit breaker statistics");
         }
     }
@@ -273,7 +273,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, stats);
             
         } catch (Exception e) {
-            Logger.error("Failed to get circuit breaker for service: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get circuit breaker for service: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve circuit breaker");
         }
     }
@@ -302,12 +302,12 @@ public class AdminController extends Bragi {
                 "serviceName", serviceName
             );
             
-            Logger.info("Admin reset circuit breaker for service: {}", serviceName);
+            JawsLogger.info("Admin reset circuit breaker for service: {}", serviceName);
             
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to reset circuit breaker: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to reset circuit breaker: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to reset circuit breaker");
         }
     }
@@ -336,7 +336,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to get retry scheduler statistics: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get retry scheduler statistics: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve retry scheduler statistics");
         }
     }
@@ -356,12 +356,12 @@ public class AdminController extends Bragi {
                 "message", String.format("Manually processed %d retry jobs", processedCount)
             );
             
-            Logger.info("Admin triggered retry processing: {} jobs processed", processedCount);
+            JawsLogger.info("Admin triggered retry processing: {} jobs processed", processedCount);
             
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to trigger retry processing: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to trigger retry processing: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to trigger retry processing");
         }
     }
@@ -393,7 +393,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, analysis);
             
         } catch (Exception e) {
-            Logger.error("Failed to get error analysis: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get error analysis: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve error analysis");
         }
     }
@@ -433,7 +433,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to test error classification: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to test error classification: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to test error classification");
         }
     }
@@ -499,7 +499,7 @@ public class AdminController extends Bragi {
             sendSucessfulResponse(OK, response);
             
         } catch (Exception e) {
-            Logger.error("Failed to get system health: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to get system health: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve system health");
         }
     }

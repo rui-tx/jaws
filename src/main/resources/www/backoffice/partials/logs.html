@@ -1,0 +1,154 @@
+<!-- Breadcrumb Section -->
+<section class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2">
+                    <li>
+                        <span class="text-sm font-medium text-gray-900" th:text="${currentUser}">User Name</span>
+                    </li>
+                    <li>
+                        <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                        <span class="text-sm text-gray-500">Logs</span>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-3">
+            <!-- Log Level Filter -->
+            <div class="flex items-center space-x-2">
+                <select id="level-filter" class="block w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm">
+                    <option value="">All Levels</option>
+                    <option value="ERROR">Error</option>
+                    <option value="WARN">Warning</option>
+                    <option value="INFO">Info</option>
+                    <option value="DEBUG">Debug</option>
+                    <option value="TRACE">Trace</option>
+                </select>
+                <button id="filter-button" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                    </svg>
+                    Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+    <div class="px-6 py-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Application Logs</h1>
+                <p class="mt-2 text-primary-100">Monitor and analyze system activity</p>
+            </div>
+            <div class="hidden lg:block">
+                <!-- Hero icon -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content Section -->
+<section class="px-6 py-6">
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c0 .621-.504 1.125-1.125 1.125H11.25a9 9 0 01-9-9V3.375c0-.621.504-1.125 1.125-1.125z" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Application Logs</h2>
+            </div>
+            <button 
+                class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                hx-get="/htmx/backoffice/logs"
+                hx-headers='{"Content-Type": "application/json"}'
+                hx-indicator="#logs-spinner"
+                hx-swap="innerHTML transition:true"
+                hx-target="#logs-table-body"
+                hx-trigger="click" 
+                title="Refresh logs list">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div class="overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logger / Method</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thread</th>
+                                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody 
+                            class="bg-white divide-y divide-gray-200"
+                            hx-get="/htmx/backoffice/logs"
+                            hx-headers='{"Content-Type": "application/json"}'
+                            hx-indicator="#logs-spinner"
+                            hx-swap="innerHTML transition:true"
+                            hx-trigger="intersect once"
+                            id="logs-table-body">
+                            <!-- Default loading content -->
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    <div class="flex items-center justify-center">
+                                        <svg class="animate-spin h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Loading logs...
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-center py-4 htmx-indicator" id="logs-spinner">
+            <img alt="Loading..." class="h-8 w-8" src="https://htmx.org/img/bars.svg"/>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterButton = document.getElementById('filter-button');
+    const levelFilter = document.getElementById('level-filter');
+    const logsTableBody = document.getElementById('logs-table-body');
+
+    if (filterButton && levelFilter && logsTableBody) {
+        filterButton.addEventListener('click', function () {
+            const level = levelFilter.value;
+            const url = level ? `/htmx/backoffice/logs?level=${encodeURIComponent(level)}` : '/htmx/backoffice/logs';
+            
+            htmx.ajax('GET', url, {
+                target: '#logs-table-body',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+                }
+            });
+        });
+
+        // Allow Enter key to trigger filter
+        levelFilter.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                filterButton.click();
+            }
+        });
+    }
+});
+</script> 

@@ -1,5 +1,7 @@
 package org.ruitx.jaws.components.freyr;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.interfaces.Job;

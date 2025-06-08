@@ -7,7 +7,7 @@ import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.model.Image;
 import org.ruitx.www.model.ImageVariant;
 import org.ruitx.www.service.ImageService;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -167,7 +167,7 @@ public class ImageController extends Bragi {
             try {
                 fileData = filePart.getInputStream().readAllBytes();
             } catch (IOException e) {
-                Logger.error("Failed to read uploaded file: {}", e.getMessage());
+                JawsLogger.error("Failed to read uploaded file: {}", e.getMessage());
                 sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to read uploaded file");
                 return;
             }
@@ -191,7 +191,7 @@ public class ImageController extends Bragi {
             }
 
         } catch (Exception e) {
-            Logger.error("Failed to upload image: {}", e.getMessage(), e);
+            JawsLogger.error("Failed to upload image: {}", e.getMessage(), e);
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to upload image: " + e.getMessage());
         }
     }
@@ -234,7 +234,7 @@ public class ImageController extends Bragi {
     @Route(endpoint = "/api/images/:id/serve", method = GET)
     public void serveImageFile() {
         String imageId = getPathParam("id");
-        Logger.info("serveImageFile called with imageId: {}", imageId);
+        JawsLogger.info("serveImageFile called with imageId: {}", imageId);
         String variant = getQueryParam("variant"); // optional: thumbnail, medium, large
         
         try {
@@ -278,12 +278,12 @@ public class ImageController extends Bragi {
                 byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
                 sendBinaryResponse(OK, mimeType, fileContent);
             } catch (IOException e) {
-                Logger.error("Failed to read image file {}: {}", filePath, e.getMessage());
+                JawsLogger.error("Failed to read image file {}: {}", filePath, e.getMessage());
                 sendErrorResponse(NOT_FOUND, "Image file not found");
             }
 
         } catch (Exception e) {
-            Logger.error("Failed to serve image file {}: {}", imageId, e.getMessage());
+            JawsLogger.error("Failed to serve image file {}: {}", imageId, e.getMessage());
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to serve image file");
         }
     }

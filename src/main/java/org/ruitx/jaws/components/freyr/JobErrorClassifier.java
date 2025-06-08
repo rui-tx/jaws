@@ -1,8 +1,8 @@
 package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
-import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
+import org.ruitx.jaws.types.Row;
 
 import java.io.IOException;
 import java.net.ConnectException;

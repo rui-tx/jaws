@@ -1,7 +1,6 @@
 package org.ruitx.jaws.components.freyr;
 
 import org.ruitx.jaws.components.Mimir;
-import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.interfaces.Job;
 import org.tinylog.Logger;
 
@@ -16,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SequentialJobQueue {
     
-    private static final int DEFAULT_QUEUE_CAPACITY = 1000;
+    private static final int DEFAULT_QUEUE_CAPACITY = 10000;
     
     private final Mimir mimir = new Mimir();
     private final BlockingQueue<Job> sequentialQueue;

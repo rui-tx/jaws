@@ -1,6 +1,6 @@
 package org.ruitx.jaws.components;
 
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,17 +28,17 @@ public class Norns implements Runnable {
     public void registerTask(String name, Runnable task, long interval, TimeUnit unit) {
         long intervalMillis = unit.toMillis(interval);
         tasks.put(name, new CronTask(task, intervalMillis));
-        Logger.info("Registered task with Norns: {} with interval: {} {}", name, interval, unit);
+        JawsLogger.info("Registered task with Norns: {} with interval: {} {}", name, interval, unit);
     }
 
     public void unregisterTask(String name) {
         tasks.remove(name);
-        Logger.info("Unregistered task from Norns: {}", name);
+        JawsLogger.info("Unregistered task from Norns: {}", name);
     }
 
     @Override
     public void run() {
-        Logger.info("Norns started weaving the threads of fate");
+        JawsLogger.info("Norns started weaving the threads of fate");
         while (running) {
             try {
                 long now = System.currentTimeMillis();
@@ -48,20 +48,20 @@ public class Norns implements Runnable {
                             task.run();
                             task.updateLastRun(now);
                         } catch (Exception e) {
-                            Logger.error("Error in Norns' thread {}: {}", name, e.getMessage(), e);
+                            JawsLogger.error("Error in Norns' thread {}: {}", name, e.getMessage(), e);
                         }
                     }
                 });
                 TimeUnit.SECONDS.sleep(1); // Check tasks every second
             } catch (InterruptedException e) {
-                Logger.info("Norns interrupted, ceasing their weaving");
+                JawsLogger.info("Norns interrupted, ceasing their weaving");
                 running = false;
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
-                Logger.error("Error in Norns: {}", e.getMessage(), e);
+                JawsLogger.error("Error in Norns: {}", e.getMessage(), e);
             }
         }
-        Logger.info("Norns have ceased their weaving");
+        JawsLogger.info("Norns have ceased their weaving");
     }
 
     public void stop() {

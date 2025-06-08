@@ -1,10 +1,11 @@
 package org.ruitx.jaws.configs;
 
 import org.ruitx.jaws.components.Tyr;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.sql.DriverManager;
 import java.util.Properties;
 
 public class ApplicationConfig {
@@ -34,11 +35,22 @@ public class ApplicationConfig {
     private static final Properties properties = new Properties();
 
     static {
+        // CRITICAL: Load SQLite JDBC driver BEFORE any Logger calls
+        // This ensures tinylog JDBC writer can find the driver
+        try {
+            Class.forName("org.sqlite.JDBC");
+            DriverManager.registerDriver(new org.sqlite.JDBC());
+            System.out.println("SQLite JDBC driver loaded successfully in ApplicationConfig");
+        } catch (Exception e) {
+            System.err.println("Failed to load SQLite JDBC driver in ApplicationConfig: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
         // Load properties file
         try (FileInputStream fis = new FileInputStream("src/main/resources/application.properties")) {
             properties.load(fis);
         } catch (IOException e) {
-            Logger.warn("Could not load application.properties, will use environment variables or defaults");
+            JawsLogger.warn("Could not load application.properties, will use environment variables or defaults");
         }
 
         // Initialize all static fields
@@ -52,19 +64,19 @@ public class ApplicationConfig {
         JWT_SECRET = getJWTSecretValue();
         HERMOD_DEVELOPMENT_MODE = getHermodDevelopmentModeValue();
         HERMOD_TEMPLATE_CACHE_TTL = getHermodTemplateCacheTtlValue();
-        Logger.info("JAWS Configuration");
-        Logger.info("--------------------------------");
-        Logger.info("URL: " + URL);
-        Logger.info("PORT: " + PORT);
-        Logger.info("WWW_PATH: " + WWW_PATH);
-        Logger.info("CUSTOM_PAGE_PATH_401: " + CUSTOM_PAGE_PATH_401);
-        Logger.info("CUSTOM_PAGE_PATH_404: " + CUSTOM_PAGE_PATH_404);
-        Logger.info("DATABASE_PATH: " + DATABASE_PATH);
-        Logger.info("DATABASE_SCHEMA_PATH: " + DATABASE_SCHEMA_PATH);
-        Logger.info("JWT_SECRET: [REDACTED]");
-        Logger.info("HERMOD_DEVELOPMENT_MODE: " + HERMOD_DEVELOPMENT_MODE);
-        Logger.info("HERMOD_TEMPLATE_CACHE_TTL: " + HERMOD_TEMPLATE_CACHE_TTL);
-        Logger.info("--------------------------------");
+        JawsLogger.info("JAWS Configuration");
+        JawsLogger.info("--------------------------------");
+        JawsLogger.info("URL: " + URL);
+        JawsLogger.info("PORT: " + PORT);
+        JawsLogger.info("WWW_PATH: " + WWW_PATH);
+        JawsLogger.info("CUSTOM_PAGE_PATH_401: " + CUSTOM_PAGE_PATH_401);
+        JawsLogger.info("CUSTOM_PAGE_PATH_404: " + CUSTOM_PAGE_PATH_404);
+        JawsLogger.info("DATABASE_PATH: " + DATABASE_PATH);
+        JawsLogger.info("DATABASE_SCHEMA_PATH: " + DATABASE_SCHEMA_PATH);
+        JawsLogger.info("JWT_SECRET: [REDACTED]");
+        JawsLogger.info("HERMOD_DEVELOPMENT_MODE: " + HERMOD_DEVELOPMENT_MODE);
+        JawsLogger.info("HERMOD_TEMPLATE_CACHE_TTL: " + HERMOD_TEMPLATE_CACHE_TTL);
+        JawsLogger.info("--------------------------------");
     }
 
     private ApplicationConfig() {
@@ -76,7 +88,7 @@ public class ApplicationConfig {
             try {
                 return Integer.parseInt(envValue);
             } catch (NumberFormatException e) {
-                Logger.warn("Invalid PORT environment variable value: " + envValue);
+                JawsLogger.warn("Invalid PORT environment variable value: " + envValue);
             }
         }
 
@@ -85,7 +97,7 @@ public class ApplicationConfig {
             try {
                 return Integer.parseInt(propValue);
             } catch (NumberFormatException e) {
-                Logger.warn("Invalid port in properties file: " + propValue);
+                JawsLogger.warn("Invalid port in properties file: " + propValue);
             }
         }
 
@@ -125,10 +137,10 @@ public class ApplicationConfig {
     private static String getJWTSecretValue() {
         String jwtSecret = getConfigValue("JWTTOKEN", "jwt.secret", null);
         if (jwtSecret == null || jwtSecret.isEmpty()) {
-            Logger.warn("JWT Token not found, generating a new one");
+            JawsLogger.warn("JWT Token not found, generating a new one");
             String jwtToken = Tyr.createSecreteKey();
-            Logger.info("JWT Token: " + jwtToken);
-            Logger.warn("Please save this token in a safe place, it will not be shown again");
+            JawsLogger.info("JWT Token: " + jwtToken);
+            JawsLogger.warn("Please save this token in a safe place, it will not be shown again");
             return jwtToken;
         }
         return jwtSecret;
