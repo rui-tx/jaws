@@ -22,13 +22,53 @@ import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 
 public class Mimir {
-    private static final AtomicBoolean initialized = new AtomicBoolean(false);
-    private static final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
-    private static DataSource dataSource;
+    // Instance variables instead of static - each Mimir has its own database connection
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
+    private DataSource dataSource;
     private File db;
+    private String schemaPath;
+    private boolean shouldCreateDefaultUser;
 
+    /**
+     * Default constructor - maintains existing behavior for backward compatibility.
+     * Uses the default database path and schema from ApplicationConfig.
+     */
     public Mimir() {
-        this.db = new File(DATABASE_PATH);
+        this(DATABASE_PATH, DATABASE_SCHEMA_PATH, true);
+    }
+
+    /**
+     * Constructor for custom database without schema loading.
+     * Useful for logs database or other specialized databases.
+     * 
+     * @param databasePath Path to the database file
+     */
+    public Mimir(String databasePath) {
+        this(databasePath, null, false);
+    }
+
+    /**
+     * Constructor for custom database with optional schema.
+     * 
+     * @param databasePath Path to the database file
+     * @param schemaPath Path to the schema file (null to skip schema loading)
+     */
+    public Mimir(String databasePath, String schemaPath) {
+        this(databasePath, schemaPath, false);
+    }
+
+    /**
+     * Full constructor with all options.
+     * 
+     * @param databasePath Path to the database file
+     * @param schemaPath Path to the schema file (null to skip schema loading)  
+     * @param shouldCreateDefaultUser Whether to create the default admin user
+     */
+    public Mimir(String databasePath, String schemaPath, boolean shouldCreateDefaultUser) {
+        this.db = new File(databasePath);
+        this.schemaPath = schemaPath;
+        this.shouldCreateDefaultUser = shouldCreateDefaultUser;
         initializeDataSource();
     }
 
@@ -44,10 +84,19 @@ public class Mimir {
     public void initializeDatabase(String databasePath) {
         if (databasePath != null && !databasePath.isEmpty()) {
             this.db = new File(databasePath);
+            // Reset initialization to allow re-initialization with new path
+            initialized.set(false);
+            initializeDataSource();
         }
 
         createDatabaseFile();
-        Logger.info("Database is ready.");
+        
+        // If schema is specified and database was created empty, load the schema
+        if (schemaPath != null && isDatabaseEmpty()) {
+            loadSchema();
+        }
+        
+        Logger.trace("Database is ready: {}", db.getAbsolutePath());
     }
 
     private void createDatabaseFile() {
@@ -55,7 +104,7 @@ public class Mimir {
         try {
             if (db.createNewFile()) {
                 Logger.info("Database created: " + db.getAbsolutePath());
-                loadSchema();
+                // Schema loading will be handled by initializeDatabase method
             } else {
                 throw new IOException("Could not create database file.");
             }
@@ -65,12 +114,42 @@ public class Mimir {
         }
     }
 
+    /**
+     * Check if the database is empty (no tables).
+     * 
+     * @return true if database has no tables, false otherwise
+     */
+    private boolean isDatabaseEmpty() {
+        try {
+            List<Row> tables = getRows("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+            return tables.isEmpty();
+        } catch (Exception e) {
+            Logger.warn("Error checking if database is empty: {}", e.getMessage());
+            return true; // Assume empty if we can't check
+        }
+    }
+
+    /**
+     * Force load the schema into the database.
+     * This can be used to load schema into an existing database.
+     */
+    public void loadSchemaForce() {
+        if (schemaPath != null) {
+            loadSchema();
+        } else {
+            Logger.warn("No schema path configured for this Mimir instance");
+        }
+    }
+
     private void loadSchema() {
         try (Connection conn = getConnection()) {
-            String sql = Files.readString(Path.of(DATABASE_SCHEMA_PATH));
+            String sql = Files.readString(Path.of(schemaPath));
             executeSqlStatements(conn, sql);
-            createDefaultAdminUser();
-            Logger.info("Database initialized with " + DATABASE_SCHEMA_PATH);
+            // Only create default admin user if configured to do so
+            if (shouldCreateDefaultUser) {
+                createDefaultAdminUser();
+            }
+            Logger.info("Database initialized with schema: {}", schemaPath);
         } catch (SQLException | IOException e) {
             Logger.error("Error initializing database: " + e.getMessage());
             throw new RuntimeException("Failed to initialize database", e);
@@ -542,5 +621,50 @@ public class Mimir {
                 Logger.error("Failed to delete test database: " + db.getAbsolutePath());
             }
         }
+    }
+
+    /**
+     * Cleanup resources when this Mimir instance is no longer needed.
+     * This is optional as SQLite handles cleanup automatically on JVM exit,
+     * but good practice for long-running applications with dynamic database usage.
+     */
+    public void close() {
+        try {
+            // Clean up any ongoing transactions for this instance
+            Connection txConn = transactionConnection.get();
+            if (txConn != null) {
+                try {
+                    txConn.rollback(); // Rollback any uncommitted transaction
+                } catch (SQLException e) {
+                    Logger.warn("Error rolling back transaction during cleanup: {}", e.getMessage());
+                }
+                txConn.close();
+                transactionConnection.remove();
+            }
+            
+            // SQLiteDataSource doesn't need explicit cleanup, but reset state
+            initialized.set(false);
+            Logger.debug("Mimir instance cleanup completed for: {}", db.getAbsolutePath());
+        } catch (SQLException e) {
+            Logger.warn("Error during Mimir cleanup: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Get the database file path for this Mimir instance.
+     * 
+     * @return The database file path
+     */
+    public String getDatabasePath() {
+        return db.getAbsolutePath();
+    }
+
+    /**
+     * Check if this Mimir instance is initialized.
+     * 
+     * @return true if initialized, false otherwise
+     */
+    public boolean isInitialized() {
+        return initialized.get();
     }
 }

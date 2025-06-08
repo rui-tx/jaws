@@ -8,7 +8,7 @@ import org.ruitx.jaws.configs.MiddlewareConfig;
 import org.ruitx.www.service.AuthService;
 import org.ruitx.www.service.ImageService;
 import org.ruitx.www.service.PasteService;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -97,7 +97,7 @@ public final class Odin {
     private static void createBifrost(Yggdrasill yggdrasill) {
         MiddlewareConfig.MIDDLEWARE.forEach(yggdrasill::addMiddleware);
         
-        Logger.info("Configured {} middleware(s): {}", 
+        JawsLogger.info("Configured {} middleware(s): {}", 
                 MiddlewareConfig.MIDDLEWARE.size(),
                 MiddlewareConfig.MIDDLEWARE.stream()
                         .map(m -> m.getClass().getSimpleName())
@@ -140,13 +140,13 @@ public final class Odin {
     private static void createFreyr() {
         Freyr freyr = Freyr.getInstance();
         freyr.start();
-        Logger.info("Freyr started successfully");
+        JawsLogger.info("Freyr started successfully");
     }
 
     // Hel is the shutdown hook that gracefully stops all services
     private static void createHel(ExecutorService executor) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Logger.info("Shutdown hook triggered, stopping services...");
+            JawsLogger.info("Shutdown hook triggered, stopping services...");
             
             // Stop Freyr gracefully
             Freyr jobQueue = Freyr.getInstance();
@@ -168,7 +168,7 @@ public final class Odin {
                 Thread.currentThread().interrupt();
             }
             
-            Logger.info("JAWS shutdown complete");
+            JawsLogger.info("JAWS shutdown complete");
         }));
     }
 

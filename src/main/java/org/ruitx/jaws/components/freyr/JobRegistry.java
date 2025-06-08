@@ -5,6 +5,7 @@ import org.ruitx.www.jobs.ExternalApiJob;
 import org.ruitx.www.jobs.ImageResizeJob;
 import org.ruitx.www.jobs.SequentialPingJob;
 import org.ruitx.www.jobs.ParallelPingJob;
+import org.ruitx.www.jobs.BatchLogWriterJob;
 import org.tinylog.Logger;
 
 import java.lang.reflect.Constructor;
@@ -36,6 +37,9 @@ public class JobRegistry {
 
         // Image Processing
         register(ImageResizeJob.JOB_TYPE, ImageResizeJob.class);
+
+        // Logging System
+        register(BatchLogWriterJob.JOB_TYPE, BatchLogWriterJob.class);
 
         Logger.info("JobRegistry initialized with {} job types", jobTypes.size());
     }

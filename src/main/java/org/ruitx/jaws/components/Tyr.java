@@ -6,7 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.www.model.auth.UserSession;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
@@ -110,7 +110,7 @@ public class Tyr {
             return Optional.of(newTokens);
 
         } catch (JwtException e) {
-            Logger.error("Error validating refresh token: " + e);
+            JawsLogger.error("Error validating refresh token: " + e);
             return Optional.empty();
         }
     }
@@ -130,7 +130,7 @@ public class Tyr {
                     .parse(token);
 
         } catch (JwtException e) {
-            Logger.error("Error validating: " + e);
+            JawsLogger.error("Error validating: " + e);
             return false;
         }
         return true;
@@ -162,7 +162,7 @@ public class Tyr {
 
 
         } catch (JwtException e) {
-            Logger.error("Error validating: " + e);
+            JawsLogger.error("Error validating: " + e);
             return "";
         }
 
@@ -181,7 +181,7 @@ public class Tyr {
 
 
         } catch (JwtException e) {
-            Logger.error("Error validating: " + e);
+            JawsLogger.error("Error validating: " + e);
             return "";
         }
 

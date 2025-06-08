@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Freyr implements Runnable {
     
     private static final int DEFAULT_WORKER_THREADS = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_QUEUE_CAPACITY = 1000;
+    private static final int DEFAULT_QUEUE_CAPACITY = 10000;
     private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes
     
     private static Freyr instance;
@@ -96,10 +96,10 @@ public class Freyr implements Runnable {
                 if (!queued) {
                     throw new RuntimeException("Sequential queue is full");
                 }
-                Logger.info("Job submitted to sequential queue: {}", job);
+                Logger.trace("Job submitted to sequential queue: {}", job);
             } else {
                 jobQueue.offer(new JobInstance(job));
-                Logger.info("Job submitted to parallel queue: {}", job);
+                Logger.trace("Job submitted to parallel queue: {}", job);
             }
             
             totalJobs.incrementAndGet();
@@ -439,14 +439,14 @@ public class Freyr implements Runnable {
             activeWorkers.incrementAndGet();
             
             try {
-                Logger.info("Processing parallel job: {}", job);
+                Logger.trace("Processing parallel job: {}", job);
                 
                 updateJobStatus(job.getId(), JobStatus.PROCESSING, null, Instant.now().toEpochMilli(), null);
                 job.execute();                
                 updateJobStatus(job.getId(), JobStatus.COMPLETED, null, null, Instant.now().toEpochMilli());
                 
                 completedJobs.incrementAndGet();
-                Logger.info("Completed parallel job: {}", job.getId());
+                Logger.trace("Completed parallel job: {}", job.getId());
                 
             } catch (Exception e) {
                 Logger.error("Failed to process parallel job {}: {}", job.getId(), e.getMessage(), e);

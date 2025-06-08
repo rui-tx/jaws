@@ -1,6 +1,6 @@
 package org.ruitx.jaws.components;
 
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -26,7 +26,7 @@ public class Heimdall implements Runnable {
     public void run() {
         try {
 
-            Logger.info("Heimdall started");
+            JawsLogger.info("Heimdall started");
             WatchService watchService = FileSystems.getDefault().newWatchService();
             registerAll(path, watchService);
 
@@ -36,10 +36,10 @@ public class Heimdall implements Runnable {
                     Path changed = path.resolve((Path) event.context());
 
                     if (isIgnored(changed)) {
-                        Logger.info("Heimdall ignored file: " + changed);
+                        JawsLogger.info("Heimdall ignored file: " + changed);
                         continue;
                     }
-                    Logger.info("Heimdall detected a file change: " + changed);
+                    JawsLogger.info("Heimdall detected a file change: " + changed);
 
                     // If the event indicates a directory was created, register it for watching
                     if (event.kind() == ENTRY_CREATE) {
@@ -49,7 +49,7 @@ public class Heimdall implements Runnable {
                 key.reset();
             }
         } catch (IOException | InterruptedException e) {
-            Logger.error("Heimdall encountered an error: " + e);
+            JawsLogger.error("Heimdall encountered an error: " + e);
         }
     }
 
@@ -66,13 +66,13 @@ public class Heimdall implements Runnable {
                     .forEach(path -> {
                         try {
                             if (isIgnored(path)) {
-                                Logger.info("Heimdall ignored directory: " + path);
+                                JawsLogger.info("Heimdall ignored directory: " + path);
                                 return;
                             }
-                            Logger.trace("Heimdall is now watching: " + path);
+                            JawsLogger.trace("Heimdall is now watching: " + path);
                             path.register(watchService, ENTRY_MODIFY, ENTRY_CREATE, ENTRY_DELETE);
                         } catch (IOException e) {
-                            Logger.error("Failed to register directory: " + path + " due to: " + e.getMessage());
+                            JawsLogger.error("Failed to register directory: " + path + " due to: " + e.getMessage());
                         }
                     });
         }

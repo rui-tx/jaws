@@ -1,0 +1,292 @@
+<!-- Breadcrumb Section -->
+<section class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2">
+                    <li>
+                        <span class="text-sm font-medium text-gray-900" th:text="${currentUser}">User Name</span>
+                    </li>
+                    <li>
+                        <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                        <a href="/backoffice/logs" class="text-sm text-gray-500 hover:text-gray-700">Logs</a>
+                    </li>
+                    <li>
+                        <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                        <span class="text-sm text-gray-500" th:text="${logId}">Log ID</span>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-3">
+            <a href="/backoffice/logs" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+                Back to Logs
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+    <div class="px-6 py-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Log Entry Details</h1>
+                <div class="flex items-center space-x-3 mt-2">
+                    <!-- Level badge with conditional styling -->
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" th:if="${logLevel == 'ERROR'}" th:text="${logLevel}">LEVEL</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800" th:if="${logLevel == 'WARN'}" th:text="${logLevel}">LEVEL</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" th:if="${logLevel == 'INFO'}" th:text="${logLevel}">LEVEL</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800" th:if="${logLevel == 'DEBUG'}" th:text="${logLevel}">LEVEL</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800" th:if="${logLevel == 'TRACE'}" th:text="${logLevel}">LEVEL</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800" th:if="${logLevel != 'ERROR' and logLevel != 'WARN' and logLevel != 'INFO' and logLevel != 'DEBUG' and logLevel != 'TRACE'}" th:text="${logLevel}">LEVEL</span>
+                    
+                    <span th:text="${logLogger}" class="text-primary-100 font-semibold">Logger Name</span>
+                </div>
+            </div>
+            <div class="hidden lg:block">
+                <!-- Hero icon -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content Section -->
+<section class="px-6 py-6 space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Left Column - Basic Information -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <h2 class="text-lg font-medium text-gray-900">Log Information</h2>
+                </div>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Log ID</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${logId}" 
+                               readonly>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Level</label>
+                    <div class="mt-1">
+                        <!-- Level badge with conditional styling -->
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800" th:if="${logLevel == 'ERROR'}" th:text="${logLevel}">LEVEL</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" th:if="${logLevel == 'WARN'}" th:text="${logLevel}">LEVEL</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800" th:if="${logLevel == 'INFO'}" th:text="${logLevel}">LEVEL</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800" th:if="${logLevel == 'DEBUG'}" th:text="${logLevel}">LEVEL</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800" th:if="${logLevel == 'TRACE'}" th:text="${logLevel}">LEVEL</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800" th:if="${logLevel != 'ERROR' and logLevel != 'WARN' and logLevel != 'INFO' and logLevel != 'DEBUG' and logLevel != 'TRACE'}" th:text="${logLevel}">LEVEL</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Logger</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${logLogger}" 
+                               readonly>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Method</label>
+                        <div class="mt-1">
+                            <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                                   type="text" 
+                                   th:value="${logMethod}" 
+                                   readonly>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Line Number</label>
+                        <div class="mt-1">
+                            <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                                   type="text" 
+                                   th:value="${logLine}" 
+                                   readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Thread</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${logThread}" 
+                               readonly>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Timestamp</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${logTimestamp}" 
+                               readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Message & Exception -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.691 1.347 3.061 3.004 3.061h1.875a.75.75 0 00.75-.75V12H6.75a.75.75 0 00-.75.75v.011c0 .02.004.04.007.058l.004.02-.01.007h.003c.001 0 .002 0 .003.001L6 13.5V16a.75.75 0 00.75.75h4.5a.75.75 0 00.75-.75v-2.5l-.002-.058.003-.04.007-.01-.01-.01a.73.73 0 00.001-.003L12 13.5c0-.414-.336-.75-.75-.75H9a.75.75 0 00-.75.75V15h-.75a.75.75 0 01-.75-.75v-1.504l.007-.022a.748.748 0 00-.007-.022V12a.75.75 0 00-.75-.75H6a.75.75 0 00-.75.75v1.51c0 .02.01.04.01.063l-.004.02a.746.746 0 00.004.02V15a.75.75 0 01-.75.75V16.75h9V15a.75.75 0 01-.75-.75V12.75a.75.75 0 00-.75-.75V12a.75.75 0 00-.75-.75H9a.75.75 0 01-.75.75V13.5H6.75a.75.75 0 01-.75-.75V12.75a.75.75 0 01-.75-.75V11.25a.75.75 0 01.75-.75H12a.75.75 0 01.75.75V12a.75.75 0 00.75.75H15a.75.75 0 00.75-.75V9.75a.75.75 0 00-.75-.75H7.5a.75.75 0 00-.75.75V8.25z" />
+                    </svg>
+                    <h2 class="text-lg font-medium text-gray-900">Message & Details</h2>
+                </div>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Log Message</label>
+                    <div class="mt-1">
+                        <textarea class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                                  rows="4" 
+                                  th:text="${logMessage}" 
+                                  readonly>Log message content</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exception Details Section (only show if there's an exception) -->
+    <div class="bg-white rounded-lg shadow border border-gray-200" th:if="${!#strings.isEmpty(logException)}">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.75 0a9 9 0 1118 0 9 9 0 01-18 0zm9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Exception Stack Trace</h2>
+            </div>
+            <button class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50" onclick="copyToClipboard('exception-content')">
+                <svg class="-ml-1 mr-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.375a2.25 2.25 0 01-2.25-2.25V6.108c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 011.927-.184" />
+                </svg>
+                Copy
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                <pre id="exception-content" class="text-sm text-red-800 whitespace-pre-wrap overflow-x-auto" th:text="${logException}">Exception stack trace will be displayed here</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Log Data Section -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Raw Log Data</h2>
+            </div>
+            <button class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50" onclick="copyToClipboard('raw-data-content')">
+                <svg class="-ml-1 mr-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.375a2.25 2.25 0 01-2.25-2.25V6.108c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 011.927-.184" />
+                </svg>
+                Copy
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <div class="bg-gray-50 border border-gray-200 rounded-md p-4">
+                <pre id="raw-data-content" class="text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto">
+ID: <span th:text="${logId}">1</span>
+Level: <span th:text="${logLevel}">INFO</span>
+Message: <span th:text="${logMessage}">Log message</span>
+Logger: <span th:text="${logLogger}">Logger name</span>
+Method: <span th:text="${logMethod}">methodName</span>
+Line: <span th:text="${logLine}">123</span>
+Thread: <span th:text="${logThread}">main</span>
+Timestamp: <span th:text="${logTimestamp}">2024-01-01 12:00:00</span>
+<span th:if="${!#strings.isEmpty(logException)}">Exception: <span th:text="${logException}">Exception details</span></span>
+                </pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent || element.innerText;
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() {
+            // Show success message
+            showNotification('Copied to clipboard!', 'success');
+        }).catch(function(err) {
+            console.error('Could not copy text: ', err);
+            fallbackCopyTextToClipboard(text);
+        });
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showNotification('Copied to clipboard!', 'success');
+        } else {
+            showNotification('Failed to copy', 'error');
+        }
+    } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+        showNotification('Failed to copy', 'error');
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function showNotification(message, type) {
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md text-white text-sm z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        document.body.removeChild(notification);
+    }, 3000);
+}
+</script> 

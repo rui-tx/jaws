@@ -4,11 +4,11 @@ import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.freyr.BaseJob;
 import org.ruitx.jaws.components.freyr.CircuitBreaker;
 import org.ruitx.jaws.components.freyr.JobResultStore;
-import org.ruitx.jaws.strings.RequestType;
+    import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.dto.api.Post;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -79,12 +79,12 @@ public class ExternalApiJob extends BaseJob {
         String serviceName = extractServiceName(url);
         this.circuitBreaker = CircuitBreaker.forExternalAPI("external-api-" + serviceName);
         
-        Logger.debug("ExternalApiJob created with circuit breaker for service: {}", serviceName);
+        JawsLogger.debug("ExternalApiJob created with circuit breaker for service: {}", serviceName);
     }
 
     @Override
     public void execute() throws Exception {
-        Logger.info("Starting external API job: {} with circuit breaker protection", getId());
+        JawsLogger.info("Starting external API job: {} with circuit breaker protection", getId());
         
         try {
             // Get URL from payload, default to the original URL
@@ -95,7 +95,7 @@ public class ExternalApiJob extends BaseJob {
             
             // Simulate network delay (from original method)
             long networkDelay = getLong("networkDelayMs") != null ? getLong("networkDelayMs") : 2000L;
-            Logger.info("Simulating network delay of {} ms...", networkDelay);
+            JawsLogger.info("Simulating network delay of {} ms...", networkDelay);
             Thread.sleep(networkDelay);
             
             // Make the API call with circuit breaker protection
@@ -138,12 +138,12 @@ public class ExternalApiJob extends BaseJob {
             String jsonResult = Odin.getMapper().writeValueAsString(result);
             JobResultStore.storeSuccess(getId(), jsonResult);
             
-            Logger.info("External API job completed successfully: {} (circuit breaker state: {})", 
+            JawsLogger.info("External API job completed successfully: {} (circuit breaker state: {})", 
                        getId(), stats.state.name());
             
         } catch (CircuitBreaker.CircuitBreakerOpenException e) {
             // Circuit breaker is open - fail fast without making the API call
-            Logger.warn("External API job failed due to open circuit breaker: {} - {}", getId(), e.getMessage());
+            JawsLogger.warn("External API job failed due to open circuit breaker: {} - {}", getId(), e.getMessage());
             
             // Store circuit breaker error result
             JobResultStore.storeError(getId(), 503, 
@@ -152,13 +152,13 @@ public class ExternalApiJob extends BaseJob {
             
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Logger.warn("External API job was interrupted: {}", getId());
+            JawsLogger.warn("External API job was interrupted: {}", getId());
             
             // Store error result
             JobResultStore.storeError(getId(), 500, "Data fetch was interrupted");
             throw e;
         } catch (Exception e) {
-            Logger.error("External API job failed: {}", e.getMessage(), e);
+            JawsLogger.error("External API job failed: {}", e.getMessage(), e);
             
             // Store error result
             JobResultStore.storeError(getId(), 500, "API call failed: " + e.getMessage());
@@ -171,7 +171,7 @@ public class ExternalApiJob extends BaseJob {
      */
     private APIResponse<List<Post>> callExternalAPIWithCircuitBreaker(String url) throws Exception {
         return circuitBreaker.execute(() -> {
-            Logger.debug("Making API call through circuit breaker to: {}", url);
+            JawsLogger.debug("Making API call through circuit breaker to: {}", url);
             return callExternalAPI(url);
         });
     }
@@ -190,7 +190,7 @@ public class ExternalApiJob extends BaseJob {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             
             if (response.statusCode() != 200 && response.statusCode() != 201) {
-                Logger.error("API request failed with status code: {}", response.statusCode());
+                JawsLogger.error("API request failed with status code: {}", response.statusCode());
                 
                 // Throw exception for circuit breaker to track failures
                 throw new IOException("API returned error status: " + response.statusCode());
@@ -198,7 +198,7 @@ public class ExternalApiJob extends BaseJob {
 
             String contentType = response.headers().firstValue("content-type").orElse("");
             if (!contentType.contains("application/json")) {
-                Logger.error("Unexpected content type: {}", contentType);
+                JawsLogger.error("Unexpected content type: {}", contentType);
                 
                 // Throw exception for circuit breaker to track failures
                 throw new IOException("Server returned non-JSON response: " + contentType);
@@ -206,12 +206,12 @@ public class ExternalApiJob extends BaseJob {
             
             // Parse the response
             List<Post> posts = Odin.getMapper().readValue(response.body(), LIST_POST);
-            Logger.debug("Successfully parsed {} posts from API response", posts.size());
+            JawsLogger.debug("Successfully parsed {} posts from API response", posts.size());
             
             return APIResponse.success(String.valueOf(response.statusCode()), "Data fetched successfully", posts);
 
         } catch (IOException | InterruptedException e) {
-            Logger.error("HTTP request failed: {}", e.getMessage());
+            JawsLogger.error("HTTP request failed: {}", e.getMessage());
             // Re-throw so circuit breaker can track the failure
             throw new RuntimeException("Failed to fetch data from API: " + e.getMessage(), e);
         }
@@ -234,7 +234,7 @@ public class ExternalApiJob extends BaseJob {
                 return host.startsWith("www.") ? host.substring(4) : host;
             }
         } catch (Exception e) {
-            Logger.debug("Failed to parse URL for service name: {}", url);
+            JawsLogger.debug("Failed to parse URL for service name: {}", url);
         }
         
         // Fallback to a hash of the URL

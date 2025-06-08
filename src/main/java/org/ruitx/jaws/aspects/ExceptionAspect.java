@@ -12,6 +12,7 @@ import org.ruitx.jaws.exceptions.ConnectionException;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.utils.JawsLogger;
 import org.tinylog.Logger;
 
 import java.io.IOException;
@@ -47,13 +48,13 @@ public class ExceptionAspect {
 
     private void handleException(Throwable ex, ProceedingJoinPoint joinPoint) {
         // Log the exception
-        Logger.error("Exception occurred: {}", ex.getMessage(), ex);
+        JawsLogger.error("Exception occurred: {}", ex.getMessage(), ex);
 
         // Try to send error response if we have access to a controller or RequestContext
         try {
             sendErrorResponseFromController(ex, joinPoint);
         } catch (Exception e) {
-            Logger.error("Failed to send error response: {}", e.getMessage());
+            JawsLogger.error("Failed to send error response: {}", e.getMessage());
         }
     }
 
@@ -79,7 +80,7 @@ public class ExceptionAspect {
             // Use the controller's sendErrorResponse method
             controller.sendErrorResponse(responseCode, errorMessage != null ? errorMessage : "An unexpected error occurred");
         } catch (Exception e) {
-            Logger.error("Failed to send error response through controller: {}", e.getMessage());
+            JawsLogger.error("Failed to send error response through controller: {}", e.getMessage());
         }
     }
 
@@ -110,7 +111,7 @@ public class ExceptionAspect {
             }
         } catch (Exception e) {
             // Log but don't try to send more responses
-            Logger.error("Failed to send error response: {}", e.getMessage());
+            JawsLogger.error("Failed to send error response: {}", e.getMessage());
         }
     }
 

@@ -8,7 +8,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.interfaces.IsolationLevel;
 import org.ruitx.jaws.interfaces.Transactional;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.lang.reflect.Method;
 import java.sql.Connection;
@@ -60,7 +60,7 @@ public class TransactionAspect {
             try {
                 db.rollbackTransaction();
             } catch (SQLException ex) {
-                Logger.error("Error during rollback: {}", ex.getMessage());
+                JawsLogger.error("Error during rollback: {}", ex.getMessage());
             }
             throw e;
         }
@@ -88,7 +88,7 @@ public class TransactionAspect {
                     field.setAccessible(true);
                     return (Mimir) field.get(target);
                 } catch (IllegalAccessException e) {
-                    Logger.error("Failed to access Mimir field: {}", e.getMessage());
+                    JawsLogger.error("Failed to access Mimir field: {}", e.getMessage());
                 }
             }
         }

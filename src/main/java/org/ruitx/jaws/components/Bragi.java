@@ -10,7 +10,7 @@ import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -171,7 +171,7 @@ public abstract class Bragi {
                 throw new IllegalStateException("No request context available");
             }
         } catch (Exception e) {
-            Logger.error("Failed to send JSON response: {}", e.getMessage());
+            JawsLogger.error("Failed to send JSON response: {}", e.getMessage());
             throw new SendRespondException("Failed to send JSON response", e);
         } finally {
             // Clean up template variables
@@ -194,7 +194,7 @@ public abstract class Bragi {
                 throw new IllegalStateException("No request context available");
             }
         } catch (Exception e) {
-            Logger.error("Failed to send HTML response: {}", e.getMessage());
+            JawsLogger.error("Failed to send HTML response: {}", e.getMessage());
             throw new SendRespondException("Failed to send HTML response", e);
         } finally {
             // Clean up template variables
@@ -212,7 +212,7 @@ public abstract class Bragi {
                 throw new IllegalStateException("No request context available");
             }
         } catch (Exception e) {
-            Logger.error("Failed to send HTML response: {}", e.getMessage());
+            JawsLogger.error("Failed to send HTML response: {}", e.getMessage());
             throw new SendRespondException("Failed to send HTML response", e);
         } finally {
             // Clean up template variables
@@ -315,7 +315,7 @@ public abstract class Bragi {
             requestContext.remove();
             Hermod.clearTemplateVariables(); // Also clean up template variables
         } catch (Exception e) {
-            Logger.error("Error cleaning up request context: {}", e.getMessage());
+            JawsLogger.error("Error cleaning up request context: {}", e.getMessage());
         }
     }
 
@@ -362,7 +362,7 @@ public abstract class Bragi {
                 throw new IllegalStateException("No request context available");
             }
         } catch (IOException e) {
-            Logger.error("Failed to render template: {}", e.getMessage());
+            JawsLogger.error("Failed to render template: {}", e.getMessage());
             throw new SendRespondException("Failed to render template", e);
         }
     }
@@ -389,7 +389,7 @@ public abstract class Bragi {
                 throw new IllegalStateException("No request context available");
             }
         } catch (IOException e) {
-            Logger.error("Failed to assemble page: {}", e.getMessage());
+            JawsLogger.error("Failed to assemble page: {}", e.getMessage());
             throw new SendRespondException("Failed to assemble page", e);
         }
     }
@@ -410,7 +410,7 @@ public abstract class Bragi {
                 throw new IllegalStateException("No request context available");
             }
         } catch (Exception e) {
-            Logger.error("Failed to send binary response: {}", e.getMessage());
+            JawsLogger.error("Failed to send binary response: {}", e.getMessage());
             throw new SendRespondException("Failed to send binary response", e);
         }
     }
@@ -447,7 +447,7 @@ public abstract class Bragi {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200 && response.statusCode() != 201) {
-                Logger.error("API request failed with status code: {}", response.statusCode());
+                JawsLogger.error("API request failed with status code: {}", response.statusCode());
                 return APIResponse.error(
                         response.statusCode() + "",
                         "Server returned error status: " + response.statusCode()
@@ -456,8 +456,8 @@ public abstract class Bragi {
 
             String contentType = response.headers().firstValue(CONTENT_TYPE.getHeaderName()).orElse("");
             if (!contentType.contains("application/json")) {
-                Logger.error("Unexpected content type: {}", contentType);
-                Logger.error("Response body: {}", response.body());
+                JawsLogger.error("Unexpected content type: {}", contentType);
+                JawsLogger.error("Response body: {}", response.body());
                 return APIResponse.error(
                         response.statusCode() + "",
                         "Server returned non-JSON response"
@@ -466,7 +466,7 @@ public abstract class Bragi {
             return parseResponse(response.body(), responseType);
 
         } catch (IOException | InterruptedException e) {
-            Logger.error("HTTP request failed: {}", e.getMessage());
+            JawsLogger.error("HTTP request failed: {}", e.getMessage());
             return APIResponse.error(
                     ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
                     "Failed to fetch data from API"
@@ -568,10 +568,10 @@ public abstract class Bragi {
         try {
             return getMapper().readValue(response, responseType);
         } catch (JsonParseException e) {
-            Logger.error("Failed to parse API response as JSON: {}", e.getMessage());
+            JawsLogger.error("Failed to parse API response as JSON: {}", e.getMessage());
             return APIResponse.error(ResponseCode.BAD_REQUEST.getCodeAndMessage(), "Invalid JSON response");
         } catch (Exception e) {
-            Logger.error("Failed to parse API response: {}", e.getMessage());
+            JawsLogger.error("Failed to parse API response: {}", e.getMessage());
             return APIResponse.error(ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(), "Failed to parse response");
         }
     }

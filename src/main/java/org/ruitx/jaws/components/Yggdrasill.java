@@ -15,19 +15,17 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.interfaces.MiddlewareChain;
 import org.ruitx.jaws.strings.DefaultHTML;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.utils.JawsValidation;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -121,10 +119,10 @@ public class Yggdrasill {
             server.setHandler(context);
             server.start();
 
-            Logger.info("Yggdrasill started on port {} with resources path: {}", port, resourcesPath);
+            JawsLogger.info("Yggdrasill started on port {} with resources path: {}", port, resourcesPath);
             
         } catch (Exception e) {
-            Logger.error("Yggdrasill encountered an error: {}", e.getMessage(), e);
+            JawsLogger.error("Yggdrasill encountered an error: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to start Yggdrasill", e);
         }
     }
@@ -137,7 +135,7 @@ public class Yggdrasill {
             // Create static resource handler
             Path resourcePath = Paths.get(resourcesPath).toAbsolutePath();
             if (!Files.exists(resourcePath)) {
-                Logger.warn("Static resources path does not exist: {}", resourcePath);
+                JawsLogger.warn("Static resources path does not exist: {}", resourcePath);
                 Files.createDirectories(resourcePath);
             }
 
@@ -151,9 +149,9 @@ public class Yggdrasill {
             // Add static servlet with lower priority (mapped to /static/*)
             context.addServlet(staticServlet, "/static/*");
             
-            Logger.info("Static file serving configured for path: {}", resourcePath);
+            JawsLogger.info("Static file serving configured for path: {}", resourcePath);
         } catch (Exception e) {
-            Logger.error("Failed to setup static file serving: {}", e.getMessage());
+            JawsLogger.error("Failed to setup static file serving: {}", e.getMessage());
         }
     }
 
@@ -180,14 +178,14 @@ public class Yggdrasill {
      * Shuts down the server.
      */
     public void shutdown() {
-        Logger.info("Yggdrasill shutdown initiated...");
+        JawsLogger.info("Yggdrasill shutdown initiated...");
         if (server != null) {
             try {
-                Logger.info("Shutting down Yggdrasill...");
+                JawsLogger.info("Shutting down Yggdrasill...");
                 server.stop();
                 server.join();
             } catch (Exception e) {
-                Logger.error("Error shutting down Yggdrasill: {}", e.getMessage());
+                JawsLogger.error("Error shutting down Yggdrasill: {}", e.getMessage());
             }
         }
     }
@@ -220,7 +218,7 @@ public class Yggdrasill {
                 processRequest(context);
 
             } catch (Exception e) {
-                Logger.error("Error processing request: {}", e.getMessage(), e);
+                JawsLogger.error("Error processing request: {}", e.getMessage(), e);
                 try {
                     if (!response.isCommitted()) {
                         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -229,7 +227,7 @@ public class Yggdrasill {
                         response.getWriter().flush();
                     }
                 } catch (IOException ioException) {
-                    Logger.error("Error sending error response: {}", ioException.getMessage());
+                    JawsLogger.error("Error sending error response: {}", ioException.getMessage());
                 } finally {
                     currentConnections.decrementAndGet();
                 }
@@ -252,7 +250,7 @@ public class Yggdrasill {
             // Convert HTTP method to RequestType
             RequestType requestType = RequestType.fromString(method);
             if (requestType == null) {
-                Logger.error("Invalid method: {}", method);
+                JawsLogger.error("Invalid method: {}", method);
                 context.response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                 context.response.getWriter().write("405 - Method Not Allowed");
                 return;
@@ -297,7 +295,7 @@ public class Yggdrasill {
                         // Only check routes with NO parameters (static routes)
                         if (!route.endpoint().contains(":")) {
                             if (route.endpoint().equals(endPoint)) {
-                                Logger.debug("Static route matched: {} {} -> {}.{}", 
+                                JawsLogger.debug("Static route matched: {} {} -> {}.{}", 
                                     route.method(), route.endpoint(), 
                                     routeMethod.getDeclaringClass().getSimpleName(), routeMethod.getName());
                                 
@@ -308,7 +306,7 @@ public class Yggdrasill {
                                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
                                 if (controllerInstance == null) {
-                                    Logger.error("Controller instance not found: {}", controllerName);
+                                    JawsLogger.error("Controller instance not found: {}", controllerName);
                                     return false;
                                 }
                                 
@@ -332,7 +330,7 @@ public class Yggdrasill {
                         if (route.endpoint().contains(":")) {
                             Map<String, String> pathParams = matchRoutePattern(route.endpoint(), endPoint);
                             if (pathParams != null) {
-                                Logger.debug("Parameterized route matched: {} {} -> {}.{}", 
+                                JawsLogger.debug("Parameterized route matched: {} {} -> {}.{}", 
                                     route.method(), route.endpoint(), 
                                     routeMethod.getDeclaringClass().getSimpleName(), routeMethod.getName());
                                 
@@ -343,7 +341,7 @@ public class Yggdrasill {
                                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
                                 Object controllerInstance = Njord.getInstance().getControllerInstance(controllerName);
                                 if (controllerInstance == null) {
-                                    Logger.error("Controller instance not found: {}", controllerName);
+                                    JawsLogger.error("Controller instance not found: {}", controllerName);
                                     return false;
                                 }
                                 
@@ -355,7 +353,7 @@ public class Yggdrasill {
                 
                 return false;
             } catch (Exception e) {
-                Logger.error("Error finding dynamic route: {}", e.getMessage(), e);
+                JawsLogger.error("Error finding dynamic route: {}", e.getMessage(), e);
                 return false;
             }
         }
@@ -366,12 +364,12 @@ public class Yggdrasill {
         private boolean invokeRouteMethod(RequestContext context, Method routeMethod, Object controllerInstance) {
             try {
                 String controllerName = routeMethod.getDeclaringClass().getSimpleName();
-                Logger.debug("Invoking route method {} in controller {}", routeMethod.getName(), controllerName);
+                JawsLogger.debug("Invoking route method {} in controller {}", routeMethod.getName(), controllerName);
 
                 // Set request context if the controller extends Bragi
                 if (controllerInstance instanceof Bragi bragi) {
                     bragi.setRequestContext(context);
-                    Logger.debug("Set request context for controller {}", controllerName);
+                    JawsLogger.debug("Set request context for controller {}", controllerName);
                 }
 
                 // Synchronize the controller instance to prevent concurrent access
@@ -497,7 +495,7 @@ public class Yggdrasill {
 
                 return true;
             } catch (Exception e) {
-                Logger.error("Failed to handle request: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+                JawsLogger.error("Failed to handle request: {} - {}", e.getClass().getSimpleName(), e.getMessage());
                 return false;
             }
         }
@@ -507,11 +505,11 @@ public class Yggdrasill {
          */
         private void handleControllerException(RequestContext context, Exception e, Object controllerInstance, String methodName) {
             String controllerName = controllerInstance.getClass().getSimpleName();
-            Logger.error("Controller execution failed in {}.{}: {} - {}",
+            JawsLogger.error("Controller execution failed in {}.{}: {} - {}",
                     controllerName, methodName, e.getClass().getSimpleName(), e.getMessage());
 
             if (e.getCause() != null) {
-                Logger.error("Caused by: {} - {}", e.getCause().getClass().getSimpleName(), e.getCause().getMessage());
+                JawsLogger.error("Caused by: {} - {}", e.getCause().getClass().getSimpleName(), e.getCause().getMessage());
             }
 
             // Try to send error response if possible
@@ -525,7 +523,7 @@ public class Yggdrasill {
                     sendJSONResponse(context, ResponseCode.INTERNAL_SERVER_ERROR, Bragi.encode(response));
                     controller.cleanup();
                 } catch (Exception ex) {
-                    Logger.error("Failed to send error response: {}", ex.getMessage());
+                    JawsLogger.error("Failed to send error response: {}", ex.getMessage());
                 }
             }
         }
@@ -593,7 +591,7 @@ public class Yggdrasill {
                 context.response.getWriter().write(body);
                 context.response.getWriter().flush();
             } catch (IOException e) {
-                Logger.error("Error sending JSON response: {}", e.getMessage());
+                JawsLogger.error("Error sending JSON response: {}", e.getMessage());
                 throw new SendRespondException("Error sending JSON response", e);
             }
         }
@@ -632,7 +630,7 @@ public class Yggdrasill {
                 context.response.getOutputStream().write(body);
                 context.response.getOutputStream().flush();
             } catch (IOException e) {
-                Logger.error("Error sending binary response: {}", e.getMessage());
+                JawsLogger.error("Error sending binary response: {}", e.getMessage());
                 throw new SendRespondException("Error sending binary response", e);
             }
         }
@@ -667,7 +665,7 @@ public class Yggdrasill {
                 }
                 context.response.getWriter().flush();
             } catch (IOException e) {
-                Logger.error("Error sending 404 response: {}", e.getMessage());
+                JawsLogger.error("Error sending 404 response: {}", e.getMessage());
             }
         }
 
@@ -708,7 +706,7 @@ public class Yggdrasill {
                             );
                             context.response.getWriter().write(processedHTML);
                         } catch (Exception e) {
-                            Logger.error("Error processing custom 401 template: {}", e.getMessage());
+                            JawsLogger.error("Error processing custom 401 template: {}", e.getMessage());
                             // Fall back to default
                             context.response.getWriter().write(HTML_401_UNAUTHORIZED);
                         }
@@ -719,7 +717,7 @@ public class Yggdrasill {
                 
                 context.response.getWriter().flush();
             } catch (Exception e) {
-                Logger.error("Error sending unauthorized response: {}", e.getMessage());
+                JawsLogger.error("Error sending unauthorized response: {}", e.getMessage());
             }
         }
 
@@ -893,7 +891,7 @@ public class Yggdrasill {
                     }
                 }
             } catch (IOException e) {
-                Logger.error("Error reading request body: {}", e.getMessage());
+                JawsLogger.error("Error reading request body: {}", e.getMessage());
                 requestBody = "";
                 bodyParams = new LinkedHashMap<>();
             }
@@ -942,7 +940,7 @@ public class Yggdrasill {
 
                 return result;
             } catch (Exception e) {
-                Logger.error("Failed to parse JSON body: {}", e.getMessage());
+                JawsLogger.error("Failed to parse JSON body: {}", e.getMessage());
                 return new LinkedHashMap<>();
             }
         }
@@ -1005,7 +1003,7 @@ public class Yggdrasill {
                     }
                 }
             } catch (IOException | ServletException e) {
-                Logger.error("Error extracting multipart files: {}", e.getMessage());
+                JawsLogger.error("Error extracting multipart files: {}", e.getMessage());
             }
             return files;
         }
@@ -1085,7 +1083,7 @@ public class Yggdrasill {
                 response.getWriter().write(body);
                 response.getWriter().flush();
             } catch (IOException e) {
-                Logger.error("Error sending JSON response: {}", e.getMessage());
+                JawsLogger.error("Error sending JSON response: {}", e.getMessage());
                 throw new SendRespondException("Error sending JSON response", e);
             }
         }
@@ -1101,7 +1099,7 @@ public class Yggdrasill {
                 response.getOutputStream().write(body);
                 response.getOutputStream().flush();
             } catch (IOException e) {
-                Logger.error("Error sending binary response: {}", e.getMessage());
+                JawsLogger.error("Error sending binary response: {}", e.getMessage());
                 throw new SendRespondException("Error sending binary response", e);
             }
         }

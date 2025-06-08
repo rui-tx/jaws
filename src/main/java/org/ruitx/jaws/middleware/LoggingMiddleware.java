@@ -3,7 +3,7 @@ package org.ruitx.jaws.middleware;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
-import org.tinylog.Logger;
+import org.ruitx.jaws.utils.JawsLogger;
 
 /**
  * LoggingMiddleware logs incoming HTTP requests for debugging and monitoring.
@@ -13,7 +13,7 @@ public class LoggingMiddleware implements Middleware {
     @Override
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
-            Logger.debug("LoggingMiddleware: Handling request");
+            JawsLogger.debug("LoggingMiddleware: Handling request");
             long startTime = System.currentTimeMillis();
             String method = context.getRequest().getMethod();
             String uri = context.getRequest().getRequestURI();
@@ -21,7 +21,7 @@ public class LoggingMiddleware implements Middleware {
             String fullUrl = queryString != null ? uri + "?" + queryString : uri;
             String clientIp = context.getClientIpAddress();
             
-            Logger.info("HTTP {} {} from {}", method, fullUrl, clientIp);
+            JawsLogger.info("HTTP {} {} from {}", method, fullUrl, clientIp);
             
             // Continue with the chain
             boolean result = chain.next();
@@ -29,13 +29,13 @@ public class LoggingMiddleware implements Middleware {
             long duration = System.currentTimeMillis() - startTime;
             int statusCode = context.getResponse().getStatus();
             
-            Logger.info("HTTP {} {} completed in {}ms with status {}", 
+            JawsLogger.info("HTTP {} {} completed in {}ms with status {}", 
                 method, fullUrl, duration, statusCode);
             
             return result;
             
         } catch (Exception e) {
-            Logger.error("Error in LoggingMiddleware: {}", e.getMessage(), e);
+            JawsLogger.error("Error in LoggingMiddleware: {}", e.getMessage(), e);
             return chain.next(); // Continue on error
         }
     }
