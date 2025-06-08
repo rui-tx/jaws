@@ -1,59 +1,68 @@
-<section class="section is-title-bar">
-    <div class="level">
-        <div class="level-left">
-            <div class="level-item">
-                <ul>
-                    <li th:text="${currentUser}">User Name</li>
-                    <li>Dashboard</li>
-                </ul>
-            </div>
+<!-- Breadcrumb Section -->
+<section class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2">
+                    <li>
+                        <span class="text-sm font-medium text-gray-900" th:text="${currentUser}">User Name</span>
+                    </li>
+                    <li>
+                        <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                        <span class="text-sm text-gray-500">Dashboard</span>
+                    </li>
+                </ol>
+            </nav>
         </div>
-        <div class="level-right">
-            <div class="level-item">
-                <div class="buttons is-right">
-                    <a class="button is-primary" href="https://github.com/rui-tx/jaws"
-                       target="_blank">
-                        <span class="icon"><i class="mdi mdi-github-circle"></i></span>
-                        <span>GitHub</span>
-                    </a>
-                </div>
+        <div class="flex items-center space-x-3">
+            <!-- Additional buttons can go here -->
+        </div>
+    </div>
+</section>
+
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+    <div class="px-6 py-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Dashboard</h1>
+                <p class="mt-2 text-primary-100">Welcome to the Jaws Backoffice</p>
+            </div>
+            <div class="hidden lg:block">
+                <!-- Hero icon or additional content -->
             </div>
         </div>
     </div>
 </section>
-<section class="hero is-hero-bar">
-    <div class="hero-body">
-        <div class="level">
-            <div class="level-left">
-                <div class="level-item"><h1 class="title">
-                    Dashboard
-                </h1></div>
-            </div>
-            <div class="level-right" style="display: none;">
-                <div class="level-item"></div>
-            </div>
-        </div>
-    </div>
-</section>
-<section class="section is-main-section">
+
+<!-- Main Content Section -->
+<section class="px-6 py-6 space-y-6">
     <!-- Job Statistics Section -->
-    <div class="card mb-6">
-        <header class="card-header">
-            <p class="card-header-title">
-                <span class="icon"><i class="mdi mdi-chart-line"></i></span>
-                Job Queue Statistics
-            </p>
-            <a class="card-header-icon"
-               hx-get="/htmx/backoffice/job-stats"
-               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-               hx-indicator="#job-stats-spinner"
-               hx-swap="innerHTML transition:true"
-               hx-target="#job-stats-content"
-               hx-trigger="click" title="Refresh job statistics">
-                <span class="icon"><i class="mdi mdi-reload"></i></span>
-            </a>
-        </header>
-        <div class="card-content">
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Job Queue Statistics</h2>
+            </div>
+            <button 
+                class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                hx-get="/htmx/backoffice/job-stats"
+                hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                hx-indicator="#job-stats-spinner"
+                hx-swap="innerHTML transition:true"
+                hx-target="#job-stats-content"
+                hx-trigger="click" 
+                title="Refresh job statistics">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+            </button>
+        </div>
+        <div class="p-6">
             <div id="job-stats-content"
                  hx-get="/htmx/backoffice/job-stats"
                  hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
@@ -62,58 +71,64 @@
                  hx-trigger="load">
                 <!-- Job statistics will be loaded here -->
             </div>
-            <div class="loading-container htmx-indicator" id="job-stats-spinner">
-                <img alt="Loading..." class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
+            <div class="flex justify-center py-4 htmx-indicator" id="job-stats-spinner">
+                <img alt="Loading..." class="h-8 w-8" src="https://htmx.org/img/bars.svg"/>
             </div>
         </div>
     </div>
 
-    <div class="card has-table has-mobile-sort-spaced">
-        <header class="card-header">
-            <p class="card-header-title">
-                <span class="icon"><i class="mdi mdi-account-multiple"></i></span>
-                Users
-            </p>
-            <a class="card-header-icon"
-               hx-get="/htmx/backoffice/users"
-               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-               hx-indicator="#users-spinner"
-               hx-swap="innerHTML transition:true"
-               hx-target="#users-table-body"
-               hx-trigger="click">
-                <span class="icon"><i class="mdi mdi-reload"></i></span>
-            </a>
+    <!-- Users Table Section -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Users</h2>
+            </div>
+            <button 
+                class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                hx-get="/htmx/backoffice/users"
+                hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                hx-indicator="#users-spinner"
+                hx-swap="innerHTML transition:true"
+                hx-target="#users-table-body"
+                hx-trigger="click">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+            </button>
+        </div>
 
-        </header>
-
-        <div class="card-content">
-            <div class="b-table has-pagination">
-                <div class="table-wrapper has-mobile-cards">
-                    <table class="table is-fullwidth is-striped is-hoverable is-sortable is-fullwidth">
-                        <thead>
-                        <tr>
-                            <th></th>
-                            <th>Username/Email</th>
-                            <th>Full Name</th>
-                            <th>Created</th>
-                            <th></th>
-                        </tr>
+        <div class="p-6">
+            <div class="overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username/Email</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                            </tr>
                         </thead>
-                        <tbody hx-get="/htmx/backoffice/users"
-                               hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-                               hx-indicator="#users-spinner"
-                               hx-swap="innerHTML transition:true"
-                               hx-trigger="load"
-                               id="users-table-body">
+                        <tbody 
+                            class="bg-white divide-y divide-gray-200"
+                            hx-get="/htmx/backoffice/users"
+                            hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                            hx-indicator="#users-spinner"
+                            hx-swap="innerHTML transition:true"
+                            hx-trigger="load"
+                            id="users-table-body">
                         </tbody>
                     </table>
-
                 </div>
             </div>
         </div>
 
-        <div class="loading-container htmx-indicator" id="users-spinner">
-            <img class="loading-spinner" src="https://htmx.org/img/bars.svg"/>
+        <div class="flex justify-center py-4 htmx-indicator" id="users-spinner">
+            <img class="h-8 w-8" src="https://htmx.org/img/bars.svg" alt="Loading..."/>
         </div>
     </div>
 </section>

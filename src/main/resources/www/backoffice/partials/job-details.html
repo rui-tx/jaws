@@ -1,150 +1,174 @@
-<section class="section is-title-bar">
-    <div class="level">
-        <div class="level-left">
-            <div class="level-item">
-                <ul>
-                    <li th:text="${currentUser}">User Name</li>
-                    <li><a href="/backoffice/jobs">Jobs</a></li>
-                    <li th:text="${jobId}">Job ID</li>
-                </ul>
-            </div>
+<!-- Breadcrumb Section -->
+<section class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2">
+                    <li>
+                        <span class="text-sm font-medium text-gray-900" th:text="${currentUser}">User Name</span>
+                    </li>
+                    <li>
+                        <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                        <a href="/backoffice/jobs" class="text-sm text-gray-500 hover:text-gray-700">Jobs</a>
+                    </li>
+                    <li>
+                        <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                        <span class="text-sm text-gray-500" th:text="${jobId}">Job ID</span>
+                    </li>
+                </ol>
+            </nav>
         </div>
-        <div class="level-right">
-            <div class="buttons is-right">
-                <a href="/backoffice/jobs" class="button is-light">
-                    <span class="icon"><i class="mdi mdi-arrow-left"></i></span>
-                    <span>Back to Jobs</span>
-                </a>
-                <!-- Conditional reprocess button -->
-                <button class="button is-warning" 
-                        th:if="${jobStatus == 'FAILED' or jobStatus == 'DEAD_LETTER'}"
-                        hx-post="/htmx/backoffice/jobs/{jobId}/reprocess" 
-                        th:attr="hx-post='/htmx/backoffice/jobs/' + ${jobId} + '/reprocess'"
-                        hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-                        hx-swap="innerHTML"
-                        hx-target="#reprocess-result"
-                        hx-confirm="Are you sure you want to reprocess this job?">
-                    <span class="icon"><i class="mdi mdi-refresh"></i></span>
-                    <span>Reprocess Job</span>
-                </button>
-            </div>
+        <div class="flex items-center space-x-3">
+            <a href="/backoffice/jobs" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+                Back to Jobs
+            </a>
+            <!-- Conditional reprocess button -->
+            <button class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                    th:if="${jobStatus == 'FAILED' or jobStatus == 'DEAD_LETTER'}"
+                    hx-post="/htmx/backoffice/jobs/{jobId}/reprocess" 
+                    th:attr="hx-post='/htmx/backoffice/jobs/' + ${jobId} + '/reprocess'"
+                    hx-headers='js:{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                    hx-swap="innerHTML"
+                    hx-target="#reprocess-result"
+                    hx-confirm="Are you sure you want to reprocess this job?">
+                <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Reprocess Job
+            </button>
         </div>
     </div>
 </section>
 
-<section class="hero is-hero-bar">
-    <div class="hero-body">
-        <div class="level">
-            <div class="level-left">
-                <div class="level-item">
-                    <h1 class="title">Job Details</h1>
-                    <div class="subtitle">
-                        <!-- Status tag with conditional styling -->
-                        <span class="tag is-warning" th:if="${jobStatus == 'PENDING'}" th:text="${jobStatus}">STATUS</span>
-                        <span class="tag is-info" th:if="${jobStatus == 'PROCESSING'}" th:text="${jobStatus}">STATUS</span>
-                        <span class="tag is-success" th:if="${jobStatus == 'COMPLETED'}" th:text="${jobStatus}">STATUS</span>
-                        <span class="tag is-danger" th:if="${jobStatus == 'FAILED'}" th:text="${jobStatus}">STATUS</span>
-                        <span class="tag is-danger" th:if="${jobStatus == 'TIMEOUT'}" th:text="${jobStatus}">STATUS</span>
-                        <span class="tag is-warning" th:if="${jobStatus == 'RETRY_SCHEDULED'}" th:text="${jobStatus}">STATUS</span>
-                        <span class="tag is-dark" th:if="${jobStatus == 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
-                        <span class="tag is-light" th:if="${jobStatus != 'PENDING' and jobStatus != 'PROCESSING' and jobStatus != 'COMPLETED' and jobStatus != 'FAILED' and jobStatus != 'TIMEOUT' and jobStatus != 'RETRY_SCHEDULED' and jobStatus != 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
-                        
-                        <span th:text="${jobType}" class="has-text-weight-bold ml-2">Job Type</span>
-                    </div>
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+    <div class="px-6 py-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Job Details</h1>
+                <div class="flex items-center space-x-3 mt-2">
+                    <!-- Status badge with conditional styling -->
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800" th:if="${jobStatus == 'PENDING'}" th:text="${jobStatus}">STATUS</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" th:if="${jobStatus == 'PROCESSING'}" th:text="${jobStatus}">STATUS</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" th:if="${jobStatus == 'COMPLETED'}" th:text="${jobStatus}">STATUS</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" th:if="${jobStatus == 'FAILED'}" th:text="${jobStatus}">STATUS</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" th:if="${jobStatus == 'TIMEOUT'}" th:text="${jobStatus}">STATUS</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800" th:if="${jobStatus == 'RETRY_SCHEDULED'}" th:text="${jobStatus}">STATUS</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800" th:if="${jobStatus == 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800" th:if="${jobStatus != 'PENDING' and jobStatus != 'PROCESSING' and jobStatus != 'COMPLETED' and jobStatus != 'FAILED' and jobStatus != 'TIMEOUT' and jobStatus != 'RETRY_SCHEDULED' and jobStatus != 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                    
+                    <span th:text="${jobType}" class="text-primary-100 font-semibold">Job Type</span>
                 </div>
             </div>
+            <div class="hidden lg:block">
+                <!-- Hero icon -->
+            </div>
         </div>
     </div>
 </section>
 
-<section class="section is-main-section">
+<!-- Main Content Section -->
+<section class="px-6 py-6 space-y-6">
     <!-- Reprocess result notification area -->
-    <div id="reprocess-result" class="mb-4"></div>
+    <div id="reprocess-result" class="hidden"></div>
 
-    <div class="columns">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Left Column - Basic Information -->
-        <div class="column is-half">
-            <div class="card">
-                <header class="card-header">
-                    <p class="card-header-title">
-                        <span class="icon"><i class="mdi mdi-information-outline"></i></span>
-                        Basic Information
-                    </p>
-                </header>
-                <div class="card-content">
-                    <div class="content">
-                        <div class="field">
-                            <label class="label">Job ID</label>
-                            <div class="control">
-                                <input class="input" type="text" th:value="${jobId}" readonly>
-                            </div>
-                        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <h2 class="text-lg font-medium text-gray-900">Basic Information</h2>
+                </div>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Job ID</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${jobId}" 
+                               readonly>
+                    </div>
+                </div>
 
-                        <div class="field">
-                            <label class="label">Type</label>
-                            <div class="control">
-                                <input class="input" type="text" th:value="${jobType}" readonly>
-                            </div>
-                        </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Type</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${jobType}" 
+                               readonly>
+                    </div>
+                </div>
 
-                        <div class="field">
-                            <label class="label">Status</label>
-                            <div class="control">
-                                <!-- Status tag with conditional styling -->
-                                <span class="tag is-medium is-warning" th:if="${jobStatus == 'PENDING'}" th:text="${jobStatus}">STATUS</span>
-                                <span class="tag is-medium is-info" th:if="${jobStatus == 'PROCESSING'}" th:text="${jobStatus}">STATUS</span>
-                                <span class="tag is-medium is-success" th:if="${jobStatus == 'COMPLETED'}" th:text="${jobStatus}">STATUS</span>
-                                <span class="tag is-medium is-danger" th:if="${jobStatus == 'FAILED'}" th:text="${jobStatus}">STATUS</span>
-                                <span class="tag is-medium is-danger" th:if="${jobStatus == 'TIMEOUT'}" th:text="${jobStatus}">STATUS</span>
-                                <span class="tag is-medium is-warning" th:if="${jobStatus == 'RETRY_SCHEDULED'}" th:text="${jobStatus}">STATUS</span>
-                                <span class="tag is-medium is-dark" th:if="${jobStatus == 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
-                                <span class="tag is-medium is-light" th:if="${jobStatus != 'PENDING' and jobStatus != 'PROCESSING' and jobStatus != 'COMPLETED' and jobStatus != 'FAILED' and jobStatus != 'TIMEOUT' and jobStatus != 'RETRY_SCHEDULED' and jobStatus != 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
-                            </div>
-                        </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Status</label>
+                    <div class="mt-1">
+                        <!-- Status badge with conditional styling -->
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" th:if="${jobStatus == 'PENDING'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800" th:if="${jobStatus == 'PROCESSING'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800" th:if="${jobStatus == 'COMPLETED'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800" th:if="${jobStatus == 'FAILED'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800" th:if="${jobStatus == 'TIMEOUT'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" th:if="${jobStatus == 'RETRY_SCHEDULED'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800" th:if="${jobStatus == 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800" th:if="${jobStatus != 'PENDING' and jobStatus != 'PROCESSING' and jobStatus != 'COMPLETED' and jobStatus != 'FAILED' and jobStatus != 'TIMEOUT' and jobStatus != 'RETRY_SCHEDULED' and jobStatus != 'DEAD_LETTER'}" th:text="${jobStatus}">STATUS</span>
+                    </div>
+                </div>
 
-                        <div class="field">
-                            <label class="label">Execution Mode</label>
-                            <div class="control">
-                                <span class="tag" th:text="${jobExecutionMode}">PARALLEL</span>
-                            </div>
-                        </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Execution Mode</label>
+                    <div class="mt-1">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800" th:text="${jobExecutionMode}">PARALLEL</span>
+                    </div>
+                </div>
 
-                        <div class="columns">
-                            <div class="column">
-                                <div class="field">
-                                    <label class="label">Priority</label>
-                                    <div class="control">
-                                        <input class="input" type="text" th:value="${jobPriority}" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="column">
-                                <div class="field">
-                                    <label class="label">Timeout (ms)</label>
-                                    <div class="control">
-                                        <input class="input" type="text" th:value="${jobTimeoutMs}" readonly>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Priority</label>
+                        <div class="mt-1">
+                            <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                                   type="text" 
+                                   th:value="${jobPriority}" 
+                                   readonly>
                         </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Timeout (ms)</label>
+                        <div class="mt-1">
+                            <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                                   type="text" 
+                                   th:value="${jobTimeoutMs}" 
+                                   readonly>
+                        </div>
+                    </div>
+                </div>
 
-                        <div class="columns">
-                            <div class="column">
-                                <div class="field">
-                                    <label class="label">Current Retries</label>
-                                    <div class="control">
-                                        <span class="tag" th:text="${jobCurrentRetries + '/' + jobMaxRetries}">0/3</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="column">
-                                <div class="field">
-                                    <label class="label">Max Retries</label>
-                                    <div class="control">
-                                        <input class="input" type="text" th:value="${jobMaxRetries}" readonly>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Current Retries</label>
+                        <div class="mt-1">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" th:text="${jobCurrentRetries + '/' + jobMaxRetries}">0/3</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Max Retries</label>
+                        <div class="mt-1">
+                            <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                                   type="text" 
+                                   th:value="${jobMaxRetries}" 
+                                   readonly>
                         </div>
                     </div>
                 </div>
@@ -152,119 +176,115 @@
         </div>
 
         <!-- Right Column - Timestamps -->
-        <div class="column is-half">
-            <div class="card">
-                <header class="card-header">
-                    <p class="card-header-title">
-                        <span class="icon"><i class="mdi mdi-clock-outline"></i></span>
-                        Timestamps
-                    </p>
-                </header>
-                <div class="card-content">
-                    <div class="content">
-                        <div class="field">
-                            <label class="label">Created At</label>
-                            <div class="control">
-                                <input class="input" type="text" th:value="${jobCreatedAt}" readonly>
-                            </div>
-                        </div>
-
-                        <div class="field" th:if="${!#strings.isEmpty(jobStartedAt)}">
-                            <label class="label">Started At</label>
-                            <div class="control">
-                                <input class="input" type="text" th:value="${jobStartedAt}" readonly>
-                            </div>
-                        </div>
-
-                        <div class="field" th:if="${!#strings.isEmpty(jobCompletedAt)}">
-                            <label class="label">Completed At</label>
-                            <div class="control">
-                                <input class="input" type="text" th:value="${jobCompletedAt}" readonly>
-                            </div>
-                        </div>
-
-                        <div class="field" th:if="${!#strings.isEmpty(jobClientId)}">
-                            <label class="label">Client ID</label>
-                            <div class="control">
-                                <input class="input" type="text" th:value="${jobClientId}" readonly>
-                            </div>
-                        </div>
-
-                        <div class="field" th:if="${!#strings.isEmpty(jobUserId)}">
-                            <label class="label">User ID</label>
-                            <div class="control">
-                                <input class="input" type="text" th:value="${jobUserId}" readonly>
-                            </div>
-                        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h2 class="text-lg font-medium text-gray-900">Timestamps</h2>
+                </div>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Created At</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${jobCreatedAt}" 
+                               readonly>
                     </div>
+                </div>
+
+                <div th:if="${!#strings.isEmpty(jobStartedAt)}">
+                    <label class="block text-sm font-medium text-gray-700">Started At</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${jobStartedAt}" 
+                               readonly>
+                    </div>
+                </div>
+
+                <div th:if="${!#strings.isEmpty(jobCompletedAt)}">
+                    <label class="block text-sm font-medium text-gray-700">Completed At</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${jobCompletedAt}" 
+                               readonly>
+                    </div>
+                </div>
+
+                <div th:if="${!#strings.isEmpty(jobClientId)}">
+                    <label class="block text-sm font-medium text-gray-700">Client ID</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${jobClientId}" 
+                               readonly>
+                    </div>
+                </div>
+
+                <div th:if="${!#strings.isEmpty(jobUserId)}">
+                    <label class="block text-sm font-medium text-gray-700">User ID</label>
+                    <div class="mt-1">
+                        <input class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50" 
+                               type="text" 
+                               th:value="${jobUserId}" 
+                               readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job Payload Section -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Job Payload</h2>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Payload</label>
+                <div class="mt-1">
+                    <textarea class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-gray-50 font-mono text-sm" 
+                              rows="8" 
+                              th:text="${jobPayload}" 
+                              readonly></textarea>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Error Message Section -->
-    <div class="card mt-4" th:if="${!#strings.isEmpty(jobErrorMessage)}">
-        <header class="card-header">
-            <p class="card-header-title">
-                <span class="icon has-text-danger"><i class="mdi mdi-alert-circle-outline"></i></span>
-                Error Message
-            </p>
-        </header>
-        <div class="card-content">
-            <div class="content">
-                <div class="notification is-danger is-light">
-                    <pre th:text="${jobErrorMessage}">Error message will be displayed here</pre>
+    <div class="bg-white rounded-lg shadow border border-gray-200" th:if="${!#strings.isEmpty(jobErrorMessage)}">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <h2 class="text-lg font-medium text-gray-900">Error Message</h2>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Error Details</label>
+                <div class="mt-1">
+                    <textarea class="appearance-none block w-full px-3 py-2 border border-red-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 bg-red-50 font-mono text-sm" 
+                              rows="6" 
+                              th:text="${jobErrorMessage}" 
+                              readonly></textarea>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Payload Section -->
-    <div class="card mt-4">
-        <header class="card-header">
-            <p class="card-header-title">
-                <span class="icon"><i class="mdi mdi-code-json"></i></span>
-                Job Payload
-            </p>
-            <button class="card-header-icon" id="format-json-btn">
-                <span class="icon"><i class="mdi mdi-code-braces"></i></span>
-            </button>
-        </header>
-        <div class="card-content">
-            <div class="content">
-                <div class="field">
-                    <div class="control">
-                        <textarea class="textarea" rows="10" id="job-payload" th:text="${jobPayload}" readonly>{}</textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const formatJsonBtn = document.getElementById('format-json-btn');
-    const payloadTextarea = document.getElementById('job-payload');
-
-    if (formatJsonBtn && payloadTextarea) {
-        formatJsonBtn.addEventListener('click', function () {
-            try {
-                const jsonStr = payloadTextarea.value;
-                const parsed = JSON.parse(jsonStr);
-                const formatted = JSON.stringify(parsed, null, 2);
-                payloadTextarea.value = formatted;
-                
-                // Adjust textarea height to fit content
-                payloadTextarea.style.height = 'auto';
-                payloadTextarea.style.height = (payloadTextarea.scrollHeight + 10) + 'px';
-            } catch (e) {
-                console.warn('Invalid JSON, cannot format:', e);
-            }
-        });
-
-        // Auto-format on page load
-        formatJsonBtn.click();
-    }
-});
-</script> 
+</section> 

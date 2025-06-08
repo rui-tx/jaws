@@ -62,6 +62,7 @@ public class BackofficeController extends Bragi {
         context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
                 ? user.profilePicture()
                 : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        context.put("currentPage", "dashboard");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, DASHBOARD_PAGE));
@@ -78,6 +79,7 @@ public class BackofficeController extends Bragi {
         context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
                 ? user.profilePicture()
                 : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        context.put("currentPage", "settings");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, SETTINGS_PAGE));
@@ -94,6 +96,7 @@ public class BackofficeController extends Bragi {
         context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
                 ? user.profilePicture()
                 : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        context.put("currentPage", "users");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USERS_PAGE));
@@ -144,6 +147,7 @@ public class BackofficeController extends Bragi {
         context.put("lastLogin", user.lastLogin() == null
                 ? "Never logged in"
                 : JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm:ss"));
+        context.put("currentPage", "profile");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
@@ -174,6 +178,7 @@ public class BackofficeController extends Bragi {
         context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
                 ? user.profilePicture()
                 : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        context.put("currentPage", "jobs");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, JOBS_PAGE));
@@ -198,6 +203,7 @@ public class BackofficeController extends Bragi {
         context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
                 ? user.profilePicture()
                 : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        context.put("currentPage", "jobs");
         
         context.put("jobId", jobId);
         context.put("jobType", jobRow.getString("type").orElse("Unknown"));
@@ -260,47 +266,58 @@ public class BackofficeController extends Bragi {
                 String status = job.getString("status").orElse("UNKNOWN");
                 String statusClass = getStatusClass(status);
                 
-                html.append("<tr>")
-                    .append("<td>")
-                    .append("<span class=\"tag ").append(statusClass).append("\">").append(status).append("</span>")
+                html.append("<tr class=\"hover:bg-gray-50\">")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
+                    .append("<div class=\"flex items-center\">")
+                    .append("<div class=\"h-10 w-10 flex-shrink-0\">")
+                    .append("<span class=\"px-2 inline-flex text-xs leading-5 font-medium text-gray-900\">")
+                    .append(status).append("</span>")
+                    .append("</div>")
+                    .append("</div>")
                     .append("</td>")
-                    .append("<td>")
-                    .append("<strong>").append(job.getString("type").orElse("Unknown")).append("</strong>")
-                    .append("<br>")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
+                    .append("<div class=\"text-sm font-medium text-gray-900\">").append(job.getString("type").orElse("Unknown")).append("</div>")
+                    .append("<div class=\"text-sm text-gray-500\">")
                     .append("<small class=\"has-text-grey\">").append(job.getString("id").orElse("")).append("</small>")
+                    .append("</div>")
                     .append("</td>")
-                    .append("<td>")
-                    .append("<span class=\"tag is-small\">Priority: ").append(job.getInt("priority").orElse(5)).append("</span>")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
+                    .append("<span class=\"px-2 inline-flex text-xs leading-5 font-medium text-gray-900\">Priority: ").append(job.getInt("priority").orElse(5)).append("</span>")
                     .append("<br>")
                     .append("<small class=\"has-text-grey\">").append(job.getString("execution_mode").orElse("PARALLEL")).append("</small>")
                     .append("</td>")
-                    .append("<td>")
-                    .append("<small class=\"has-text-grey is-abbr-like\" title=\"")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
+                    .append("<time datetime=\"")
                     .append(job.getLong("created_at").orElse(0L))
                     .append("\">")
                     .append(job.getLong("created_at").map(ts -> JawsUtils.formatUnixTimestamp(ts)).orElse("N/A"))
-                    .append("</small>")
+                    .append("</time>")
                     .append("</td>")
-                    .append("<td>")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
                     .append(job.getInt("current_retries").orElse(0)).append("/").append(job.getInt("max_retries").orElse(3))
                     .append("</td>")
-                    .append("<td class=\"is-actions-cell\">")
-                    .append("<div class=\"buttons is-right\">")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">")
+                    .append("<div class=\"flex space-x-2 justify-end\">")
                     .append("<a href=\"/backoffice/jobs/").append(job.getString("id").orElse("")).append("\" ")
-                    .append("class=\"button is-small is-primary\" type=\"button\">")
-                    .append("<span class=\"icon\"><i class=\"mdi mdi-eye\"></i></span>")
+                    .append("class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700\" type=\"button\">")
+                    .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" />")
+                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" />")
+                    .append("</svg>")
                     .append("</a>");
 
                 // Add reprocess button for failed jobs
                 if ("FAILED".equals(status) || "DEAD_LETTER".equals(status)) {
-                    html.append("<button class=\"button is-small is-warning\" ")
+                    html.append("<button class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-yellow-600 hover:bg-yellow-700\" ")
                         .append("hx-post=\"/htmx/backoffice/jobs/").append(job.getString("id").orElse("")).append("/reprocess\" ")
                         .append("hx-headers='js:{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
                         .append("hx-swap=\"outerHTML\" ")
                         .append("hx-target=\"closest tr\" ")
                         .append("hx-confirm=\"Are you sure you want to reprocess this job?\" ")
                         .append("type=\"button\">")
-                        .append("<span class=\"icon\"><i class=\"mdi mdi-refresh\"></i></span>")
+                        .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                        .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99\" />")
+                        .append("</svg>")
                         .append("</button>");
                 }
 
@@ -338,78 +355,42 @@ public class BackofficeController extends Bragi {
                 String newJobId = jobQueue.getDeadLetterQueue().manualRetry(jobId, true);
                 if (newJobId != null) {
                     sendHTMLResponse(OK, 
-                        "<tr class=\"has-background-success-light\">" +
-                        "<td colspan=\"6\">" +
-                        "<div class=\"notification is-success is-light\">" +
+                        "<tr class=\"bg-green-50\">" +
+                        "<td colspan=\"6\" class=\"px-6 py-4\">" +
+                        "<div class=\"bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded\">" +
                         "<strong>Success!</strong> Job reprocessed successfully. New Job ID: " + newJobId +
                         "</div>" +
                         "</td>" +
                         "</tr>");
                 } else {
                     sendHTMLResponse(BAD_REQUEST, 
-                        "<tr class=\"has-background-danger-light\">" +
-                        "<td colspan=\"6\">" +
-                        "<div class=\"notification is-danger is-light\">" +
+                        "<tr class=\"bg-red-50\">" +
+                        "<td colspan=\"6\" class=\"px-6 py-4\">" +
+                        "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">" +
                         "<strong>Error!</strong> Failed to reprocess job from Dead Letter Queue." +
                         "</div>" +
                         "</td>" +
                         "</tr>");
                 }
             } else if ("FAILED".equals(status)) {
-                // Reset job status to PENDING and resubmit
-                mimir.executeSql(
-                    "UPDATE JOBS SET status = ?, error_message = NULL, current_retries = 0, started_at = NULL, completed_at = NULL WHERE id = ?",
-                    "PENDING", jobId
-                );
+                // Update job status to retry
+                String updateSql = "UPDATE JOBS SET status = 'PENDING', retry_count = retry_count + 1, started_at = NULL, completed_at = NULL WHERE id = ?";
+                new org.ruitx.jaws.components.Mimir().executeSql(updateSql, jobId);
                 
-                // Try to recreate and resubmit the job
-                String jobType = jobRow.getString("type").orElse("");
-                String payloadJson = jobRow.getString("payload").orElse("{}");
-                
-                try {
-                    Map<String, Object> payload = org.ruitx.jaws.components.Odin.getMapper().readValue(payloadJson, Map.class);
-                    org.ruitx.jaws.interfaces.Job job = org.ruitx.jaws.components.freyr.JobRegistry.getInstance().createJob(jobType, payload);
-                    
-                    if (job != null) {
-                        // Update the existing job ID in the payload
-                        payload.put("originalJobId", jobId);
-                        jobQueue.submit(job);
-                        
-                        sendHTMLResponse(OK, 
-                            "<tr class=\"has-background-success-light\">" +
-                            "<td colspan=\"6\">" +
-                            "<div class=\"notification is-success is-light\">" +
-                            "<strong>Success!</strong> Job reprocessed successfully!" +
-                            "</div>" +
-                            "</td>" +
-                            "</tr>");
-                    } else {
-                        sendHTMLResponse(BAD_REQUEST, 
-                            "<tr class=\"has-background-danger-light\">" +
-                            "<td colspan=\"6\">" +
-                            "<div class=\"notification is-danger is-light\">" +
-                            "<strong>Error!</strong> Failed to recreate job. Unknown job type: " + jobType +
-                            "</div>" +
-                            "</td>" +
-                            "</tr>");
-                    }
-                } catch (Exception e) {
-                    log.error("Failed to reprocess job {}: {}", jobId, e.getMessage(), e);
-                    sendHTMLResponse(INTERNAL_SERVER_ERROR, 
-                        "<tr class=\"has-background-danger-light\">" +
-                        "<td colspan=\"6\">" +
-                        "<div class=\"notification is-danger is-light\">" +
-                        "<strong>Error!</strong> Failed to reprocess job: " + e.getMessage() +
-                        "</div>" +
-                        "</td>" +
-                        "</tr>");
-                }
+                sendHTMLResponse(OK, 
+                    "<tr class=\"bg-green-50\">" +
+                    "<td colspan=\"6\" class=\"px-6 py-4\">" +
+                    "<div class=\"bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded\">" +
+                    "<strong>Success!</strong> Job has been reset to PENDING status and will be retried." +
+                    "</div>" +
+                    "</td>" +
+                    "</tr>");
             } else {
                 sendHTMLResponse(BAD_REQUEST, 
-                    "<tr class=\"has-background-warning-light\">" +
-                    "<td colspan=\"6\">" +
-                    "<div class=\"notification is-warning is-light\">" +
-                    "<strong>Warning!</strong> Job cannot be reprocessed. Current status: " + status +
+                    "<tr class=\"bg-red-50\">" +
+                    "<td colspan=\"6\" class=\"px-6 py-4\">" +
+                    "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">" +
+                    "<strong>Error!</strong> Job status is " + status + ". Only FAILED or DEAD_LETTER jobs can be reprocessed." +
                     "</div>" +
                     "</td>" +
                     "</tr>");
@@ -417,13 +398,37 @@ public class BackofficeController extends Bragi {
         } catch (Exception e) {
             log.error("Failed to reprocess job: {}", e.getMessage(), e);
             sendHTMLResponse(INTERNAL_SERVER_ERROR, 
-                "<tr class=\"has-background-danger-light\">" +
-                "<td colspan=\"6\">" +
-                "<div class=\"notification is-danger is-light\">" +
-                "<strong>Error!</strong> Failed to reprocess job: " + e.getMessage() +
+                "<tr class=\"bg-yellow-50\">" +
+                "<td colspan=\"6\" class=\"px-6 py-4\">" +
+                "<div class=\"bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded\">" +
+                "<strong>Warning!</strong> An error occurred while reprocessing the job." +
                 "</div>" +
                 "</td>" +
                 "</tr>");
+        }
+    }
+
+    @AccessControl(login = true)
+    @Route(endpoint = "/htmx/backoffice/jobs/:id/delete", method = POST)
+    public void deleteJobHTMX() {
+        try {
+            String jobId = getPathParam("id");
+            
+            // Delete job from database
+            String deleteSql = "DELETE FROM JOBS WHERE id = ?";
+            new org.ruitx.jaws.components.Mimir().executeSql(deleteSql, jobId);
+            
+            sendHTMLResponse(OK, 
+                "<tr class=\"bg-red-50\">" +
+                "<td colspan=\"6\" class=\"px-6 py-4\">" +
+                "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">" +
+                "<strong>Deleted!</strong> Job has been permanently deleted." +
+                "</div>" +
+                "</td>" +
+                "</tr>");
+        } catch (Exception e) {
+            log.error("Failed to delete job: {}", e.getMessage(), e);
+            sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error deleting job");
         }
     }
 
@@ -443,43 +448,47 @@ public class BackofficeController extends Bragi {
 
         StringBuilder html = new StringBuilder();
         for (User user : response.data()) {
-
-            html.append("<tr>")
-                    .append("<td class=\"is-image-cell\">")
-                    .append("<div class=\"image\">")
+            html.append("<tr class=\"hover:bg-gray-50\">")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
+                    .append("<div class=\"flex items-center\">")
+                    .append("<div class=\"h-10 w-10 flex-shrink-0\">")
                     .append(user.profilePicture() != null && !user.profilePicture().isEmpty()
-                            ? "<img class=\"is-rounded\" src=\"" + user.profilePicture() + "\">"
-                            : "<img class=\"is-rounded\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg\">")
-                    // .append(user.user().toLowerCase().replace(" ", "-")) // disable for now
-                    // .append(".svg\">")
+                            ? "<img class=\"h-10 w-10 rounded-full\" src=\"" + user.profilePicture() + "\" alt=\"\">"
+                            : "<img class=\"h-10 w-10 rounded-full\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg\" alt=\"\">")
+                    .append("</div>")
                     .append("</div>")
                     .append("</td>")
-                    .append("<td data-label=\"Name\">")
-                    .append("<p>").append(user.user()).append("</p>")
-                    .append("<p class=\"has-text-grey is-size-7\">")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
+                    .append("<div class=\"text-sm font-medium text-gray-900\">").append(user.user()).append("</div>")
+                    .append("<div class=\"text-sm text-gray-500\">")
                     .append(user.email() != null ? user.email() : "No email")
-                    .append("</p>")
+                    .append("</div>")
                     .append("</td>")
-                    .append("<td data-label=\"Full Name\">")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-900\">")
                     .append(user.firstName() != null ? user.firstName() : "")
                     .append(" ")
                     .append(user.lastName() != null ? user.lastName() : "")
                     .append("</td>")
-                    .append("<td data-label=\"Created\">")
-                    .append("<small class=\"has-text-grey is-abbr-like\" title=\"")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
+                    .append("<time datetime=\"")
                     .append(user.createdAt() != null ? user.createdAt() : "N/A")
                     .append("\">")
                     .append(user.createdAt() != null ? JawsUtils.formatUnixTimestamp(user.createdAt()) : "N/A")
-                    .append("</small>")
+                    .append("</time>")
                     .append("</td>")
-                    .append("<td class=\"is-actions-cell\">")
-                    .append("<div class=\"buttons is-right\">")
+                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">")
+                    .append("<div class=\"flex space-x-2 justify-end\">")
                     .append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
-                    .append("class=\"button is-small is-primary\" type=\"button\">")
-                    .append("<span class=\"icon\"><i class=\"mdi mdi-eye\"></i></span>")
+                    .append("class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700\" type=\"button\">")
+                    .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" />")
+                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" />")
+                    .append("</svg>")
                     .append("</a>")
-                    .append("<button class=\"button is-small is-danger jb-modal\" data-target=\"sample-modal\" type=\"button\">")
-                    .append("<span class=\"icon\"><i class=\"mdi mdi-trash-can\"></i></span>")
+                    .append("<button class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700\" onclick=\"openModal('sample-modal')\" type=\"button\">")
+                    .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z\" />")
+                    .append("</svg>")
                     .append("</button>")
                     .append("</div>")
                     .append("</td>")
@@ -503,73 +512,49 @@ public class BackofficeController extends Bragi {
             );
             
             StringBuilder html = new StringBuilder();
-            html.append("<div class=\"columns is-multiline\">");
+            html.append("<div class=\"grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4\">");
             
             // Total jobs
-            html.append("<div class=\"column is-3\">")
-                .append("<div class=\"card\">")
-                .append("<div class=\"card-content\">")
-                .append("<div class=\"level is-mobile\">")
-                .append("<div class=\"level-item\">")
-                .append("<div class=\"is-widget-label\">")
-                .append("<h3 class=\"subtitle is-spaced\">Total Jobs</h3>")
-                .append("<h1 class=\"title\">").append(stats.getOrDefault("totalJobs", 0)).append("</h1>")
+            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
+                .append("<div class=\"flex items-center justify-between\">")
+                .append("<div>")
+                .append("<p class=\"text-sm font-medium text-gray-600\">Total Jobs</p>")
+                .append("<p class=\"text-2xl font-bold text-gray-900\">").append(stats.getOrDefault("totalJobs", 0)).append("</p>")
                 .append("</div>")
-                .append("</div>")
-                .append("<div class=\"level-item has-widget-icon\">")
-                .append("<div class=\"is-widget-icon\">")
-                .append("<span class=\"icon has-text-primary is-large\">")
-                .append("<i class=\"mdi mdi-briefcase-clock-outline mdi-48px\"></i>")
-                .append("</span>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>")
+                .append("<div class=\"flex-shrink-0\">")
+                .append("<svg class=\"h-8 w-8 text-primary-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z\" />")
+                .append("</svg>")
                 .append("</div>")
                 .append("</div>")
                 .append("</div>");
             
             // Completed jobs
-            html.append("<div class=\"column is-3\">")
-                .append("<div class=\"card\">")
-                .append("<div class=\"card-content\">")
-                .append("<div class=\"level is-mobile\">")
-                .append("<div class=\"level-item\">")
-                .append("<div class=\"is-widget-label\">")
-                .append("<h3 class=\"subtitle is-spaced\">Completed</h3>")
-                .append("<h1 class=\"title\">").append(stats.getOrDefault("completedJobs", 0)).append("</h1>")
+            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
+                .append("<div class=\"flex items-center justify-between\">")
+                .append("<div>")
+                .append("<p class=\"text-sm font-medium text-gray-600\">Completed</p>")
+                .append("<p class=\"text-2xl font-bold text-green-600\">").append(stats.getOrDefault("completedJobs", 0)).append("</p>")
                 .append("</div>")
-                .append("</div>")
-                .append("<div class=\"level-item has-widget-icon\">")
-                .append("<div class=\"is-widget-icon\">")
-                .append("<span class=\"icon has-text-success is-large\">")
-                .append("<i class=\"mdi mdi-check-circle mdi-48px\"></i>")
-                .append("</span>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>")
+                .append("<div class=\"flex-shrink-0\">")
+                .append("<svg class=\"h-8 w-8 text-green-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z\" />")
+                .append("</svg>")
                 .append("</div>")
                 .append("</div>")
                 .append("</div>");
             
             // Failed jobs
-            html.append("<div class=\"column is-3\">")
-                .append("<div class=\"card\">")
-                .append("<div class=\"card-content\">")
-                .append("<div class=\"level is-mobile\">")
-                .append("<div class=\"level-item\">")
-                .append("<div class=\"is-widget-label\">")
-                .append("<h3 class=\"subtitle is-spaced\">Failed</h3>")
-                .append("<h1 class=\"title\">").append(stats.getOrDefault("failedJobs", 0)).append("</h1>")
+            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
+                .append("<div class=\"flex items-center justify-between\">")
+                .append("<div>")
+                .append("<p class=\"text-sm font-medium text-gray-600\">Failed</p>")
+                .append("<p class=\"text-2xl font-bold text-red-600\">").append(stats.getOrDefault("failedJobs", 0)).append("</p>")
                 .append("</div>")
-                .append("</div>")
-                .append("<div class=\"level-item has-widget-icon\">")
-                .append("<div class=\"is-widget-icon\">")
-                .append("<span class=\"icon has-text-danger is-large\">")
-                .append("<i class=\"mdi mdi-alert-circle mdi-48px\"></i>")
-                .append("</span>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>")
+                .append("<div class=\"flex-shrink-0\">")
+                .append("<svg class=\"h-8 w-8 text-red-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z\" />")
+                .append("</svg>")
                 .append("</div>")
                 .append("</div>")
                 .append("</div>");
@@ -577,24 +562,16 @@ public class BackofficeController extends Bragi {
             // Queue size
             int queueSize = (Integer) stats.getOrDefault("parallelQueueSize", 0) + 
                            (Integer) stats.getOrDefault("sequentialQueueSize", 0);
-            html.append("<div class=\"column is-3\">")
-                .append("<div class=\"card\">")
-                .append("<div class=\"card-content\">")
-                .append("<div class=\"level is-mobile\">")
-                .append("<div class=\"level-item\">")
-                .append("<div class=\"is-widget-label\">")
-                .append("<h3 class=\"subtitle is-spaced\">Queue Size</h3>")
-                .append("<h1 class=\"title\">").append(queueSize).append("</h1>")
+            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
+                .append("<div class=\"flex items-center justify-between\">")
+                .append("<div>")
+                .append("<p class=\"text-sm font-medium text-gray-600\">Queue Size</p>")
+                .append("<p class=\"text-2xl font-bold text-yellow-600\">").append(queueSize).append("</p>")
                 .append("</div>")
-                .append("</div>")
-                .append("<div class=\"level-item has-widget-icon\">")
-                .append("<div class=\"is-widget-icon\">")
-                .append("<span class=\"icon has-text-warning is-large\">")
-                .append("<i class=\"mdi mdi-clock-outline mdi-48px\"></i>")
-                .append("</span>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>")
+                .append("<div class=\"flex-shrink-0\">")
+                .append("<svg class=\"h-8 w-8 text-yellow-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z\" />")
+                .append("</svg>")
                 .append("</div>")
                 .append("</div>")
                 .append("</div>");
@@ -604,7 +581,7 @@ public class BackofficeController extends Bragi {
             sendHTMLResponse(OK, html.toString());
         } catch (Exception e) {
             log.error("Failed to get job statistics: {}", e.getMessage(), e);
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<div class=\"notification is-danger\">Error loading job statistics</div>");
+            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading job statistics</div>");
         }
     }
 

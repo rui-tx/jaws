@@ -5,62 +5,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667" type="image/x-icon" />
     <title>Jaws - Backoffice - Log In</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link th:href="${utils.getPathFor('backoffice/css/main.css')}" rel="stylesheet">
-    <link th:href="${utils.getPathFor('backoffice/css/login.css')}" rel="stylesheet">
     <script th:src="${utils.getPathFor('backoffice/js/auth.js')}" defer></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
 </head>
-<body>
-<div class="columns is-vcentered">
-    <div class="login column is-4 ">
-        <section class="section">
-            <div class="has-text-centered">
-                <img class="login-logo" src="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667">
+<body class="h-screen bg-gray-100 font-sans">
+<div class="flex h-full">
+    <!-- Login Form Section -->
+    <div class="w-full lg:w-2/5 flex items-center justify-center px-8 py-12">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+                <img class="mx-auto h-20 w-20" src="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667" alt="Jaws Logo">
+                <h2 class="mt-4 text-2xl font-bold text-gray-900">Welcome back</h2>
+                <p class="mt-2 text-sm text-gray-600">Sign in to your account</p>
             </div>
 
-            <form id="login-form">
-                <div class="field">
-                    <label class="label">Username</label>
-                    <div class="control has-icons-right">
-                        <input class="input" type="text" id="username" name="user">
-                        <span class="icon is-small is-right">
-                    <i class="fa fa-user"></i>
-                  </span>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <div class="mt-1 relative">
+                        <input 
+                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pr-10" 
+                            type="text" 
+                            id="username" 
+                            name="user"
+                            placeholder="Enter your username"
+                            required>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="fa fa-user text-gray-400"></i>
+                        </div>
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label">Password</label>
-                    <div class="control has-icons-right">
-                        <input class="input" type="password" id="password" name="password">
-                        <span class="icon is-small is-right">
-                    <i class="fa fa-key"></i>
-                  </span>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <div class="mt-1 relative">
+                        <input 
+                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pr-10" 
+                            type="password" 
+                            id="password" 
+                            name="password"
+                            placeholder="Enter your password"
+                            required>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="fa fa-key text-gray-400"></i>
+                        </div>
                     </div>
                 </div>
-                <div id="error-message" class="has-text-danger has-text-centered" style="display: none;">
+                
+                <div id="error-message" class="text-red-600 text-center text-sm" style="display: none;">
                     Invalid username or password
                 </div>
-                <div class="has-text-centered">
-                    <button type="button" class="button is-vcentered is-primary is-outlined" id="login-button">
-                        <span id="login-text">Login</span>
-                        <span id="login-spinner" style="display: none;">
+                
+                <div>
+                    <button type="button" class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50" id="login-button">
+                        <span id="login-text">Sign in</span>
+                        <span id="login-spinner" class="ml-2" style="display: none;">
                             <i class="fa fa-spinner fa-spin"></i>
                         </span>
                     </button>
                 </div>
 
             </form>
-            <div class="has-text-centered">
-                <!--<a href=""> Don't you have an account? Sign up now!</a> -->
+            
+            <div class="text-center mt-6">
+                <!--<a href="#" class="text-sm text-primary-600 hover:text-primary-500">Don't you have an account? Sign up now!</a> -->
             </div>
-        </section>
+        </div>
     </div>
 
-    <img class="interactive-bg column is-8" src="https://images.unsplash.com/photo-1744762567611-dee68f42ecc9?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
-
+    <!-- Background Image Section -->
+    <div class="hidden lg:block lg:w-3/5 relative">
+        <img 
+            class="absolute inset-0 w-full h-full object-cover" 
+            src="https://images.unsplash.com/photo-1744762567611-dee68f42ecc9?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            alt="Background">
+        <div class="absolute inset-0 bg-primary-600 bg-opacity-20"></div>
+    </div>
 </div>
 
 <script th:src="${utils.getPathFor('backoffice/js/main.min.js')}" type="text/javascript"></script>
