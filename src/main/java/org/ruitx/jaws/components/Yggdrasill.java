@@ -465,8 +465,6 @@ public class Yggdrasill {
             }
         }
 
-
-
         /**
          * Matches the route pattern to the endpoint and extracts path parameters if any.
          */
@@ -799,14 +797,25 @@ public class Yggdrasill {
                 if (contentType != null && contentType.contains("multipart/form-data")) {
                     requestBody = ""; // Set empty for multipart requests
                     multipartFiles = extractMultipartFiles(request);
+                } else if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+                    // For form-encoded requests, be more careful with stream reading
+                    // This prevents the STREAMED error that occurs when the servlet container
+                    // expects to handle form data but we consume the stream
+                    try {
+                        requestBody = request.getReader().lines().collect(Collectors.joining("\n"));
+                        bodyParams = extractBodyParameters(requestBody);
+                    } catch (Exception e) {
+                        // If reading fails, set empty values to prevent further issues
+                        JawsLogger.debug("Could not read form-encoded request body: {}", e.getMessage());
+                        requestBody = "";
+                        bodyParams = new LinkedHashMap<>();
+                    }
                 } else {
-                    // For non-multipart requests, read the body as text
+                    // For non-multipart, non-form requests (like JSON), read the body as text
                     requestBody = request.getReader().lines().collect(Collectors.joining("\n"));
                     
-                    // Extract body parameters if it's form data
-                    if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
-                        bodyParams = extractBodyParameters(requestBody);
-                    } else if (contentType != null && contentType.contains("application/json")) {
+                    // Extract body parameters if it's JSON
+                    if (contentType != null && contentType.contains("application/json")) {
                         bodyParams = parseJsonBody(requestBody);
                     }
                 }

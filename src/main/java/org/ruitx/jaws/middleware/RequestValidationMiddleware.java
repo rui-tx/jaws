@@ -37,29 +37,35 @@ public class RequestValidationMiddleware implements Middleware {
     @Override
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
-            JawsLogger.debug("RequestValidationMiddleware: Processing request validation");
-            
             String endPoint = context.getRequest().getRequestURI();
-            String methodStr = context.getRequest().getMethod().toUpperCase();
-            RequestType requestType = RequestType.fromString(methodStr);
+            RequestType requestType = RequestType.fromString(context.getRequest().getMethod());
             
-            if (requestType == null) {
-                JawsLogger.debug("RequestValidationMiddleware: Invalid request type, skipping validation");
-                return chain.next();
-            }
+            // Skip validation for certain endpoints
+            // if (endPoint.equals("/") || endPoint.equals("/api/v1/ping") || endPoint.startsWith("/api/admin")) {
+            //     return chain.next();
+            // }
 
-            // Remove query parameters from endpoint for route matching
-            int questionMarkIndex = endPoint.indexOf('?');
-            if (questionMarkIndex != -1) {
-                endPoint = endPoint.substring(0, questionMarkIndex);
+            String contentType = context.getHeader(CONTENT_TYPE.getHeaderName());
+            String httpMethod = context.getRequest().getMethod().toUpperCase();
+            boolean expectsRequestBody = httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH");
+            
+            if (expectsRequestBody && contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+                try {
+                    APIResponse<String> response = APIResponse.error(
+                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                            "This endpoint requires JSON data. Please set Content-Type to 'application/json' and send JSON in the request body"
+                    );
+                    sendErrorResponse(context, response);
+                    return false; // Stop the chain
+                } catch (Exception e) {
+                    return false;
+                }
             }
 
             // Find the route method to determine if validation is needed
             Method routeMethod = findRouteMethod(endPoint, requestType);
             
             if (routeMethod != null) {
-                JawsLogger.debug("RequestValidationMiddleware: Found route method, checking if validation is needed");
-                
                 // Get method parameters to determine if we need to validate request body
                 Class<?>[] parameterTypes = routeMethod.getParameterTypes();
                 
@@ -75,13 +81,11 @@ public class RequestValidationMiddleware implements Middleware {
                     // Store the validated object in context for the controller to use
                     if (validationResult.validatedObject != null) {
                         context.setValidatedRequestBody(validationResult.validatedObject);
-                        JawsLogger.debug("RequestValidationMiddleware: Stored validated request body in context");
                     }
                 }
             }
 
             // Continue to next middleware/route processing
-            JawsLogger.debug("RequestValidationMiddleware: Validation passed, continuing to next middleware");
             return chain.next();
             
         } catch (Exception e) {
@@ -109,8 +113,28 @@ public class RequestValidationMiddleware implements Middleware {
         }
         
         if (expectsRequestBody) {
-            // Check for missing Content-Type header
-            if (contentType == null || !contentType.contains("application/json")) {
+            // Check for missing Content-Type header or wrong Content-Type
+            if (contentType == null) {
+                APIResponse<String> response = APIResponse.error(
+                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                        "Content-Type header is required for " + httpMethod + " requests. Please set Content-Type to 'application/json'"
+                );
+                sendErrorResponse(context, response);
+                return ValidationResult.failure();
+            }
+            
+            // Check for wrong Content-Type (form-encoded instead of JSON)
+            if (contentType.contains("application/x-www-form-urlencoded")) {
+                APIResponse<String> response = APIResponse.error(
+                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                        "This endpoint requires JSON data. Please set Content-Type to 'application/json' and send JSON in the request body"
+                );
+                sendErrorResponse(context, response);
+                return ValidationResult.failure();
+            }
+            
+            // Check for other invalid content types
+            if (!contentType.contains("application/json")) {
                 APIResponse<String> response = APIResponse.error(
                         ResponseCode.BAD_REQUEST.getCodeAndMessage(),
                         "Content-Type header must be 'application/json' for " + httpMethod + " requests"
@@ -293,13 +317,29 @@ public class RequestValidationMiddleware implements Middleware {
     /**
      * Sends an error response using the context's JSON response method.
      */
-    private void sendErrorResponse(Yggdrasill.RequestContext context, APIResponse<String> response) {
+    private boolean sendErrorResponse(Yggdrasill.RequestContext context, APIResponse<String> response) {
         try {
             // Extract the response code from the APIResponse instead of hardcoding BAD_REQUEST
             ResponseCode responseCode = ResponseCode.fromCodeAndMessage(response.code());
             context.sendJSONResponse(responseCode, Bragi.encode(response));
+            return true; // Successfully sent error response
         } catch (Exception e) {
             JawsLogger.error("RequestValidationMiddleware: Error sending validation error response: {}", e.getMessage());
+            // Try to send a simple error response as fallback
+            try {
+                APIResponse<String> fallbackResponse = APIResponse.error(
+                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                        "Request validation failed"
+                );
+                context.getResponse().setStatus(400);
+                context.getResponse().setContentType("application/json; charset=UTF-8");
+                context.getResponse().getWriter().write(Bragi.encode(fallbackResponse));
+                context.getResponse().getWriter().flush();
+                return true;
+            } catch (Exception fallbackException) {
+                JawsLogger.error("RequestValidationMiddleware: Failed to send fallback error response: {}", fallbackException.getMessage());
+                return false; // Complete failure
+            }
         }
     }
 
