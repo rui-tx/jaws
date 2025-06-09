@@ -6,6 +6,10 @@ import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.QUEUE_CAPACITY;
+import static org.ruitx.jaws.configs.ApplicationConfig.WORKER_THREADS;
+import static org.ruitx.jaws.configs.ApplicationConfig.CLEANUP_INTERVAL_MS;
+
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -22,9 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Freyr implements Runnable {
     
-    private static final int DEFAULT_WORKER_THREADS = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_QUEUE_CAPACITY = 10000;
-    private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes
+    private static final int DEFAULT_WORKER_THREADS = WORKER_THREADS;
+    private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
+    //private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes
     
     private static Freyr instance;
     private static final Object instanceLock = new Object();

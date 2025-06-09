@@ -4,6 +4,8 @@ import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.interfaces.Job;
 import org.tinylog.Logger;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.QUEUE_CAPACITY;
+
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -15,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SequentialJobQueue {
     
-    private static final int DEFAULT_QUEUE_CAPACITY = 10000;
+    private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
     
     private final Mimir mimir = new Mimir();
     private final BlockingQueue<Job> sequentialQueue;

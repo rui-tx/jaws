@@ -5,6 +5,11 @@ import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.www.jobs.BatchLogWriterJob;
 import org.tinylog.Logger;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.BATCH_SIZE;
+import static org.ruitx.jaws.configs.ApplicationConfig.FLUSH_INTERVAL_MS;
+import static org.ruitx.jaws.configs.ApplicationConfig.BUFFER_CAPACITY;
+import static org.ruitx.jaws.configs.ApplicationConfig.DB_LEVEL;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,9 +21,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JawsLogger {
     
     // Batch logging configuration
-    private static final int BATCH_SIZE = 1000;                   // Submit job when buffer reaches this size 
-    private static final long FLUSH_INTERVAL_MS = 5000;           // Submit job every 500ms for faster processing 
-    private static final int BUFFER_CAPACITY = 10000;             // Maximum buffer size before dropping logs
+    //private static final int BATCH_SIZE = 1000;                   // Submit job when buffer reaches this size 
+    //private static final long FLUSH_INTERVAL_MS = 5000;           // Submit job every 500ms for faster processing 
+    //private static final int BUFFER_CAPACITY = 10000;             // Maximum buffer size before dropping logs
     
     // Dedicated Mimir instance for logs database (fallback only)
     private static final Mimir logsDb;
@@ -271,11 +276,39 @@ public class JawsLogger {
     // ============================================================================
     
     /**
+     * Check if a log level should be saved to the database based on configured DB_LEVEL
+     */
+    private static boolean shouldLogToDatabase(String level) {
+        int levelPriority = getLogLevelPriority(level);
+        int configuredPriority = getLogLevelPriority(DB_LEVEL);
+        return levelPriority >= configuredPriority;
+    }
+    
+    /**
+     * Get numeric priority for log level (higher number = higher priority)
+     */
+    private static int getLogLevelPriority(String level) {
+        switch (level.toUpperCase()) {
+            case "TRACE": return 1;
+            case "DEBUG": return 2;
+            case "INFO": return 3;
+            case "WARN": return 4;
+            case "ERROR": return 5;
+            default: return 0; // Unknown level gets lowest priority
+        }
+    }
+
+    /**
      * Queue a log entry for batch processing
      */
     private static void queueLogEntry(String level, String message, Throwable exception) {
         if (!dbAvailable || !batchingEnabled) {
             return; // Skip queuing if database unavailable or batching disabled
+        }
+        
+        // Check if this log level should be saved to database
+        if (!shouldLogToDatabase(level)) {
+            return; // Skip queuing if level is below configured DB_LEVEL
         }
         
         try {
