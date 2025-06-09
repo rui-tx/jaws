@@ -24,6 +24,12 @@ import java.lang.reflect.Method;
  */
 public class AuthMiddleware implements Middleware {
 
+    private int order = 10;
+
+    public AuthMiddleware(int order) {
+        this.order = order;
+    }
+
     @Override
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
@@ -284,6 +290,6 @@ public class AuthMiddleware implements Middleware {
 
     @Override
     public int getOrder() {
-        return 30; // Execute after CORS and logging, but before most other middleware
+        return order; // Execute after CORS and logging, but before most other middleware
     }
 } 

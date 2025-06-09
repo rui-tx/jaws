@@ -4,6 +4,8 @@ import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.middleware.AuthMiddleware;
 import org.ruitx.jaws.middleware.CorsMiddleware;
 import org.ruitx.jaws.middleware.LoggingMiddleware;
+import org.ruitx.jaws.middleware.RateLimiterMiddleware;
+import org.ruitx.jaws.middleware.RequestValidationMiddleware;
 
 import java.util.List;
 
@@ -18,8 +20,10 @@ public class MiddlewareConfig {
      * Middleware will be executed in order of their priority (getOrder() method).
      */
     public static final List<Middleware> MIDDLEWARE = List.of(
-            new LoggingMiddleware(),
-            new CorsMiddleware(),
-            new AuthMiddleware()
+            new LoggingMiddleware(1),
+            new RateLimiterMiddleware(2),
+            new CorsMiddleware(3),
+            new AuthMiddleware(4),
+            new RequestValidationMiddleware(5)
     );
 } 

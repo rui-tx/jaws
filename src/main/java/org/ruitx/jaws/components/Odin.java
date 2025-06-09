@@ -95,14 +95,10 @@ public final class Odin {
 
     // Bifrost is the middleware that processes the requests
     private static void createBifrost(Yggdrasill yggdrasill) {
-        MiddlewareConfig.MIDDLEWARE.forEach(yggdrasill::addMiddleware);
-        
-        JawsLogger.info("Configured {} middleware(s): {}", 
-                MiddlewareConfig.MIDDLEWARE.size(),
-                MiddlewareConfig.MIDDLEWARE.stream()
-                        .map(m -> m.getClass().getSimpleName())
-                        .reduce((a, b) -> a + ", " + b)
-                        .orElse("none"));
+        MiddlewareConfig.MIDDLEWARE.forEach( m -> {
+            yggdrasill.addMiddleware(m);
+            JawsLogger.info("Configured {} middleware", m.getClass().getSimpleName());
+        });
     }
 
     // Heimdall is a file watcher that watches for changes in the www path

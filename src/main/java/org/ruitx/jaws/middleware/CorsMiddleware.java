@@ -13,6 +13,12 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 public class CorsMiddleware implements Middleware {
 
+    private int order = 10;
+
+    public CorsMiddleware(int order) {
+        this.order = order;
+    }
+
     @Override
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
@@ -51,6 +57,6 @@ public class CorsMiddleware implements Middleware {
 
     @Override
     public int getOrder() {
-        return 10; // Execute early in the chain
+        return order; // Execute early in the chain
     }
 } 
