@@ -295,7 +295,9 @@ public class RequestValidationMiddleware implements Middleware {
      */
     private void sendErrorResponse(Yggdrasill.RequestContext context, APIResponse<String> response) {
         try {
-            context.sendJSONResponse(ResponseCode.BAD_REQUEST, Bragi.encode(response));
+            // Extract the response code from the APIResponse instead of hardcoding BAD_REQUEST
+            ResponseCode responseCode = ResponseCode.fromCodeAndMessage(response.code());
+            context.sendJSONResponse(responseCode, Bragi.encode(response));
         } catch (Exception e) {
             JawsLogger.error("RequestValidationMiddleware: Error sending validation error response: {}", e.getMessage());
         }
