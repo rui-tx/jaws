@@ -23,10 +23,6 @@ public class AuthService {
     }
 
     public APIResponse<String> createUser(UserCreateRequest request) {
-        if (UserCreateRequest.isValid(request).isPresent()) {
-            return APIResponse.error(BAD_REQUEST, UserCreateRequest.isValid(request).get());
-        }
-
         Optional<User> user = authRepo.getUserByUsername(request.username().toLowerCase());
         if (user.isPresent()) {
             return APIResponse.error(CONFLICT, "User already exists");
@@ -90,10 +86,6 @@ public class AuthService {
     }
 
     public APIResponse<LoginResponse> loginUser(String username, String password, String userAgent, String ipAddress) {
-        if (username == null || password == null) {
-            return APIResponse.error(BAD_REQUEST, "User / password is missing");
-        }
-
         Optional<User> user = authRepo.getUserByUsername(username.toLowerCase());
         if (user.isEmpty()) {
             return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
@@ -123,10 +115,6 @@ public class AuthService {
     }
 
     public APIResponse<Void> logout(String refreshToken) {
-        if (refreshToken == null || refreshToken.isEmpty()) {
-            return APIResponse.error(BAD_REQUEST, "Refresh token is required");
-        }
-
         authRepo.deactivateSession(refreshToken);
         return APIResponse.success(OK, null);
     }

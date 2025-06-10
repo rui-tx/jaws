@@ -15,8 +15,10 @@ import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.jaws.utils.JawsValidation;
+import org.ruitx.www.validation.Validatable;
 
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
 
@@ -167,6 +169,19 @@ public class RequestValidationMiddleware implements Middleware {
                 if (validationError != null) {
                     sendErrorResponse(context, validationError);
                     return ValidationResult.failure();
+                }
+                
+                // Custom validation for DTOs that implement Validatable
+                if (deserializedObject instanceof Validatable validatable) {
+                    Optional<String> customValidationError = validatable.isValid();
+                    if (customValidationError.isPresent()) {
+                        APIResponse<String> customError = APIResponse.error(
+                                ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+                                customValidationError.get()
+                        );
+                        sendErrorResponse(context, customError);
+                        return ValidationResult.failure();
+                    }
                 }
                 
                 return ValidationResult.success(deserializedObject);
