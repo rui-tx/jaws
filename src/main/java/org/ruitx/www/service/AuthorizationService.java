@@ -1,6 +1,7 @@
 package org.ruitx.www.service;
 
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.www.model.auth.Role;
@@ -255,18 +256,17 @@ public class AuthorizationService {
      *
      * @param roleName    the role name (must be unique)
      * @param description the role description (optional)
-     * @return true if role was created successfully, false otherwise
+     * @return APIResponse with success/error message
      */
-    public boolean createRole(String roleName, String description) {
+    public APIResponse<String> createRole(String roleName, String description) {
         if (roleName == null || roleName.trim().isEmpty()) {
-            return false;
+            return APIResponse.error("400 BAD REQUEST", "Role name cannot be empty");
         }
 
         try {
             // Check if role already exists
             if (getRoleByName(roleName).isPresent()) {
-                JawsLogger.warn("Role {} already exists", roleName);
-                return false;
+                return APIResponse.error("409 CONFLICT", "Role '" + roleName + "' already exists");
             }
 
             long now = Instant.now().getEpochSecond();
@@ -277,14 +277,14 @@ public class AuthorizationService {
 
             if (result > 0) {
                 JawsLogger.info("Role {} created successfully", roleName);
-                return true;
+                return APIResponse.success("201 CREATED", "Role '" + roleName + "' created successfully", null);
             } else {
                 JawsLogger.error("Failed to create role {}", roleName);
-                return false;
+                return APIResponse.error("500 INTERNAL SERVER ERROR", "Failed to create role");
             }
         } catch (Exception e) {
             JawsLogger.error("Failed to create role {}: {}", roleName, e.getMessage());
-            return false;
+            return APIResponse.error("500 INTERNAL SERVER ERROR", "Database error: " + e.getMessage());
         }
     }
 
@@ -297,5 +297,172 @@ public class AuthorizationService {
      */
     public boolean assignDefaultRole(Integer userId) {
         return assignRole(userId, "user", null);
+    }
+
+    /**
+     * Assign a role to a user by role ID.
+     *
+     * @param userId     the user ID to assign the role to
+     * @param roleId     the role ID to assign
+     * @param assignedBy the user ID who is assigning the role
+     * @return APIResponse with success/error message
+     */
+    public APIResponse<String> assignRole(Integer userId, Integer roleId, Integer assignedBy) {
+        if (userId == null || roleId == null) {
+            return APIResponse.error("400 BAD REQUEST", "User ID and Role ID are required");
+        }
+
+        try {
+            // Check if user already has this role
+            List<Row> existing = db.getRows(
+                    "SELECT id FROM USER_ROLE WHERE user_id = ? AND role_id = ?",
+                    userId, roleId
+            );
+            
+            if (!existing.isEmpty()) {
+                return APIResponse.error("409 CONFLICT", "User already has this role");
+            }
+
+            // Assign the role
+            long now = Instant.now().getEpochSecond();
+            int result = db.executeSql(
+                    "INSERT INTO USER_ROLE (user_id, role_id, assigned_at, assigned_by) VALUES (?, ?, ?, ?)",
+                    userId, roleId, now, assignedBy
+            );
+
+            if (result > 0) {
+                JawsLogger.info("Role {} assigned to user {} by user {}", roleId, userId, assignedBy);
+                return APIResponse.success("201 CREATED", "Role assigned successfully", null);
+            } else {
+                return APIResponse.error("500 INTERNAL SERVER ERROR", "Failed to assign role");
+            }
+        } catch (Exception e) {
+            JawsLogger.error("Failed to assign role {} to user {}: {}", roleId, userId, e.getMessage());
+            return APIResponse.error("500 INTERNAL SERVER ERROR", "Database error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get a role by its ID.
+     *
+     * @param roleId the role ID
+     * @return Optional containing the role if found, empty otherwise
+     */
+    public Optional<Role> getRoleById(Integer roleId) {
+        if (roleId == null) {
+            return Optional.empty();
+        }
+
+        try {
+            Row row = db.getRow("SELECT * FROM ROLE WHERE id = ?", roleId);
+            return row != null ? Role.fromRow(row) : Optional.empty();
+        } catch (Exception e) {
+            JawsLogger.error("Failed to get role by ID {}: {}", roleId, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Get all user role assignments.
+     *
+     * @return list of all user role assignments
+     */
+    public List<UserRole> getAllUserRoles() {
+        try {
+            List<Row> rows = db.getRows("SELECT * FROM USER_ROLE ORDER BY assigned_at DESC");
+            return rows.stream()
+                    .map(UserRole::fromRow)
+                    .flatMap(Optional::stream)
+                    .toList();
+        } catch (Exception e) {
+            JawsLogger.error("Failed to get all user roles: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Get the count of users for a specific role.
+     *
+     * @param roleId the role ID
+     * @return count of users with this role
+     */
+    public int getUserCountForRole(Integer roleId) {
+        if (roleId == null) {
+            return 0;
+        }
+
+        try {
+            Row row = db.getRow("SELECT COUNT(*) as count FROM USER_ROLE WHERE role_id = ?", roleId);
+            return row != null ? row.getInt("count").orElse(0) : 0;
+        } catch (Exception e) {
+            JawsLogger.error("Failed to get user count for role {}: {}", roleId, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Delete a role from the system.
+     *
+     * @param roleId the role ID to delete
+     * @return APIResponse with success/error message
+     */
+    public APIResponse<String> deleteRole(Integer roleId) {
+        if (roleId == null) {
+            return APIResponse.error("400 BAD REQUEST", "Role ID is required");
+        }
+
+        try {
+            // Check if role exists
+            Optional<Role> role = getRoleById(roleId);
+            if (role.isEmpty()) {
+                return APIResponse.error("404 NOT FOUND", "Role not found");
+            }
+
+            // Check if role is assigned to any users
+            int userCount = getUserCountForRole(roleId);
+            if (userCount > 0) {
+                return APIResponse.error("409 CONFLICT", 
+                    "Cannot delete role '" + role.get().name() + "' because it is assigned to " + userCount + " user(s)");
+            }
+
+            // Delete the role
+            int result = db.executeSql("DELETE FROM ROLE WHERE id = ?", roleId);
+
+            if (result > 0) {
+                JawsLogger.info("Role {} ({}) deleted successfully", roleId, role.get().name());
+                return APIResponse.success("200 OK", "Role deleted successfully", null);
+            } else {
+                return APIResponse.error("500 INTERNAL SERVER ERROR", "Failed to delete role");
+            }
+        } catch (Exception e) {
+            JawsLogger.error("Failed to delete role {}: {}", roleId, e.getMessage());
+            return APIResponse.error("500 INTERNAL SERVER ERROR", "Database error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Remove a user role assignment.
+     *
+     * @param userRoleId the user role assignment ID to remove
+     * @return APIResponse with success/error message
+     */
+    public APIResponse<String> removeUserRole(Integer userRoleId) {
+        if (userRoleId == null) {
+            return APIResponse.error("400 BAD REQUEST", "User role ID is required");
+        }
+
+        try {
+            int result = db.executeSql("DELETE FROM USER_ROLE WHERE id = ?", userRoleId);
+
+            if (result > 0) {
+                JawsLogger.info("User role assignment {} removed successfully", userRoleId);
+                return APIResponse.success("200 OK", "Role assignment removed successfully", null);
+            } else {
+                return APIResponse.error("404 NOT FOUND", "Role assignment not found");
+            }
+        } catch (Exception e) {
+            JawsLogger.error("Failed to remove user role assignment {}: {}", userRoleId, e.getMessage());
+            return APIResponse.error("500 INTERNAL SERVER ERROR", "Database error: " + e.getMessage());
+        }
     }
 } 
