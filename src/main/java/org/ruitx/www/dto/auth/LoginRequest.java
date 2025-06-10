@@ -19,9 +19,9 @@ public record LoginRequest(
         @NotNull(message = "Password is required")
         @NotBlank(message = "Password cannot be empty")
         @Size(min = 8, message = "Password must be at least 8 characters long")
-        @Size(max = 16, message = "Password cannot exceed 16 characters")
+        @Size(max = 64, message = "Password cannot exceed 64 characters")
         @JsonProperty("password") String password
-        
+
 ) implements Validatable {
 
     @Override
