@@ -109,15 +109,10 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USERS_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/users", method = POST)
-    public void listUsersHTMX(UserCreateRequest request) {
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
-        if (!user.user().equals("admin")) {
-            sendHTMLResponse(FORBIDDEN, "You are not authorized to create users");
-            return;
-        }
-
+    public void createUser(UserCreateRequest request) {
+        // No manual role check needed anymore! The middleware handles it
         APIResponse<String> response = authService.createUser(request);
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
     }
@@ -160,15 +155,10 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/profile/:id", method = PATCH)
     public void updateUserProfile(UserUpdateRequest request) {
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
-
-        if (!user.user().equals("admin")) {
-            sendHTMLResponse(FORBIDDEN, "You are not authorized to create users");
-            return;
-        }
+        // No manual role check needed anymore! The middleware handles it
         APIResponse<String> response = authService
                 .updateUser(Integer.parseInt(getPathParam("id")), request);
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());

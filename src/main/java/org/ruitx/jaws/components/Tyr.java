@@ -12,8 +12,10 @@ import javax.crypto.SecretKey;
 import java.security.Key;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
@@ -23,13 +25,14 @@ public class Tyr {
     private static final long ACCESS_TOKEN_EXPIRATION = 6 * 60 * 60L; // 6 hours in seconds
     private static final long REFRESH_TOKEN_EXPIRATION = 30 * 24 * 60 * 60L; // 30 days in seconds
 
-    public static TokenPair createTokenPair(String userId, String userAgent, String ipAddress) {
+    public static TokenPair createTokenPair(String userId, List<String> userRoles, String userAgent, String ipAddress) {
         Key key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
         long now = Instant.now().getEpochSecond();
 
         String accessToken = Jwts.builder()
                 .issuer(APPLICATION_NAME)
                 .subject(userId)
+                .claim("roles", userRoles)  // Include roles in JWT claims
                 .issuedAt(Date.from(Instant.ofEpochSecond(now)))
                 .expiration(Date.from(Instant.ofEpochSecond(now + ACCESS_TOKEN_EXPIRATION)))
                 .signWith(key)
@@ -38,6 +41,7 @@ public class Tyr {
         String refreshToken = Jwts.builder()
                 .issuer(APPLICATION_NAME)
                 .subject(userId)
+                .claim("roles", userRoles)  // Include roles in refresh token too
                 .issuedAt(Date.from(Instant.ofEpochSecond(now)))
                 .expiration(Date.from(Instant.ofEpochSecond(now + REFRESH_TOKEN_EXPIRATION)))
                 .signWith(key)
@@ -99,7 +103,8 @@ public class Tyr {
 
             // Create new token pair
             String userId = claims.getSubject();
-            TokenPair newTokens = createTokenPair(userId, userAgent, ipAddress);
+            List<String> userRoles = getUserRolesFromJWT(refreshToken);
+            TokenPair newTokens = createTokenPair(userId, userRoles, userAgent, ipAddress);
 
             // Invalidate old session
             db.executeSql(
@@ -170,22 +175,33 @@ public class Tyr {
     }
 
     public static String getUserRoleFromJWT(String token) {
+        // Legacy method - returns first role or empty string for backwards compatibility
+        List<String> roles = getUserRolesFromJWT(token);
+        return roles.isEmpty() ? "" : roles.get(0);
+    }
+
+    public static List<String> getUserRolesFromJWT(String token) {
         SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
-        Object userRole;
         try {
-            userRole = Jwts.parser()
+            Object rolesObj = Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(token)
-                    .getPayload().get("role");
+                    .getPayload().get("roles");
 
+            if (rolesObj instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                List<String> roles = (List<String>) rolesObj;
+                return roles != null ? roles : new ArrayList<>();
+            }
+            
+            // Handle legacy single role claim or null
+            return new ArrayList<>();
 
         } catch (JwtException e) {
             JawsLogger.error("Error validating: " + e);
-            return "";
+            return new ArrayList<>();
         }
-
-        return userRole == null ? "" : userRole.toString();
     }
 
     public record TokenPair(String accessToken, String refreshToken) {

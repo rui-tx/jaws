@@ -17,6 +17,8 @@ import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.utils.JawsLogger;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * AuthMiddleware handles JWT authentication for protected routes.
@@ -178,9 +180,10 @@ public class AuthMiddleware implements Middleware {
     }
 
     /**
-     * Check if the request is authorized for the required role.
+     * Check if the request is authorized for the required role(s).
+     * Supports comma-separated roles (ANY logic) like "admin,editor"
      */
-    private boolean isAuthorized(Yggdrasill.RequestContext context, String requiredRole) {
+    private boolean isAuthorized(Yggdrasill.RequestContext context, String requiredRoles) {
         String token = context.getCurrentToken();
         
         if (token == null || token.trim().isEmpty()) {
@@ -189,17 +192,23 @@ public class AuthMiddleware implements Middleware {
         }
 
         try {
-            String userRole = Tyr.getUserRoleFromJWT(token);
-            JawsLogger.debug("AuthMiddleware: Role check - required: '{}', user: '{}'", requiredRole, userRole);
+            List<String> userRoles = Tyr.getUserRolesFromJWT(token);
+            JawsLogger.debug("AuthMiddleware: Role check - required: '{}', user roles: {}", requiredRoles, userRoles);
             
-            // Admin has access to everything
-            if ("admin".equals(userRole)) {
+            // Admin always has access to everything
+            if (userRoles.contains("admin")) {
                 JawsLogger.debug("AuthMiddleware: Admin access granted");
                 return true;
             }
             
-            // Check exact role match
-            boolean authorized = requiredRole.equals(userRole);
+            // Parse required roles (support comma-separated)
+            String[] requiredRoleArray = requiredRoles.split(",");
+            
+            // Check if user has ANY of the required roles
+            boolean authorized = Arrays.stream(requiredRoleArray)
+                    .map(String::trim)
+                    .anyMatch(userRoles::contains);
+                    
             JawsLogger.debug("AuthMiddleware: Role authorization result: {}", authorized);
             return authorized;
             
