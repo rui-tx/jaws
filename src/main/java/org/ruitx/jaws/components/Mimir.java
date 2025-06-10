@@ -163,15 +163,33 @@ public class Mimir {
         String lastName = "Doe";
         String hashedPassword =
                 BCrypt.withDefaults().hashToString(12, password.orElse("Lee7Pa$$w00rd").toCharArray());
-        executeSql("INSERT INTO USER (user, password_hash, email, first_name, last_name, is_superuser, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        
+        // Insert the admin user
+        int adminUserId = executeSql("INSERT INTO USER (user, password_hash, email, first_name, last_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 "admin",
                 hashedPassword,
                 email,
                 firstName,
                 lastName,
-                true,
                 Date.from(Instant.now())
         );
+        
+        // Assign admin role to the newly created admin user
+        // Get the admin role ID and user ID, then create the assignment
+        Row adminUser = getRow("SELECT id FROM USER WHERE user = 'admin'");
+        Row adminRole = getRow("SELECT id FROM ROLE WHERE name = 'admin'");
+        
+        if (adminUser != null && adminRole != null) {
+            executeSql("INSERT INTO USER_ROLE (user_id, role_id, assigned_at) VALUES (?, ?, ?)",
+                    adminUser.getInt("id").orElse(0),
+                    adminRole.getInt("id").orElse(0),
+                    Instant.now().getEpochSecond()
+            );
+            Logger.info("Admin role assigned to default admin user");
+        } else {
+            Logger.warn("Failed to assign admin role to default admin user - role or user not found");
+        }
+        
         Logger.info("A new admin user has been created with username 'admin' and password '"
                 + (password.orElse("Lee7Pa$$w00rd")) + "'");
         Logger.info("Please save this in a safe place, it will not be shown again.");

@@ -8,6 +8,7 @@ import org.ruitx.www.dto.auth.UserCreateRequest;
 import org.ruitx.www.dto.auth.UserUpdateRequest;
 import org.ruitx.www.model.auth.User;
 import org.ruitx.www.repository.AuthRepo;
+import org.ruitx.www.service.AuthorizationService;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,9 +18,11 @@ import static org.ruitx.jaws.strings.ResponseCode.*;
 public class AuthService {
 
     private final AuthRepo authRepo;
+    private final AuthorizationService authorizationService;
 
     public AuthService() {
         this.authRepo = new AuthRepo();
+        this.authorizationService = new AuthorizationService();
     }
 
     public APIResponse<String> createUser(UserCreateRequest request) {
@@ -36,6 +39,14 @@ public class AuthService {
 
         if (result.isEmpty()) {
             return APIResponse.error(INTERNAL_SERVER_ERROR, "Cannot create user. Check the logs for more details");
+        }
+
+        // Assign default "user" role to new user
+        boolean roleAssigned = authorizationService.assignDefaultRole(result.get());
+        if (!roleAssigned) {
+            // Log warning but don't fail user creation
+            // The user can still be assigned roles manually later
+            // This prevents breaking user creation if role system has issues
         }
 
         return APIResponse.success(CREATED, "User created successfully!");
@@ -70,8 +81,6 @@ public class AuthService {
                 .location(updateRequest.location() != null ? updateRequest.location() : currentUser.location())
                 .website(updateRequest.website() != null ? updateRequest.website() : currentUser.website())
                 .isActive(updateRequest.isActive() != null ? updateRequest.isActive() : currentUser.isActive())
-                .isSuperuser(
-                        updateRequest.isSuperuser() != null ? updateRequest.isSuperuser() : currentUser.isSuperuser())
                 .lockoutUntil(updateRequest.lockoutUntil() != null ? updateRequest.lockoutUntil()
                         : currentUser.lockoutUntil())
                 .createdAt(currentUser.createdAt())
@@ -96,8 +105,12 @@ public class AuthService {
             return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
         }
 
+        // Get user roles for JWT token
+        List<String> userRoles = authorizationService.getUserRoles(user.get().id());
+        
         Tyr.TokenPair tokenPair = Tyr.createTokenPair(
                 user.get().id().toString(),
+                userRoles,
                 userAgent,
                 ipAddress);
 

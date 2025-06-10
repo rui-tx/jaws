@@ -64,10 +64,7 @@ public record UserUpdateRequest(
     @Max(value = 1, message = "isActive must be 0 or 1")
     Integer isActive,
 
-    @JsonProperty("isSuperuser") 
-    @Min(value = 0, message = "isSuperuser must be 0 or 1")
-    @Max(value = 1, message = "isSuperuser must be 0 or 1")
-    Integer isSuperuser,
+
 
     @JsonProperty("lockoutUntil") 
     Long lockoutUntil

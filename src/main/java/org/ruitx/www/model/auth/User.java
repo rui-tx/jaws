@@ -24,7 +24,7 @@ public record User(
         @JsonProperty("website") String website,
         @JsonProperty("last_login") Long lastLogin,
         @JsonProperty("is_active") Integer isActive,
-        @JsonProperty("is_superuser") Integer isSuperuser,
+
         @JsonProperty("failed_login_attempts") Integer failedLoginAttempts,
         @JsonProperty("lockout_until") Long lockoutUntil,
         @JsonProperty("created_at") Long createdAt,
@@ -61,7 +61,7 @@ public record User(
         Optional<String> websiteOpt = row.getString("website");
         Optional<Long> lastLoginOpt = row.getUnixTimestamp("last_login");
         Optional<Integer> isActiveOpt = row.getInt("is_active");
-        Optional<Integer> isSuperuserOpt = row.getInt("is_superuser");
+
         Optional<Integer> failedLoginAttemptsOpt = row.getInt("failed_login_attempts");
         Optional<Long> lockoutUntilOpt = row.getUnixTimestamp("lockout_until");
         Optional<Long> createdAt = row.getUnixTimestamp("created_at");
@@ -87,7 +87,6 @@ public record User(
                 .website(websiteOpt.orElse(null))
                 .lastLogin(lastLoginOpt.orElse(null))
                 .isActive(isActiveOpt.orElse(1))     // Default to 1 (active) if not present
-                .isSuperuser(isSuperuserOpt.orElse(0)) // Default to 0 if not present
                 .failedLoginAttempts(failedLoginAttemptsOpt.orElse(0)) // Default to 0
                 .lockoutUntil(lockoutUntilOpt.orElse(null))
                 .createdAt(createdAt.get())
@@ -129,7 +128,6 @@ public record User(
         private String website;
         private Long lastLogin;
         private Integer isActive;
-        private Integer isSuperuser;
         private Integer failedLoginAttempts;
         private Long lockoutUntil;
         private Long createdAt;
@@ -213,10 +211,7 @@ public record User(
             return this;
         }
 
-        public Builder isSuperuser(Integer isSuperuser) {
-            this.isSuperuser = isSuperuser;
-            return this;
-        }
+
 
         public Builder failedLoginAttempts(Integer failedLoginAttempts) {
             this.failedLoginAttempts = failedLoginAttempts;
@@ -276,7 +271,6 @@ public record User(
                     website,
                     lastLogin,
                     isActive,
-                    isSuperuser,
                     failedLoginAttempts,
                     lockoutUntil,
                     createdAt,

@@ -15,6 +15,9 @@ import org.ruitx.www.dto.auth.UserUpdateRequest;
 import org.ruitx.www.model.auth.User;
 import org.ruitx.www.repository.AuthRepo;
 import org.ruitx.www.service.AuthService;
+import org.ruitx.www.service.AuthorizationService;
+import org.ruitx.www.model.auth.Role;
+import org.ruitx.www.model.auth.UserRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +30,7 @@ import java.util.Map;
 import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.RequestType.PATCH;
+import static org.ruitx.jaws.strings.RequestType.DELETE;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class BackofficeController extends Bragi {
@@ -41,10 +45,12 @@ public class BackofficeController extends Bragi {
     private static final String JOB_DETAILS_PAGE = "backoffice/partials/job-details.html";
     private static final String LOGS_PAGE = "backoffice/partials/logs.html";
     private static final String LOG_DETAILS_PAGE = "backoffice/partials/log-details.html";
+    private static final String ROLES_PAGE = "backoffice/partials/roles.html";
     private static final Logger log = LoggerFactory.getLogger(BackofficeController.class);
 
     private final AuthRepo authRepo;
     private final AuthService authService;
+    private final AuthorizationService authorizationService;
     private final Freyr jobQueue;
     private final org.ruitx.jaws.components.Mimir logsDb;
 
@@ -52,8 +58,33 @@ public class BackofficeController extends Bragi {
         bodyHtmlPath = BODY_HTML_PATH;
         this.authRepo = new AuthRepo();
         this.authService = new AuthService();
+        this.authorizationService = new AuthorizationService();
         this.jobQueue = Freyr.getInstance();
         this.logsDb = new org.ruitx.jaws.components.Mimir("src/main/resources/logs.db");
+    }
+
+    /**
+     * Creates the base context with user information and role-based navigation visibility.
+     *
+     * @param user the current user
+     * @return context map with user info and navigation permissions
+     */
+    private Map<String, String> getBaseContext(User user) {
+        Map<String, String> context = new HashMap<>();
+        
+        // Basic user info
+        context.put("userId", user.id().toString());
+        context.put("currentUser", user.firstName() + " " + user.lastName());
+        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
+                ? user.profilePicture()
+                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        
+        // Role-based navigation visibility
+        boolean isAdmin = authorizationService.hasRole(user.id(), "admin");
+        context.put("canAccessRoles", String.valueOf(isAdmin));
+        context.put("canAccessUserManagement", String.valueOf(isAdmin));
+        
+        return context;
     }
 
     @AccessControl(login = true)
@@ -61,12 +92,7 @@ public class BackofficeController extends Bragi {
     public void renderIndex() {
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "dashboard");
         setContext(context);
 
@@ -75,49 +101,34 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, DASHBOARD_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/settings", method = GET)
     public void renderSettings() {
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "settings");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, SETTINGS_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/users", method = GET)
     public void renderUsers() {
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "users");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USERS_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/users", method = POST)
-    public void listUsersHTMX(UserCreateRequest request) {
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
-        if (!user.user().equals("admin")) {
-            sendHTMLResponse(FORBIDDEN, "You are not authorized to create users");
-            return;
-        }
-
+    public void createUser(UserCreateRequest request) {
+        // No manual role check needed anymore! The middleware handles it
         APIResponse<String> response = authService.createUser(request);
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
     }
@@ -126,16 +137,25 @@ public class BackofficeController extends Bragi {
     @Route(endpoint = "/backoffice/profile/:id", method = GET)
     public void renderUserProfile() {
         String userId = getPathParam("id");
-        User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+        String currentUserId = Tyr.getUserIdFromJWT(getCurrentToken());
+        User currentUser = authRepo.getUserById(Long.parseLong(currentUserId)).get();
+        
+        // Security check: Users can only view their own profile unless they're admin
+        boolean isAdmin = authorizationService.hasRole(currentUser.id(), "admin");
+        boolean isOwnProfile = userId.equals(currentUserId);
+        
+        if (!isOwnProfile && !isAdmin) {
+            JawsLogger.warn("BackofficeController: User {} attempted to access profile {} without permission", 
+                currentUserId, userId);
+            sendHTMLResponse(FORBIDDEN, "Access denied: You can only view your own profile");
+            return;
+        }
+        
         User user = authRepo.getUserById(Long.parseLong(userId)).get();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("currentUser",
-                getCurrentToken().isEmpty() ? "-" : currentUser.firstName() + " " + currentUser.lastName());
-        context.put("profilePicture", currentUser.profilePicture() != null && !currentUser.profilePicture().isEmpty()
-                ? currentUser.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
-
+        Map<String, String> context = getBaseContext(currentUser);
+        
+        // Add user-specific profile data
         context.put("userId", userId);
         context.put("username", user.user());
         context.put("userEmail", user.email() == null ? "" : user.email());
@@ -163,45 +183,44 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true)
     @Route(endpoint = "/backoffice/profile/:id", method = PATCH)
     public void updateUserProfile(UserUpdateRequest request) {
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
-
-        if (!user.user().equals("admin")) {
-            sendHTMLResponse(FORBIDDEN, "You are not authorized to create users");
+        String userId = getPathParam("id");
+        String currentUserId = Tyr.getUserIdFromJWT(getCurrentToken());
+        User currentUser = authRepo.getUserById(Long.parseLong(currentUserId)).get();
+        
+        // Security check: Users can only update their own profile unless they're admin
+        boolean isAdmin = authorizationService.hasRole(currentUser.id(), "admin");
+        boolean isOwnProfile = userId.equals(currentUserId);
+        
+        if (!isOwnProfile && !isAdmin) {
+            JawsLogger.warn("BackofficeController: User {} attempted to update profile {} without permission", 
+                currentUserId, userId);
+            sendHTMLResponse(FORBIDDEN, "Access denied: You can only update your own profile");
             return;
         }
+        
         APIResponse<String> response = authService
-                .updateUser(Integer.parseInt(getPathParam("id")), request);
+                .updateUser(Integer.parseInt(userId), request);
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/jobs", method = GET)
     public void renderJobs() {
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "jobs");
         setContext(context);
 
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, JOBS_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/logs", method = GET)
     public void renderLogs() {
         User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "logs");
         setContext(context);
 
@@ -210,7 +229,7 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, LOGS_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/logs/:id", method = GET)
     public void renderLogDetails() {
         String logId = getPathParam("id");
@@ -223,14 +242,10 @@ public class BackofficeController extends Bragi {
             return;
         }
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "logs");
         
+        // Add log-specific data
         context.put("logId", logId);
         context.put("logLevel", logRow.getString("level").orElse("UNKNOWN"));
         context.put("logMessage", logRow.getString("message").orElse(""));
@@ -248,7 +263,7 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, LOG_DETAILS_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/jobs/:id", method = GET)
     public void renderJobDetails() {
         String jobId = getPathParam("id");
@@ -261,14 +276,10 @@ public class BackofficeController extends Bragi {
             return;
         }
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+        Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "jobs");
         
+        // Add job-specific data
         context.put("jobId", jobId);
         context.put("jobType", jobRow.getString("type").orElse("Unknown"));
         context.put("jobStatus", jobRow.getString("status").orElse("UNKNOWN"));
@@ -290,7 +301,7 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, JOB_DETAILS_PAGE));
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/jobs", method = GET)
     public void listJobsHTMX() {
         try {
@@ -420,7 +431,7 @@ public class BackofficeController extends Bragi {
         }
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/jobs/:id/reprocess", method = POST)
     public void reprocessJobHTMX() {
         try {
@@ -495,7 +506,7 @@ public class BackofficeController extends Bragi {
         }
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/jobs/:id/delete", method = POST)
     public void deleteJobHTMX() {
         try {
@@ -519,7 +530,7 @@ public class BackofficeController extends Bragi {
         }
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/users", method = GET)
     public void listUsersHTMX() {
         if (!isHTMX()) {
@@ -585,7 +596,7 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, html.toString());
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/job-stats", method = GET)
     public void getJobStatsHTMX() {
         try {
@@ -672,7 +683,7 @@ public class BackofficeController extends Bragi {
         }
     }
 
-    @AccessControl(login = true)
+    @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/logs", method = GET)
     public void listLogsHTMX() {
         try {
@@ -822,5 +833,305 @@ public class BackofficeController extends Bragi {
             default -> "is-light";
         };
     }
+
+    // =============================================
+    // ROLE MANAGEMENT ENDPOINTS
+    // =============================================
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/backoffice/roles", method = GET)
+    public void renderRoles() {
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+
+        Map<String, String> context = getBaseContext(user);
+        context.put("currentPage", "roles");
+        setContext(context);
+
+        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, ROLES_PAGE));
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/backoffice/roles", method = POST)
+    public void createRole(RoleCreateRequest request) {
+        APIResponse<String> response = authorizationService.createRole(request.name(), request.description());
+        sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/backoffice/assign-role", method = POST)
+    public void assignRole(RoleAssignRequest request) {
+        JawsLogger.info("BackofficeController: Assign role request received");
+        
+        if (request == null) {
+            JawsLogger.warn("BackofficeController: Request object is null");
+            sendHTMLResponse(BAD_REQUEST, "Invalid request data");
+            return;
+        }
+        
+        JawsLogger.info("BackofficeController: Parsed request - userId: {}, roleId: {}", 
+            request.userId(), request.roleId());
+        
+        if (request.userId() == null || request.roleId() == null) {
+            JawsLogger.warn("BackofficeController: Missing required fields - userId: {}, roleId: {}", 
+                request.userId(), request.roleId());
+            sendHTMLResponse(BAD_REQUEST, "Missing required fields: userId and roleId are required");
+            return;
+        }
+        
+        // Get current user ID for audit trail
+        Integer assignedBy = Integer.parseInt(Tyr.getUserIdFromJWT(getCurrentToken()));
+        
+        APIResponse<String> response = authorizationService.assignRole(
+            request.userId(), 
+            request.roleId(), 
+            assignedBy
+        );
+        
+        JawsLogger.info("BackofficeController: Assign role response - code: {}, message: {}", 
+            response.code(), response.info());
+        
+        sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/roles", method = GET)
+    public void listRolesHTMX() {
+        List<Role> roles = authorizationService.getAllRoles();
+        
+        StringBuilder htmlBuilder = new StringBuilder();
+        
+        if (roles.isEmpty()) {
+            htmlBuilder.append("""
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                        No roles found. Create your first role!
+                    </td>
+                </tr>
+                """);
+        } else {
+            for (Role role : roles) {
+                int userCount = authorizationService.getUserCountForRole(role.id());
+                
+                htmlBuilder.append(String.format("""
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                                        <svg class="h-5 w-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.623 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                        </svg>                                        
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">%s</div>
+                                    <div class="text-sm text-gray-500">Role ID: %d</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">%s</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                %d users
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            %s
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                            <button
+                                class="text-red-600 hover:text-red-900"
+                                hx-delete="/htmx/backoffice/roles/%d"
+                                hx-confirm="Are you sure you want to delete this role? This action cannot be undone."
+                                hx-headers='{"Content-Type": "application/json"}'
+                                hx-swap="innerHTML transition:true"
+                                hx-target="#roles-table-body"
+                                hx-trigger="click">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    """,
+                    role.name(),
+                    role.id(),
+                    role.description() != null ? role.description() : "No description",
+                    userCount,
+                    role.createdAt() != null ? JawsUtils.formatUnixTimestamp(role.createdAt()) : "Unknown",
+                    role.id()
+                ));
+            }
+        }
+        
+        sendHTMLResponse(OK, htmlBuilder.toString());
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/user-roles", method = GET)
+    public void listUserRolesHTMX() {
+        List<UserRole> userRoles = authorizationService.getAllUserRoles();
+        
+        StringBuilder htmlBuilder = new StringBuilder();
+        
+        if (userRoles.isEmpty()) {
+            htmlBuilder.append("""
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                        No role assignments found. Start assigning roles to users!
+                    </td>
+                </tr>
+                """);
+        } else {
+            for (UserRole userRole : userRoles) {
+                // Get user and role details
+                User user = authRepo.getUserById(userRole.userId().longValue()).orElse(null);
+                Role role = authorizationService.getRoleById(userRole.roleId()).orElse(null);
+                User assignedByUser = userRole.assignedBy() != null ? 
+                    authRepo.getUserById(userRole.assignedBy().longValue()).orElse(null) : null;
+                
+                if (user != null && role != null) {
+                    htmlBuilder.append(String.format("""
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <img class="h-10 w-10 rounded-full" src="%s" alt="">
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">%s %s</div>
+                                        <div class="text-sm text-gray-500">@%s</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                                    %s
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                %s
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                %s
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button
+                                    class="text-red-600 hover:text-red-900"
+                                    hx-delete="/htmx/backoffice/user-roles/%d"
+                                    hx-confirm="Are you sure you want to remove this role from the user?"
+                                    hx-headers='{"Content-Type": "application/json"}'
+                                    hx-swap="innerHTML transition:true"
+                                    hx-target="#user-roles-table-body"
+                                    hx-trigger="click">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                        """,
+                        user.profilePicture() != null && !user.profilePicture().isEmpty() ? 
+                            user.profilePicture() : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg",
+                        user.firstName() != null ? user.firstName() : "",
+                        user.lastName() != null ? user.lastName() : "",
+                        user.user(),
+                        role.name(),
+                        userRole.assignedAt() != null ? JawsUtils.formatUnixTimestamp(userRole.assignedAt()) : "Unknown",
+                        assignedByUser != null ? assignedByUser.user() : "System",
+                        userRole.id()
+                    ));
+                }
+            }
+        }
+        
+        sendHTMLResponse(OK, htmlBuilder.toString());
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/users-list", method = GET)
+    public void listUsersForDropdownHTMX() {
+        List<User> users = authRepo.getAllUsers();
+        
+        StringBuilder htmlBuilder = new StringBuilder();
+        htmlBuilder.append("<option value=\"\">Select a user...</option>");
+        
+        for (User user : users) {
+            htmlBuilder.append(String.format("""
+                <option value="%d">%s %s (@%s)</option>
+                """,
+                user.id(),
+                user.firstName() != null ? user.firstName() : "",
+                user.lastName() != null ? user.lastName() : "",
+                user.user()
+            ));
+        }
+        
+        sendHTMLResponse(OK, htmlBuilder.toString());
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/roles-list", method = GET)
+    public void listRolesForDropdownHTMX() {
+        List<Role> roles = authorizationService.getAllRoles();
+        
+        StringBuilder htmlBuilder = new StringBuilder();
+        htmlBuilder.append("<option value=\"\">Select a role...</option>");
+        
+        for (Role role : roles) {
+            htmlBuilder.append(String.format("""
+                <option value="%d">%s - %s</option>
+                """,
+                role.id(),
+                role.name(),
+                role.description() != null ? role.description() : "No description"
+            ));
+        }
+        
+        sendHTMLResponse(OK, htmlBuilder.toString());
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/roles/:id", method = DELETE)
+    public void deleteRoleHTMX() {
+        try {
+            Integer roleId = Integer.parseInt(getPathParam("id"));
+            APIResponse<String> response = authorizationService.deleteRole(roleId);
+            
+            if (response.code().equals("200 OK")) {
+                // Return updated roles table
+                listRolesHTMX();
+            } else {
+                sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), 
+                    "<div class=\"text-red-600\">" + response.info() + "</div>");
+            }
+        } catch (NumberFormatException e) {
+            sendHTMLResponse(BAD_REQUEST, "<div class=\"text-red-600\">Invalid role ID</div>");
+        }
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/user-roles/:id", method = DELETE)
+    public void removeUserRoleHTMX() {
+        try {
+            Integer userRoleId = Integer.parseInt(getPathParam("id"));
+            APIResponse<String> response = authorizationService.removeUserRole(userRoleId);
+            
+            if (response.code().equals("200 OK")) {
+                // Return updated user-roles table
+                listUserRolesHTMX();
+            } else {
+                sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), 
+                    "<div class=\"text-red-600\">" + response.info() + "</div>");
+            }
+        } catch (NumberFormatException e) {
+            sendHTMLResponse(BAD_REQUEST, "<div class=\"text-red-600\">Invalid user role ID</div>");
+        }
+    }
+
+    // =============================================
+    // DTOs for Role Management
+    // =============================================
+    
+    public record RoleCreateRequest(String name, String description) {}
+    public record RoleAssignRequest(Integer userId, Integer roleId) {}
 
 }

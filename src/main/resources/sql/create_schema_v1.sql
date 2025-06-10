@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS USER
     website               TEXT,
     last_login            INTEGER,
     is_active             INTEGER DEFAULT 1,
-    is_superuser          INTEGER DEFAULT 0,
     failed_login_attempts INTEGER DEFAULT 0,
     lockout_until         INTEGER,
     created_at            INTEGER NOT NULL,
@@ -42,6 +41,43 @@ CREATE TABLE IF NOT EXISTS USER_SESSION
 
 CREATE INDEX IF NOT EXISTS idx_user_session_refresh_token ON USER_SESSION (refresh_token);
 CREATE INDEX IF NOT EXISTS idx_user_session_access_token ON USER_SESSION (access_token);
+
+-- =============================================
+-- ROLE-BASED AUTHORIZATION SYSTEM
+-- =============================================
+
+-- Roles table
+CREATE TABLE IF NOT EXISTS ROLE (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT    NOT NULL UNIQUE,        -- e.g., 'admin', 'editor', 'moderator', 'user'
+    description TEXT,                           -- Human-readable description
+    created_at  INTEGER NOT NULL,               -- When role was created
+    updated_at  INTEGER                         -- When role was last updated
+);
+
+-- User-Role relationship (many-to-many)
+CREATE TABLE IF NOT EXISTS USER_ROLE (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,               -- Reference to user
+    role_id     INTEGER NOT NULL,               -- Reference to role
+    assigned_at INTEGER NOT NULL,               -- When role was assigned
+    assigned_by INTEGER,                        -- User ID who assigned this role (optional)
+    FOREIGN KEY (user_id) REFERENCES USER (id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES ROLE (id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES USER (id) ON DELETE SET NULL,
+    UNIQUE(user_id, role_id)                   -- Prevent duplicate role assignments
+);
+
+-- Indexes for role system performance
+CREATE INDEX IF NOT EXISTS idx_user_role_user_id ON USER_ROLE (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_role_role_id ON USER_ROLE (role_id);
+CREATE INDEX IF NOT EXISTS idx_user_role_assigned_at ON USER_ROLE (assigned_at);
+CREATE INDEX IF NOT EXISTS idx_role_name ON ROLE (name);
+
+-- Insert default roles
+INSERT INTO ROLE (name, description, created_at) VALUES 
+('admin', 'Full system administrator', strftime('%s', 'now')),
+('user', 'Standard user', strftime('%s', 'now'));
 
 CREATE TABLE IF NOT EXISTS PASTE
 (
