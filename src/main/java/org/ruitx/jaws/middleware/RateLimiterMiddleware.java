@@ -1,6 +1,7 @@
 package org.ruitx.jaws.middleware;
 
 import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
 import org.ruitx.jaws.utils.JawsLogger;
@@ -16,8 +17,8 @@ public class RateLimiterMiddleware implements Middleware {
     // Store request counts by IP
     private final Map<String, RequestCounter> requestCounts = new ConcurrentHashMap<>();
 
-    private final int maxRequestsPerWindow = 100;
-    private final int windowSizeMs = 60000;
+    private final int maxRequestsPerWindow = ApplicationConfig.RATE_LIMIT_MAX_REQUESTS;
+    private final int windowSizeMs = ApplicationConfig.RATE_LIMIT_WINDOW_MS;
 
     private int order = 10;
 
