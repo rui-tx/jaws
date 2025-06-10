@@ -10,6 +10,12 @@ import org.ruitx.jaws.utils.JawsLogger;
  */
 public class LoggingMiddleware implements Middleware {
 
+    private int order = 10;
+
+    public LoggingMiddleware(int order) {
+        this.order = order;
+    }
+
     @Override
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
@@ -42,6 +48,6 @@ public class LoggingMiddleware implements Middleware {
 
     @Override
     public int getOrder() {
-        return 5; // Execute very early in the chain
+        return order; // Execute very early in the chain
     }
 } 

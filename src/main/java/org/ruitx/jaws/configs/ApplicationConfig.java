@@ -31,6 +31,10 @@ public class ApplicationConfig {
     public static final long DEFAULT_FLUSH_INTERVAL_MS = 5000;
     public static final int DEFAULT_BUFFER_CAPACITY = 10000;
 
+    // RateLimiter
+    public static final int DEFAULT_RATE_LIMIT_MAX_REQUESTS = 100;
+    public static final int DEFAULT_RATE_LIMIT_WINDOW_MS = 60000;
+
     // Static fields for configuration
     public static final String URL;
     public static final int PORT;
@@ -53,6 +57,10 @@ public class ApplicationConfig {
     public static final int BATCH_SIZE;
     public static final long FLUSH_INTERVAL_MS;
     public static final int BUFFER_CAPACITY;
+
+    // RateLimiter
+    public static final int RATE_LIMIT_MAX_REQUESTS;
+    public static final int RATE_LIMIT_WINDOW_MS;
 
     private static final Properties properties = new Properties();
 
@@ -87,6 +95,10 @@ public class ApplicationConfig {
         FLUSH_INTERVAL_MS = getFlushIntervalMsValue();
         BUFFER_CAPACITY = getBufferCapacityValue();
         
+        // Initialize RateLimiter configuration
+        RATE_LIMIT_MAX_REQUESTS = getRateLimitMaxRequestsValue();
+        RATE_LIMIT_WINDOW_MS = getRateLimitWindowMsValue();
+        
         JawsLogger.info("JAWS Configuration");
         JawsLogger.info("--------------------------------");
         JawsLogger.info("URL: " + URL);
@@ -106,6 +118,8 @@ public class ApplicationConfig {
         JawsLogger.info("BATCH_SIZE: " + BATCH_SIZE);
         JawsLogger.info("FLUSH_INTERVAL_MS: " + FLUSH_INTERVAL_MS);
         JawsLogger.info("BUFFER_CAPACITY: " + BUFFER_CAPACITY);
+        JawsLogger.info("RATE_LIMIT_MAX_REQUESTS: " + RATE_LIMIT_MAX_REQUESTS);
+        JawsLogger.info("RATE_LIMIT_WINDOW_MS: " + RATE_LIMIT_WINDOW_MS);
         JawsLogger.info("--------------------------------");
     }
 
@@ -330,6 +344,50 @@ public class ApplicationConfig {
         }
 
         return DEFAULT_BUFFER_CAPACITY;
+    }
+
+    private static int getRateLimitMaxRequestsValue() {
+        String envValue = System.getenv("RATE_LIMIT_MAX_REQUESTS");
+        if (envValue != null) {
+            try {
+                return Integer.parseInt(envValue);
+            } catch (NumberFormatException e) {
+                JawsLogger.warn("Invalid RATE_LIMIT_MAX_REQUESTS environment variable value: " + envValue);
+            }
+        }
+
+        String propValue = properties.getProperty("ratelimiter.max.requests");
+        if (propValue != null) {
+            try {
+                return Integer.parseInt(propValue);
+            } catch (NumberFormatException e) {
+                JawsLogger.warn("Invalid ratelimiter.max.requests in properties file: " + propValue);
+            }
+        }
+
+        return DEFAULT_RATE_LIMIT_MAX_REQUESTS;
+    }
+
+    private static int getRateLimitWindowMsValue() {
+        String envValue = System.getenv("RATE_LIMIT_WINDOW_MS");
+        if (envValue != null) {
+            try {
+                return Integer.parseInt(envValue);
+            } catch (NumberFormatException e) {
+                JawsLogger.warn("Invalid RATE_LIMIT_WINDOW_MS environment variable value: " + envValue);
+            }
+        }
+
+        String propValue = properties.getProperty("ratelimiter.window.ms");
+        if (propValue != null) {
+            try {
+                return Integer.parseInt(propValue);
+            } catch (NumberFormatException e) {
+                JawsLogger.warn("Invalid ratelimiter.window.ms in properties file: " + propValue);
+            }
+        }
+
+        return DEFAULT_RATE_LIMIT_WINDOW_MS;
     }
 
     private static String getConfigValue(String envKey, String propKey, String defaultValue) {

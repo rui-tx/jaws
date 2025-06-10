@@ -1,7 +1,5 @@
 package org.ruitx.jaws.components;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.MultipartConfigElement;
@@ -380,103 +378,42 @@ public class Yggdrasill {
                         Class<?>[] parameterTypes = routeMethod.getParameterTypes();
                         Object[] parameters = new Object[parameterTypes.length];
 
-                        // Handle request body deserialization if needed
+                        // Handle request body parameter assignment
                         if (parameterTypes.length > 0) {
                             String contentType = context.getHeader(CONTENT_TYPE.getHeaderName());
-                            String requestBodyTrimmed = context.requestBody != null ? context.requestBody.trim() : "";
-                            
-                            // For POST/PUT/PATCH requests that expect a request body parameter,
-                            // we need to ensure proper JSON content type and non-empty body
-                            // UNLESS it's a multipart request (which is handled differently)
-                            String httpMethod = context.request.getMethod().toUpperCase();
-                            boolean expectsRequestBody = httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH");
                             boolean isMultipartRequest = contentType != null && contentType.contains("multipart/form-data");
                             
-                            if (expectsRequestBody && !isMultipartRequest) {
-                                // Check for missing Content-Type header
-                                if (contentType == null || !contentType.contains("application/json")) {
-                                    APIResponse<String> response = APIResponse.error(
-                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                            "Content-Type header must be 'application/json' for " + httpMethod + " requests"
-                                    );
-                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                    return true;
-                                }
-                                
-                                // Check for empty request body
-                                if (requestBodyTrimmed.isEmpty()) {
-                                    APIResponse<String> response = APIResponse.error(
-                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                            "Request body is required for " + httpMethod + " requests. Please provide a valid JSON body."
-                                    );
-                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                    return true;
-                                }
-                            }
-
-                            // If we have a request body, process it (only for non-multipart requests)
-                            if (!requestBodyTrimmed.isEmpty() && !isMultipartRequest) {
-                                try {
-                                    ObjectMapper mapper = Odin.getMapper();
-
-                                    // Deserialize the object
-                                    parameters[0] = mapper.readValue(requestBodyTrimmed, parameterTypes[0]);
-                                    
-                                    // Validate the deserialized object using Jakarta Bean Validation
-                                    APIResponse<String> validationError = JawsValidation.validate(parameters[0]);
-                                    if (validationError != null) {
-                                        sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(validationError));
-                                        return true;
-                                    }
-                                } catch (JsonParseException e) {
-                                    APIResponse<String> response = APIResponse.error(
-                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                            "Invalid JSON format: " + e.getOriginalMessage()
-                                    );
-                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                    return true;
-                                } catch (JsonMappingException e) {
-                                    // Handle unknown fields or mapping issues
-                                    String originalMessage = e.getOriginalMessage();
-                                    if (originalMessage != null && originalMessage.contains("Unrecognized field")) {
-                                        // Extract the field name from the error message
-                                        String fieldName = extractFieldNameFromError(originalMessage);
+                            if (isMultipartRequest) {
+                                // For multipart requests, we still need to handle deserialization here
+                                // as the middleware skips multipart validation
+                                String requestBodyTrimmed = context.requestBody != null ? context.requestBody.trim() : "";
+                                if (!requestBodyTrimmed.isEmpty()) {
+                                    try {
+                                        ObjectMapper mapper = Odin.getMapper();
+                                        parameters[0] = mapper.readValue(requestBodyTrimmed, parameterTypes[0]);
+                                        
+                                        // Validate the deserialized object using Jakarta Bean Validation
+                                        APIResponse<String> validationError = JawsValidation.validate(parameters[0]);
+                                        if (validationError != null) {
+                                            sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(validationError));
+                                            return true;
+                                        }
+                                    } catch (Exception e) {
                                         APIResponse<String> response = APIResponse.error(
                                                 ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                                String.format("Unknown field '%s'. Accepted fields are: content, title, language, expiresInHours, isPrivate, password", fieldName)
-                                        );
-                                        sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                        return true;
-                                    } else {
-                                        APIResponse<String> response = APIResponse.error(
-                                                ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                                "JSON mapping error: " + (originalMessage != null ? originalMessage : e.getMessage())
+                                                "Error processing multipart request body: " + e.getMessage()
                                         );
                                         sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
                                         return true;
                                     }
-                                } catch (IllegalArgumentException e) {
-                                    // This is thrown by validateRequestFields when validation fails
-                                    // The error response is already sent in validateRequestFields
-                                    return true;
-                                } catch (Exception e) {
-                                    APIResponse<String> response = APIResponse.error(
-                                            ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                            "Error processing request body: " + e.getMessage()
-                                    );
-                                    sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                    return true;
                                 }
-                            } else if (parameterTypes.length > 0 && expectsRequestBody && !isMultipartRequest) {
-                                // If we reach here, it means we have parameters expected but no body was provided
-                                // This shouldn't happen due to the checks above, but let's be safe
-                                // Skip this check for multipart requests as they're handled differently
-                                APIResponse<String> response = APIResponse.error(
-                                        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-                                        "Request body is required but was not provided"
-                                );
-                                sendJSONResponse(context, ResponseCode.BAD_REQUEST, Bragi.encode(response));
-                                return true;
+                            } else {
+                                // For non-multipart requests, use the validated object from middleware
+                                Object validatedRequestBody = context.getValidatedRequestBody();
+                                if (validatedRequestBody != null) {
+                                    parameters[0] = validatedRequestBody;
+                                    JawsLogger.debug("Using validated request body from middleware for controller method");
+                                }
                             }
                         }
 
@@ -525,26 +462,6 @@ public class Yggdrasill {
                 } catch (Exception ex) {
                     JawsLogger.error("Failed to send error response: {}", ex.getMessage());
                 }
-            }
-        }
-
-        /**
-         * Extracts the field name from Jackson's error message for unknown fields.
-         * Example: "Unrecognized field \"contednt\" (class ...)" -> "contednt"
-         */
-        private String extractFieldNameFromError(String errorMessage) {
-            try {
-                // Look for the pattern: "field \"fieldname\""
-                int startQuote = errorMessage.indexOf('"');
-                if (startQuote != -1) {
-                    int endQuote = errorMessage.indexOf('"', startQuote + 1);
-                    if (endQuote != -1) {
-                        return errorMessage.substring(startQuote + 1, endQuote);
-                    }
-                }
-                return "unknown";
-            } catch (Exception e) {
-                return "unknown";
             }
         }
 
@@ -816,6 +733,7 @@ public class Yggdrasill {
         private Map<String, Part> multipartFiles = new LinkedHashMap<>();
         private String currentToken;
         private String requestBody;
+        private Object validatedRequestBody;
 
         public RequestContext(HttpServletRequest request, HttpServletResponse response, String resourcesPath) {
             this.request = request;
@@ -879,14 +797,25 @@ public class Yggdrasill {
                 if (contentType != null && contentType.contains("multipart/form-data")) {
                     requestBody = ""; // Set empty for multipart requests
                     multipartFiles = extractMultipartFiles(request);
+                } else if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+                    // For form-encoded requests, be more careful with stream reading
+                    // This prevents the STREAMED error that occurs when the servlet container
+                    // expects to handle form data but we consume the stream
+                    try {
+                        requestBody = request.getReader().lines().collect(Collectors.joining("\n"));
+                        bodyParams = extractBodyParameters(requestBody);
+                    } catch (Exception e) {
+                        // If reading fails, set empty values to prevent further issues
+                        JawsLogger.debug("Could not read form-encoded request body: {}", e.getMessage());
+                        requestBody = "";
+                        bodyParams = new LinkedHashMap<>();
+                    }
                 } else {
-                    // For non-multipart requests, read the body as text
+                    // For non-multipart, non-form requests (like JSON), read the body as text
                     requestBody = request.getReader().lines().collect(Collectors.joining("\n"));
                     
-                    // Extract body parameters if it's form data
-                    if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
-                        bodyParams = extractBodyParameters(requestBody);
-                    } else if (contentType != null && contentType.contains("application/json")) {
+                    // Extract body parameters if it's JSON
+                    if (contentType != null && contentType.contains("application/json")) {
                         bodyParams = parseJsonBody(requestBody);
                     }
                 }
@@ -1026,6 +955,14 @@ public class Yggdrasill {
 
         public String getHeader(String name) {
             return headers.get(name);
+        }
+
+        public Object getValidatedRequestBody() {
+            return validatedRequestBody;
+        }
+
+        public void setValidatedRequestBody(Object validatedRequestBody) {
+            this.validatedRequestBody = validatedRequestBody;
         }
 
         public String getClientIpAddress() {

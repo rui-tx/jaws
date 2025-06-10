@@ -138,7 +138,8 @@ public abstract class Bragi {
     }
 
     public void sendErrorResponse(String code, String message) {
-        sendJSONResponse(false, ResponseCode.valueOf(code), message, null);
+        ResponseCode responseCode = ResponseCode.fromCodeAndMessage(code);
+        sendJSONResponse(false, responseCode, message, null);
     }
 
     /**

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Code Formatter</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            background-color: #fafafa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        h1, h3 {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: #666;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: vertical;
+            background-color: #fff;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        textarea:focus {
+            border-color: #666;
+        }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .left-options {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .right-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #f5f5f5;
+            border-color: #999;
+        }
+
+        button:active {
+            background-color: #eee;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .option-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .option-group input,
+        .option-group select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #fff;
+            transition: border-color 0.2s;
+        }
+
+        .option-group input:focus,
+        .option-group select:focus {
+            outline: none;
+            border-color: #666;
+        }
+
+        .indent-option input {
+            width: 50px;
+        }
+
+        pre {
+            background-color: #1e1e1e;
+            border-radius: 4px;
+            overflow: auto;
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        .result-container {
+            position: relative;
+            margin-top: 2rem;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            z-index: 10;
+            background-color: #f0f8ff;
+            border-color: #d1e7ff;
+            color: #0066cc;
+        }
+
+        .copy-btn:hover {
+            background-color: #e6f3ff;
+            border-color: #b3d9ff;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem 0.5rem;
+            }
+
+            .form-options {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .right-options {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            textarea {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Code Formatter</h1>
+
+    <textarea id="input" placeholder="Paste your code here..."></textarea>
+
+    <div class="form-options">
+        <div class="left-options">
+            <div class="option-group">
+                <label for="lang">Language:</label>
+                <select id="lang">
+                    <option value="javascript">JavaScript</option>
+                    <option value="java">Java</option>
+                    <option value="json">JSON</option>
+                    <option value="html">HTML</option>
+                    <option value="xml">XML</option>
+                    <option value="css">CSS</option>
+                    <option value="python">Python</option>
+                    <option value="sql">SQL</option>
+                    <option value="typescript">TypeScript</option>
+                </select>
+            </div>
+
+            <div class="option-group indent-option">
+                <label for="indentSize">Indent size:</label>
+                <input id="indentSize" max="8" min="1" type="number" value="4">
+            </div>
+        </div>
+
+        <div class="right-options">
+            <button id="formatBtn">Format</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+
+    <div class="result-container">
+        <h3></h3>
+        <button class="copy-btn" id="copyBtn">Copy</button>
+        <pre><code class="" id="output"></code></pre>
+    </div>
+</div>
+
+<!-- Scripts remain unchanged -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.13/beautify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.13/beautify-html.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.13/beautify-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+<script src="https://unpkg.com/prettier@2.8.4/standalone.js"></script>
+<script src="https://unpkg.com/prettier@2.8.4/parser-java.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql-formatter/4.0.2/sql-formatter.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const langBeautifiers = {
+            javascript: (code, options) => js_beautify(code, options),
+            json: (code, options) => {
+                try {
+                    const jsonObj = JSON.parse(code);
+                    return JSON.stringify(jsonObj, null, options.indent_size);
+                } catch (e) {
+                    console.error("Invalid JSON:", e);
+                    return js_beautify(code, options);
+                }
+            },
+            html: (code, options) => html_beautify(code, options),
+            css: (code, options) => css_beautify(code, options),
+            java: (code, options) => {
+                try {
+                    return prettier.format(code, {
+                        parser: "java",
+                        plugins: [prettierPlugins.java],
+                        tabWidth: options.indent_size
+                    });
+                } catch (e) {
+                    console.error("Java formatting failed:", e);
+                    return code;
+                }
+            },
+            xml: (code, options) => {
+                const xmlOptions = {
+                    ...options,
+                    wrap_attributes: 'auto',
+                    indent_inner_html: true,
+                    extra_liners: []
+                };
+                return html_beautify(code, xmlOptions);
+            },
+            python: (code) => code,
+            sql: (code, options) => {
+                try {
+                    return window.sqlFormatter ? window.sqlFormatter.format(code, {
+                        indent: ' '.repeat(options.indent_size)
+                    }) : code;
+                } catch (e) {
+                    console.error("SQL formatting failed:", e);
+                    return code;
+                }
+            },
+            typescript: (code, options) => js_beautify(code, options)
+        };
+
+        document.getElementById('formatBtn').addEventListener('click', formatCode);
+        document.getElementById('copyBtn').addEventListener('click', copyFormattedCode);
+        document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+        function formatCode() {
+            const lang = document.getElementById('lang').value;
+            const indentSize = parseInt(document.getElementById('indentSize').value);
+            let code = document.getElementById('input').value;
+
+            if (!code.trim()) {
+                return;
+            }
+
+            if (langBeautifiers[lang]) {
+                try {
+                    const options = {
+                        indent_size: indentSize,
+                        indent_with_tabs: false,
+                        preserve_newlines: true,
+                        max_preserve_newlines: 2,
+                        space_in_paren: false
+                    };
+
+                    code = langBeautifiers[lang](code, options);
+                } catch (e) {
+                    console.error("Formatting error:", e);
+                }
+            }
+
+            const output = document.getElementById('output');
+            if (output.getAttribute('data-highlighted') === 'yes') {
+                output.removeAttribute('data-highlighted');
+            }
+
+            output.textContent = code;
+            output.className = lang;
+            hljs.highlightElement(output);
+        }
+
+        function copyFormattedCode() {
+            const output = document.getElementById('output');
+            const textarea = document.createElement('textarea');
+            textarea.value = output.textContent;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = 'Copy';
+            }, 2000);
+        }
+
+        function resetAll() {
+            document.getElementById('input').value = '';
+            const output = document.getElementById('output');
+            output.textContent = '';
+            output.className = '';
+
+            if (output.getAttribute('data-highlighted') === 'yes') {
+                output.removeAttribute('data-highlighted');
+            }
+
+            document.getElementById('indentSize').value = '4';
+            document.getElementById('lang').selectedIndex = 0;
+        }
+    });
+</script>
+</body>
+</html>

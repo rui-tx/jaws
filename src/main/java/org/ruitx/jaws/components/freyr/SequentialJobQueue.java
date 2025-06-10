@@ -51,7 +51,7 @@ public class SequentialJobQueue {
             boolean added = sequentialQueue.offer(job);
             if (added) {
                 totalJobs.incrementAndGet();
-                Logger.info("Sequential job queued: {}", job);
+                Logger.debug("Sequential job queued: {}", job);
             } else {
                 Logger.warn("Sequential queue is full, rejected job: {}", job);
             }
@@ -159,14 +159,14 @@ public class SequentialJobQueue {
             processingJob.set(true);
             
             try {
-                Logger.info("Processing sequential job: {}", job);
+                Logger.debug("Processing sequential job: {}", job);
                 
                 updateJobStatus(job.getId(), Freyr.JobStatus.PROCESSING, null, Instant.now().toEpochMilli(), null);
                 job.execute();
                 updateJobStatus(job.getId(), Freyr.JobStatus.COMPLETED, null, null, Instant.now().toEpochMilli());
                 
                 completedJobs.incrementAndGet();
-                Logger.info("Completed sequential job: {}", job.getId());
+                Logger.debug("Completed sequential job: {}", job.getId());
                 
             } catch (Exception e) {
                 Logger.error("Failed to process sequential job {}: {}", job.getId(), e.getMessage(), e);

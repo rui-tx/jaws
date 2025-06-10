@@ -3,7 +3,6 @@ package org.ruitx.www.jobs;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.freyr.BaseJob;
 import org.ruitx.jaws.components.freyr.ExecutionMode;
-import org.ruitx.jaws.utils.LogEntry;
 import org.tinylog.Logger;
 
 import java.util.List;
@@ -21,7 +20,7 @@ public class BatchLogWriterJob extends BaseJob {
     
     // Use SEQUENTIAL mode to ensure ordered log writes and avoid database contention
     public BatchLogWriterJob(Map<String, Object> payload) {
-        super(JOB_TYPE, ExecutionMode.PARALLEL, 1, 3, 30000L, payload); // High priority (1), 3 retries, 30s timeout
+        super(JOB_TYPE, ExecutionMode.SEQUENTIAL, 1, 3, 30000L, payload); // High priority (1), 3 retries, 30s timeout
     }
     
     @Override

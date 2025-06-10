@@ -1,44 +1,53 @@
 package org.ruitx.www.dto.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import org.ruitx.www.validation.Validatable;
 
 import java.util.Optional;
 
 public record UserCreateRequest(
-        @JsonProperty("username") String username,
-        @JsonProperty("firstName") String firstName,
-        @JsonProperty("lastName") String lastName,
-        @JsonProperty("password") String password,
-        @JsonProperty("passwordConfirmation") String passwordConfirmation
-) {
+        @JsonProperty("username") 
+        @NotNull(message = "Username is required")
+        @NotBlank(message = "Username cannot be empty")
+        @Size(min = 3, message = "Username must be at least 3 characters long")
+        @Size(max = 16, message = "Username cannot exceed 16 characters")
+        String username,
 
-    public static Optional<String> isValid(UserCreateRequest request) {
-        if (request == null)
-            return Optional.of("Request cannot be null");
+        @JsonProperty("firstName") 
+        @NotNull(message = "First name is required")
+        @NotBlank(message = "First name cannot be empty")
+        @Size(max = 100, message = "First name cannot exceed 100 characters")
+        String firstName,
 
-        if (request.username() == null || request.username().isEmpty())
-            return Optional.of("Username cannot be null or empty");
+        @JsonProperty("lastName") 
+        @NotNull(message = "Last name is required")
+        @NotBlank(message = "Last name cannot be empty")
+        @Size(max = 100, message = "Last name cannot exceed 100 characters")
+        String lastName,
 
-        if (request.password() == null || request.password().isEmpty())
-            return Optional.of("Password cannot be null or empty");
+        @JsonProperty("password") 
+        @NotNull(message = "Password is required")
+        @NotBlank(message = "Password cannot be empty")
+        @Size(min = 8, message = "Password must be at least 8 characters long")
+        @Size(max = 16, message = "Password cannot exceed 16 characters")
+        String password,
 
-        if (request.passwordConfirmation() == null || request.passwordConfirmation().isEmpty())
-            return Optional.of("Password confirmation cannot be null or empty");
+        @JsonProperty("passwordConfirmation") 
+        @NotNull(message = "Password confirmation is required")
+        @NotBlank(message = "Password confirmation cannot be empty")
+        @Size(min = 8, message = "Password confirmation must be at least 8 characters long")
+        @Size(max = 16, message = "Password confirmation cannot exceed 16 characters")
+        String passwordConfirmation
+        
+) implements Validatable {
 
-        if (!request.password().equals(request.passwordConfirmation()))
+    @Override
+    public Optional<String> isValid() {
+        if (!this.password().equals(this.passwordConfirmation()))
             return Optional.of("Passwords do not match");
-
-        if (request.firstName() == null || request.firstName().isEmpty())
-            return Optional.of("First name cannot be null or empty");
-
-        if (request.lastName() == null || request.lastName().isEmpty())
-            return Optional.of("Last name cannot be null or empty");
-
-        if (request.username().length() < 3)
-            return Optional.of("Username must be at least 3 characters long");
-
-        if (request.password().length() < 8)
-            return Optional.of("Password must be at least 8 characters long");
 
         return Optional.empty();
     }
