@@ -163,13 +163,12 @@ public class Mimir {
         String lastName = "Doe";
         String hashedPassword =
                 BCrypt.withDefaults().hashToString(12, password.orElse("Lee7Pa$$w00rd").toCharArray());
-        executeSql("INSERT INTO USER (user, password_hash, email, first_name, last_name, is_superuser, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        executeSql("INSERT INTO USER (user, password_hash, email, first_name, last_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 "admin",
                 hashedPassword,
                 email,
                 firstName,
                 lastName,
-                true,
                 Date.from(Instant.now())
         );
         Logger.info("A new admin user has been created with username 'admin' and password '"

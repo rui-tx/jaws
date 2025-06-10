@@ -70,8 +70,6 @@ public class AuthService {
                 .location(updateRequest.location() != null ? updateRequest.location() : currentUser.location())
                 .website(updateRequest.website() != null ? updateRequest.website() : currentUser.website())
                 .isActive(updateRequest.isActive() != null ? updateRequest.isActive() : currentUser.isActive())
-                .isSuperuser(
-                        updateRequest.isSuperuser() != null ? updateRequest.isSuperuser() : currentUser.isSuperuser())
                 .lockoutUntil(updateRequest.lockoutUntil() != null ? updateRequest.lockoutUntil()
                         : currentUser.lockoutUntil())
                 .createdAt(currentUser.createdAt())
