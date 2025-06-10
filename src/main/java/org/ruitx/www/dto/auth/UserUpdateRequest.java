@@ -6,10 +6,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
-import org.ruitx.www.validation.Validatable;
 
 import java.time.Instant;
 import java.util.Optional;
+
+import org.ruitx.jaws.interfaces.Validatable;
 
 public record UserUpdateRequest(
     @JsonProperty("password") 

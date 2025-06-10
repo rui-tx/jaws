@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.ruitx.www.validation.Validatable;
 
 import java.util.Optional;
+
+import org.ruitx.jaws.interfaces.Validatable;
 
 public record UserCreateRequest(
         @JsonProperty("username") 

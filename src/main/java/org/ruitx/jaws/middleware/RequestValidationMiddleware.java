@@ -10,12 +10,12 @@ import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.interfaces.Validatable;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.jaws.utils.JawsValidation;
-import org.ruitx.www.validation.Validatable;
 
 import java.lang.reflect.Method;
 import java.util.Optional;

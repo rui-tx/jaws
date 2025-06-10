@@ -1,4 +1,4 @@
-package org.ruitx.www.validation;
+package org.ruitx.jaws.interfaces;
 
 import java.util.Optional;
 

@@ -2,7 +2,7 @@ package org.ruitx.www.dto.auth;
 
 import java.util.Optional;
 
-import org.ruitx.www.validation.Validatable;
+import org.ruitx.jaws.interfaces.Validatable;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
