@@ -42,6 +42,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                 </button>
+                
+                <!-- Desktop sidebar toggle button -->
+                <button class="hidden lg:block p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100" id="sidebar-toggle-button">
+                    <span class="sr-only">Toggle sidebar</span>
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                </button>
             </div>
             
             <div class="flex items-center space-x-4">
@@ -99,21 +107,21 @@
     </nav>
 
     <!-- Sidebar -->
-    <aside class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg border-r border-gray-200 pt-16 overflow-y-auto lg:translate-x-0 transform -translate-x-full transition-transform duration-200 ease-in-out" id="sidebar">
-        <div class="px-4 py-6">
+    <aside class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg border-r border-gray-200 pt-16 overflow-y-auto lg:translate-x-0 transform -translate-x-full transition-all duration-200 ease-in-out sidebar-expanded" id="sidebar">
+        <div class="px-4 py-6 transition-all duration-200">
             <div class="mb-8">
-                <h2 class="text-xl font-bold text-gray-900"><span class="font-extrabold">Jaws</span> Backoffice</h2>
+                <h2 class="text-xl font-bold text-gray-900 sidebar-text"><span class="font-extrabold">Jaws</span> Backoffice</h2>
             </div>
             
             <nav class="space-y-1">
-                <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">General</p>
+                <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 sidebar-text">General</p>
                 
                 <!-- Dashboard link -->
                 <a th:class="${currentPage == 'dashboard'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice">
                     <svg th:class="${currentPage == 'dashboard'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
                     </svg>
-                    Dashboard
+                    <span class="sidebar-text">Dashboard</span>
                 </a>
 
                 <!-- Users link -->
@@ -121,7 +129,7 @@
                     <svg th:class="${currentPage == 'users'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                     </svg>
-                    Users
+                    <span class="sidebar-text">Users</span>
                 </a>
 
                 <!-- Roles link -->
@@ -129,7 +137,7 @@
                     <svg th:class="${currentPage == 'roles'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                     </svg>
-                    Roles
+                    <span class="sidebar-text">Roles</span>
                 </a>
 
                 <!-- Jobs link -->
@@ -137,7 +145,7 @@
                     <svg th:class="${currentPage == 'jobs'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
                     </svg>
-                    Jobs
+                    <span class="sidebar-text">Jobs</span>
                 </a>
 
                 <!-- Logs link -->
@@ -145,7 +153,7 @@
                     <svg th:class="${currentPage == 'logs'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c0 .621-.504 1.125-1.125 1.125H11.25a9 9 0 01-9-9V3.375c0-.621.504-1.125 1.125-1.125z" />
                     </svg>
-                    Logs
+                    <span class="sidebar-text">Logs</span>
                 </a>
 
                 <!-- Settings link -->
@@ -154,7 +162,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    Settings
+                    <span class="sidebar-text">Settings</span>
                 </a>
             </nav>
         </div>
@@ -164,7 +172,7 @@
     <div class="fixed inset-0 bg-gray-600 bg-opacity-75 z-30 lg:hidden hidden" id="sidebar-overlay"></div>
 
     <!-- Main content -->
-    <div class="flex-1 lg:ml-64 pt-16 min-h-screen bg-gray-100">
+    <div class="flex-1 lg:ml-64 pt-16 min-h-screen bg-gray-100 transition-all duration-200 ease-in-out" id="main-content">
         <div id="bodytemplate">
             <div th:if="${bodyContent}" th:insert="~{${bodyContent}}"></div>
         </div>
@@ -220,9 +228,118 @@
 <!-- Scripts -->
 <script th:src="${utils.getPathFor('backoffice/js/htmx.min.js')}"></script>
 <script th:src="${utils.getPathFor('backoffice/js/auth.js')}"></script>
-
-<!-- Icons below are for demo only. Feel free to use any icon pack. Docs: https://bulma.io/documentation/elements/icon/ -->
 <link href="https://cdn.materialdesignicons.com/4.9.95/css/materialdesignicons.min.css" rel="stylesheet">
+
+<style>
+/* Sidebar collapsed states */
+.sidebar-collapsed {
+    width: 4rem !important; /* w-16 */
+}
+
+.sidebar-collapsed .sidebar-text {
+    display: none;
+}
+
+/* Adjust container padding when collapsed */
+.sidebar-collapsed .px-4 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+/* Navigation links styling when collapsed */
+.sidebar-collapsed nav a {
+    justify-content: center !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+/* Remove icon margins when collapsed and ensure proper size */
+.sidebar-collapsed nav a svg {
+    margin-right: 0 !important;
+    width: 1.25rem !important; /* h-5 w-5 */
+    height: 1.25rem !important;
+    flex-shrink: 0;
+}
+
+/* Hide section labels when collapsed */
+.sidebar-collapsed nav p {
+    display: none;
+}
+
+/* Main content adjustment for collapsed sidebar */
+.main-content-collapsed {
+    margin-left: 4rem !important; /* lg:ml-16 */
+}
+
+/* Adjust header margin when collapsed */
+.sidebar-collapsed .mb-8 {
+    margin-bottom: 1rem !important;
+    text-align: center;
+}
+
+/* Add tooltip-like behavior for collapsed items */
+.sidebar-collapsed nav a {
+    position: relative;
+}
+
+/* Hover expansion for collapsed sidebar */
+.sidebar-collapsed.sidebar-hover-expanded {
+    width: 16rem !important; /* w-64 */
+    z-index: 60; /* Higher than overlay to ensure it's on top */
+}
+
+.sidebar-collapsed.sidebar-hover-expanded .sidebar-text {
+    display: inline !important;
+}
+
+.sidebar-collapsed.sidebar-hover-expanded nav a {
+    justify-content: flex-start !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.5rem !important;
+}
+
+.sidebar-collapsed.sidebar-hover-expanded nav a svg {
+    margin-right: 0.75rem !important;
+}
+
+.sidebar-collapsed.sidebar-hover-expanded nav p {
+    display: block !important;
+}
+
+.sidebar-collapsed.sidebar-hover-expanded .px-4 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+@media (max-width: 1024px) {
+    .sidebar-collapsed {
+        width: 16rem !important; /* Keep normal width on mobile */
+    }
+    
+    .main-content-collapsed {
+        margin-left: 0 !important; /* Remove margin on mobile */
+    }
+    
+    /* Restore normal behavior on mobile */
+    .sidebar-collapsed .sidebar-text {
+        display: inline !important;
+    }
+    
+    .sidebar-collapsed nav a {
+        justify-content: flex-start !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    .sidebar-collapsed nav a svg {
+        margin-right: 0.75rem !important;
+    }
+    
+    .sidebar-collapsed nav p {
+        display: block !important;
+    }
+}
+</style>
 
 <script>
 // Token validation and expiration handling
@@ -305,6 +422,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!window.location.pathname.endsWith('/login.html') && !window.location.pathname.endsWith('/login')) {
         validateTokenAndRedirect();
     }
+    
+    // Restore sidebar state from localStorage
+    const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    if (isCollapsed) {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        
+        sidebar.classList.remove('sidebar-expanded');
+        sidebar.classList.add('sidebar-collapsed');
+        mainContent.classList.add('main-content-collapsed');
+    }
 });
 
 // Mobile menu toggle
@@ -314,6 +442,42 @@ document.getElementById('mobile-menu-button').addEventListener('click', function
     
     sidebar.classList.toggle('-translate-x-full');
     overlay.classList.toggle('hidden');
+});
+
+// Desktop sidebar toggle
+document.getElementById('sidebar-toggle-button').addEventListener('click', function() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    
+    // Toggle collapsed state
+    sidebar.classList.toggle('sidebar-collapsed');
+    sidebar.classList.toggle('sidebar-expanded');
+    mainContent.classList.toggle('main-content-collapsed');
+    
+    // Save state to localStorage
+    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+    localStorage.setItem('sidebar-collapsed', isCollapsed.toString());
+});
+
+// Sidebar hover functionality
+let hoverTimeout;
+const sidebar = document.getElementById('sidebar');
+
+sidebar.addEventListener('mouseenter', function() {
+    // Clear any existing timeout
+    clearTimeout(hoverTimeout);
+    
+    // Only expand on hover if sidebar is collapsed
+    if (sidebar.classList.contains('sidebar-collapsed')) {
+        sidebar.classList.add('sidebar-hover-expanded');
+    }
+});
+
+sidebar.addEventListener('mouseleave', function() {
+    // Add slight delay before collapsing to prevent flicker
+    hoverTimeout = setTimeout(() => {
+        sidebar.classList.remove('sidebar-hover-expanded');
+    }, 300);
 });
 
 // Close sidebar when overlay is clicked

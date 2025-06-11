@@ -2,7 +2,10 @@ package org.ruitx.jaws.components;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.interfaces.SqlFunction;
+import org.ruitx.jaws.types.Page;
+import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.types.SortDirection;
 import org.ruitx.jaws.utils.JawsUtils;
 import org.sqlite.SQLiteDataSource;
 import org.tinylog.Logger;
@@ -628,6 +631,171 @@ public class Mimir {
                 stmt.execute(statement);
             }
         }
+    }
+
+    // ===================================================================
+    // PAGINATION METHODS
+    // ===================================================================
+
+    /**
+     * Execute a paginated query and return a Page of Row objects.
+     * This method automatically adds LIMIT, OFFSET, and ORDER BY clauses to the SQL.
+     *
+     * @param sql         Base SQL query (without LIMIT/OFFSET)
+     * @param pageRequest Pagination parameters
+     * @param params      Parameters for the prepared statement
+     * @return Page containing Row objects and pagination metadata
+     */
+    public Page<Row> getPage(String sql, PageRequest pageRequest, Object... params) {
+        return getPage(sql, pageRequest, row -> row, params);
+    }
+
+    /**
+     * Execute a paginated query with a custom mapper function.
+     * This method automatically adds LIMIT, OFFSET, and ORDER BY clauses to the SQL.
+     *
+     * @param <T>         The type to map each row to
+     * @param sql         Base SQL query (without LIMIT/OFFSET)
+     * @param pageRequest Pagination parameters
+     * @param mapper      Function to transform each Row to type T
+     * @param params      Parameters for the prepared statement
+     * @return Page containing mapped objects and pagination metadata
+     */
+    public <T> Page<T> getPage(String sql, PageRequest pageRequest, java.util.function.Function<Row, T> mapper, Object... params) {
+        // Get total count first
+        long totalElements = getCountFromQuery(sql, params);
+        
+        if (totalElements == 0) {
+            return Page.empty(pageRequest);
+        }
+        
+        // Build paginated SQL
+        String paginatedSql = buildPaginatedSql(sql, pageRequest);
+        
+        // Execute paginated query
+        List<Row> rows = getRows(paginatedSql, params);
+        
+        // Transform to target type
+        List<T> content = rows.stream()
+            .map(mapper)
+            .toList();
+        
+        return new Page<>(content, pageRequest, totalElements);
+    }
+
+    /**
+     * Get count of total elements for pagination.
+     * Converts a SELECT query to a COUNT query.
+     *
+     * @param sql    Original SQL query
+     * @param params Parameters for the query
+     * @return Total count of elements
+     */
+    public long getCount(String sql, Object... params) {
+        return getCountFromQuery(sql, params);
+    }
+
+    /**
+     * Helper method to build paginated SQL with LIMIT, OFFSET and optional ORDER BY.
+     * 
+     * @param baseSql     The base SQL query
+     * @param pageRequest Pagination parameters
+     * @return SQL with pagination clauses added
+     */
+    private String buildPaginatedSql(String baseSql, PageRequest pageRequest) {
+        StringBuilder sql = new StringBuilder(baseSql.trim());
+        
+        // Add ORDER BY if specified and not already present
+        if (pageRequest.hasSorting() && !containsOrderBy(baseSql)) {
+            sql.append(" ORDER BY ")
+               .append(sanitizeColumnName(pageRequest.sortBy().get()))
+               .append(" ")
+               .append(pageRequest.getEffectiveDirection().getSqlKeyword());
+        }
+        
+        // Add LIMIT and OFFSET
+        sql.append(" LIMIT ").append(pageRequest.size())
+           .append(" OFFSET ").append(pageRequest.getOffset());
+        
+        return sql.toString();
+    }
+
+    /**
+     * Convert a SELECT query to a COUNT query for pagination.
+     * 
+     * @param sql    Original SELECT query
+     * @param params Query parameters
+     * @return Total count
+     */
+    private long getCountFromQuery(String sql, Object... params) {
+        String countSql = convertToCountQuery(sql);
+        Row countRow = getRow(countSql, params);
+        return countRow != null ? countRow.getLong("count").orElse(0L) : 0L;
+    }
+
+    /**
+     * Convert a SELECT statement to a COUNT statement.
+     * Handles simple SELECT queries - for complex queries, consider providing
+     * a custom count query.
+     * 
+     * @param sql Original SQL query
+     * @return COUNT query
+     */
+    private String convertToCountQuery(String sql) {
+        String upperSql = sql.toUpperCase().trim();
+        
+        // Find SELECT and FROM positions
+        int selectPos = upperSql.indexOf("SELECT");
+        int fromPos = upperSql.indexOf("FROM");
+        
+        if (selectPos == -1 || fromPos == -1) {
+            throw new IllegalArgumentException("Invalid SQL: Cannot convert to COUNT query - " + sql);
+        }
+        
+        // Extract everything from FROM onwards (excluding ORDER BY)
+        String fromClause = sql.substring(fromPos);
+        
+        // Remove ORDER BY clause if present (case insensitive)
+        int orderByPos = fromClause.toUpperCase().lastIndexOf("ORDER BY");
+        if (orderByPos != -1) {
+            fromClause = fromClause.substring(0, orderByPos).trim();
+        }
+        
+        return "SELECT COUNT(*) as count " + fromClause;
+    }
+
+    /**
+     * Check if SQL already contains ORDER BY clause.
+     * 
+     * @param sql SQL query to check
+     * @return true if ORDER BY is present
+     */
+    private boolean containsOrderBy(String sql) {
+        return sql.toUpperCase().contains("ORDER BY");
+    }
+
+    /**
+     * Basic SQL column name sanitization to prevent injection.
+     * Only allows alphanumeric characters, underscores, and dots.
+     * 
+     * @param columnName Column name to sanitize
+     * @return Sanitized column name
+     * @throws IllegalArgumentException if column name is invalid
+     */
+    private String sanitizeColumnName(String columnName) {
+        if (columnName == null || columnName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Column name cannot be null or empty");
+        }
+        
+        String sanitized = columnName.trim();
+        
+        // Allow alphanumeric, underscore, and dot (for table.column notation)
+        if (!sanitized.matches("^[a-zA-Z_][a-zA-Z0-9_.]*$")) {
+            throw new IllegalArgumentException("Invalid column name: " + columnName + 
+                ". Only alphanumeric characters, underscores, and dots are allowed.");
+        }
+        
+        return sanitized;
     }
 
     public void deleteDatabase() {
