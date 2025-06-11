@@ -67,7 +67,7 @@
             </div>
             <button 
                 class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                hx-get="/htmx/backoffice/logs"
+                hx-get="/htmx/backoffice/logs?page=0&size=25&sort=timestamp&direction=DESC"
                 hx-headers='{"Content-Type": "application/json"}'
                 hx-indicator="#logs-spinner"
                 hx-swap="innerHTML transition:true"
@@ -96,7 +96,7 @@
                         </thead>
                         <tbody 
                             class="bg-white divide-y divide-gray-200"
-                            hx-get="/htmx/backoffice/logs"
+                            hx-get="/htmx/backoffice/logs?page=0&size=25&sort=timestamp&direction=DESC"
                             hx-headers='{"Content-Type": "application/json"}'
                             hx-indicator="#logs-spinner"
                             hx-swap="innerHTML transition:true"
@@ -135,7 +135,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (filterButton && levelFilter && logsTableBody) {
         filterButton.addEventListener('click', function () {
             const level = levelFilter.value;
-            const url = level ? `/htmx/backoffice/logs?level=${encodeURIComponent(level)}` : '/htmx/backoffice/logs';
+            const baseUrl = '/htmx/backoffice/logs?page=0&size=25&sort=timestamp&direction=DESC';
+            const url = level ? `${baseUrl}&level=${encodeURIComponent(level)}` : baseUrl;
             
             htmx.ajax('GET', url, {
                 target: '#logs-table-body',

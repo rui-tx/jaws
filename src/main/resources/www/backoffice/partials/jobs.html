@@ -67,7 +67,7 @@
             </div>
             <button 
                 class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                hx-get="/htmx/backoffice/jobs"
+                hx-get="/htmx/backoffice/jobs?page=0&size=10&sort=created_at&direction=DESC"
                 hx-headers='{"Content-Type": "application/json"}'
                 hx-indicator="#jobs-spinner"
                 hx-swap="innerHTML transition:true"
@@ -96,7 +96,7 @@
                         </thead>
                         <tbody 
                             class="bg-white divide-y divide-gray-200"
-                            hx-get="/htmx/backoffice/jobs"
+                            hx-get="/htmx/backoffice/jobs?page=0&size=10&sort=created_at&direction=DESC"
                             hx-headers='{"Content-Type": "application/json"}'
                             hx-indicator="#jobs-spinner"
                             hx-swap="innerHTML transition:true"
@@ -135,7 +135,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (filterButton && statusFilter && jobsTableBody) {
         filterButton.addEventListener('click', function () {
             const status = statusFilter.value;
-            const url = status ? `/htmx/backoffice/jobs?status=${encodeURIComponent(status)}` : '/htmx/backoffice/jobs';
+            const baseUrl = '/htmx/backoffice/jobs?page=0&size=10&sort=created_at&direction=DESC';
+            const url = status ? `${baseUrl}&status=${encodeURIComponent(status)}` : baseUrl;
             
             htmx.ajax('GET', url, {
                 target: '#jobs-table-body',

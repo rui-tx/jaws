@@ -305,19 +305,46 @@ public class BackofficeController extends Bragi {
     @Route(endpoint = "/htmx/backoffice/jobs", method = GET)
     public void listJobsHTMX() {
         try {
-            String limitParam = getQueryParam("limit");
+            // Parse pagination parameters
+            int page = 0;
+            int size = 10;
+            String sortBy = "created_at";
+            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
             String statusFilter = getQueryParam("status");
             String typeFilter = getQueryParam("type");
-            
-            int limit = 50; // Default limit
-            if (limitParam != null) {
+
+            String pageParam = getQueryParam("page");
+            String sizeParam = getQueryParam("size");
+            String sortParam = getQueryParam("sort");
+            String directionParam = getQueryParam("direction");
+
+            if (pageParam != null) {
                 try {
-                    limit = Integer.parseInt(limitParam);
+                    page = Integer.parseInt(pageParam);
                 } catch (NumberFormatException e) {
-                    limit = 50;
+                    page = 0;
                 }
             }
 
+            if (sizeParam != null) {
+                try {
+                    size = Integer.parseInt(sizeParam);
+                    if (size < 1) size = 10;
+                    if (size > 100) size = 100; // Max 100 per page
+                } catch (NumberFormatException e) {
+                    size = 10;
+                }
+            }
+
+            if (sortParam != null && !sortParam.trim().isEmpty()) {
+                sortBy = sortParam.trim();
+            }
+
+            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
+                direction = org.ruitx.jaws.types.SortDirection.ASC;
+            }
+
+            // Build base SQL with filters
             StringBuilder sql = new StringBuilder("SELECT * FROM JOBS WHERE 1=1");
             List<Object> params = new ArrayList<>();
 
@@ -331,10 +358,14 @@ public class BackofficeController extends Bragi {
                 params.add(typeFilter);
             }
 
-            sql.append(" ORDER BY created_at DESC LIMIT ?");
-            params.add(limit);
+            // Create PageRequest
+            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
 
-            List<org.ruitx.jaws.types.Row> jobs = new org.ruitx.jaws.components.Mimir().getRows(sql.toString(), params.toArray());
+            // Get paginated jobs from database
+            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> jobPage = new org.ruitx.jaws.components.Mimir()
+                    .getPage(sql.toString(), pageRequest, params.toArray());
+
+            List<org.ruitx.jaws.types.Row> jobs = jobPage.getContent();
 
             StringBuilder html = new StringBuilder();
             
@@ -423,6 +454,9 @@ public class BackofficeController extends Bragi {
                         .append("</tr>");
                 }
             }
+
+            // Add pagination controls
+            html.append(generatePaginationHTML(jobPage, "jobs"));
 
             sendHTMLResponse(OK, html.toString());
         } catch (Exception e) {
@@ -538,62 +572,149 @@ public class BackofficeController extends Bragi {
             return;
         }
 
-        APIResponse<List<User>> response = authService.listUsers();
-        if (!response.success()) {
-            sendHTMLResponse(response.code(), "Error loading users");
-            return;
-        }
+        try {
+            // Parse pagination parameters
+            int page = 0;
+            int size = 10;
+            String sortBy = "created_at";
+            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
 
-        StringBuilder html = new StringBuilder();
-        for (User user : response.data()) {
-            html.append("<tr class=\"hover:bg-gray-50\">")
-                    .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                    .append("<div class=\"flex items-center\">")
-                    .append("<div class=\"h-10 w-10 flex-shrink-0\">")
-                    .append(user.profilePicture() != null && !user.profilePicture().isEmpty()
-                            ? "<img class=\"h-10 w-10 rounded-full\" src=\"" + user.profilePicture() + "\" alt=\"\">"
-                            : "<img class=\"h-10 w-10 rounded-full\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg\" alt=\"\">")
-                    .append("</div>")
-                    .append("</div>")
-                    .append("</td>")
-                    .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                    .append("<div class=\"text-sm font-medium text-gray-900\">").append(user.user()).append("</div>")
-                    .append("<div class=\"text-sm text-gray-500\">")
-                    .append(user.email() != null ? user.email() : "No email")
-                    .append("</div>")
-                    .append("</td>")
-                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-900\">")
-                    .append(user.firstName() != null ? user.firstName() : "")
-                    .append(" ")
-                    .append(user.lastName() != null ? user.lastName() : "")
-                    .append("</td>")
-                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
-                    .append("<time datetime=\"")
-                    .append(user.createdAt() != null ? user.createdAt() : "N/A")
-                    .append("\">")
-                    .append(user.createdAt() != null ? JawsUtils.formatUnixTimestamp(user.createdAt()) : "N/A")
-                    .append("</time>")
-                    .append("</td>")
-                    .append("<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">")
-                    .append("<div class=\"flex space-x-2 justify-end\">")
-                    .append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
-                    .append("class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700\" type=\"button\">")
-                    .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" />")
-                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" />")
+            String pageParam = getQueryParam("page");
+            String sizeParam = getQueryParam("size");
+            String sortParam = getQueryParam("sort");
+            String directionParam = getQueryParam("direction");
+
+            if (pageParam != null) {
+                try {
+                    page = Integer.parseInt(pageParam);
+                } catch (NumberFormatException e) {
+                    page = 0;
+                }
+            }
+
+            if (sizeParam != null) {
+                try {
+                    size = Integer.parseInt(sizeParam);
+                    if (size < 1) size = 10;
+                    if (size > 100) size = 100; // Max 100 per page
+                } catch (NumberFormatException e) {
+                    size = 10;
+                }
+            }
+
+            if (sortParam != null && !sortParam.trim().isEmpty()) {
+                sortBy = sortParam.trim();
+            }
+
+            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
+                direction = org.ruitx.jaws.types.SortDirection.ASC;
+            }
+
+            // Create PageRequest
+            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
+
+            // Get paginated users from database
+            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> userPage = new org.ruitx.jaws.components.Mimir()
+                    .getPage("SELECT * FROM USER", pageRequest);
+
+            // Transform Row objects to User objects
+            List<User> users = userPage.getContent().stream()
+                    .map(row -> User.builder()
+                            .id(row.getInt("id").orElse(0))
+                            .user(row.getString("user").orElse(""))
+                            .passwordHash(row.getString("password_hash").orElse(""))
+                            .email(row.getString("email").orElse(null))
+                            .firstName(row.getString("first_name").orElse(null))
+                            .lastName(row.getString("last_name").orElse(null))
+                            .birthdate(row.getLong("birthdate").orElse(null))
+                            .gender(row.getString("gender").orElse(null))
+                            .phoneNumber(row.getString("phone_number").orElse(null))
+                            .profilePicture(row.getString("profile_picture").orElse(null))
+                            .bio(row.getString("bio").orElse(null))
+                            .location(row.getString("location").orElse(null))
+                            .website(row.getString("website").orElse(null))
+                            .lastLogin(row.getLong("last_login").orElse(null))
+                            .isActive(row.getInt("is_active").orElse(1))
+                            .failedLoginAttempts(row.getInt("failed_login_attempts").orElse(0))
+                            .lockoutUntil(row.getLong("lockout_until").orElse(null))
+                            .createdAt(row.getLong("created_at").orElse(0L))
+                            .updatedAt(row.getLong("updated_at").orElse(null))
+                            .build())
+                    .toList();
+
+            StringBuilder html = new StringBuilder();
+
+            // Generate table rows
+            if (users.isEmpty()) {
+                html.append("<tr>")
+                    .append("<td colspan=\"5\" class=\"px-6 py-4 text-center text-gray-500\">")
+                    .append("<div class=\"flex flex-col items-center justify-center py-8\">")
+                    .append("<svg class=\"h-12 w-12 text-gray-400 mb-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z\" />")
                     .append("</svg>")
-                    .append("</a>")
-                    .append("<button class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700\" onclick=\"openModal('sample-modal')\" type=\"button\">")
-                    .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z\" />")
-                    .append("</svg>")
-                    .append("</button>")
+                    .append("<p class=\"text-sm text-gray-600 mb-1\">No users found</p>")
+                    .append("<p class=\"text-xs text-gray-500\">The user list is currently empty</p>")
                     .append("</div>")
                     .append("</td>")
                     .append("</tr>");
-        }
+            } else {
+                for (User user : users) {
+                    html.append("<tr class=\"hover:bg-gray-50\">")
+                            .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
+                            .append("<div class=\"flex items-center\">")
+                            .append("<div class=\"h-10 w-10 flex-shrink-0\">")
+                            .append(user.profilePicture() != null && !user.profilePicture().isEmpty()
+                                    ? "<img class=\"h-10 w-10 rounded-full\" src=\"" + user.profilePicture() + "\" alt=\"\">"
+                                    : "<img class=\"h-10 w-10 rounded-full\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg\" alt=\"\">")
+                            .append("</div>")
+                            .append("</div>")
+                            .append("</td>")
+                            .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
+                            .append("<div class=\"text-sm font-medium text-gray-900\">").append(user.user()).append("</div>")
+                            .append("<div class=\"text-sm text-gray-500\">")
+                            .append(user.email() != null ? user.email() : "No email")
+                            .append("</div>")
+                            .append("</td>")
+                            .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-900\">")
+                            .append(user.firstName() != null ? user.firstName() : "")
+                            .append(" ")
+                            .append(user.lastName() != null ? user.lastName() : "")
+                            .append("</td>")
+                            .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
+                            .append("<time datetime=\"")
+                            .append(user.createdAt() != null ? user.createdAt() : "N/A")
+                            .append("\">")
+                            .append(user.createdAt() != null ? JawsUtils.formatUnixTimestamp(user.createdAt()) : "N/A")
+                            .append("</time>")
+                            .append("</td>")
+                            .append("<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">")
+                            .append("<div class=\"flex space-x-2 justify-end\">")
+                            .append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
+                            .append("class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700\" type=\"button\">")
+                            .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" />")
+                            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" />")
+                            .append("</svg>")
+                            .append("</a>")
+                            .append("<button class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700\" onclick=\"openModal('sample-modal')\" type=\"button\">")
+                            .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+                            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z\" />")
+                            .append("</svg>")
+                            .append("</button>")
+                            .append("</div>")
+                            .append("</td>")
+                            .append("</tr>");
+                }
+            }
 
-        sendHTMLResponse(OK, html.toString());
+            // Add pagination controls
+            html.append(generatePaginationHTML(userPage, "users"));
+
+            sendHTMLResponse(OK, html.toString());
+        } catch (Exception e) {
+            log.error("Failed to list users: {}", e.getMessage(), e);
+            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<tr><td colspan=\"5\">Error loading users</td></tr>");
+        }
     }
 
     @AccessControl(login = true, role = "admin")
@@ -687,19 +808,46 @@ public class BackofficeController extends Bragi {
     @Route(endpoint = "/htmx/backoffice/logs", method = GET)
     public void listLogsHTMX() {
         try {
-            String limitParam = getQueryParam("limit");
+            // Parse pagination parameters
+            int page = 0;
+            int size = 25; // Default 25 for logs (they can be verbose)
+            String sortBy = "timestamp";
+            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
             String levelFilter = getQueryParam("level");
             String loggerFilter = getQueryParam("logger");
-            
-            int limit = 100; // Default limit for logs
-            if (limitParam != null) {
+
+            String pageParam = getQueryParam("page");
+            String sizeParam = getQueryParam("size");
+            String sortParam = getQueryParam("sort");
+            String directionParam = getQueryParam("direction");
+
+            if (pageParam != null) {
                 try {
-                    limit = Integer.parseInt(limitParam);
+                    page = Integer.parseInt(pageParam);
                 } catch (NumberFormatException e) {
-                    limit = 100;
+                    page = 0;
                 }
             }
 
+            if (sizeParam != null) {
+                try {
+                    size = Integer.parseInt(sizeParam);
+                    if (size < 1) size = 25;
+                    if (size > 100) size = 100; // Max 100 per page
+                } catch (NumberFormatException e) {
+                    size = 25;
+                }
+            }
+
+            if (sortParam != null && !sortParam.trim().isEmpty()) {
+                sortBy = sortParam.trim();
+            }
+
+            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
+                direction = org.ruitx.jaws.types.SortDirection.ASC;
+            }
+
+            // Build base SQL with filters
             StringBuilder sql = new StringBuilder("SELECT * FROM LOG_ENTRIES WHERE 1=1");
             List<Object> params = new ArrayList<>();
 
@@ -713,10 +861,14 @@ public class BackofficeController extends Bragi {
                 params.add("%" + loggerFilter + "%");
             }
 
-            sql.append(" ORDER BY timestamp DESC LIMIT ?");
-            params.add(limit);
+            // Create PageRequest
+            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
 
-            List<org.ruitx.jaws.types.Row> logs = logsDb.getRows(sql.toString(), params.toArray());
+            // Get paginated logs from database
+            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> logPage = logsDb
+                    .getPage(sql.toString(), pageRequest, params.toArray());
+
+            List<org.ruitx.jaws.types.Row> logs = logPage.getContent();
 
             StringBuilder html = new StringBuilder();
             
@@ -802,6 +954,9 @@ public class BackofficeController extends Bragi {
                         .append("</tr>");
                 }
             }
+
+            // Add pagination controls
+            html.append(generatePaginationHTML(logPage, "logs"));
 
             sendHTMLResponse(OK, html.toString());
         } catch (Exception e) {
@@ -896,7 +1051,61 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/roles", method = GET)
     public void listRolesHTMX() {
-        List<Role> roles = authorizationService.getAllRoles();
+        try {
+            // Parse pagination parameters
+            int page = 0;
+            int size = 10; // Default 10 for roles
+            String sortBy = "created_at";
+            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
+
+            String pageParam = getQueryParam("page");
+            String sizeParam = getQueryParam("size");
+            String sortParam = getQueryParam("sort");
+            String directionParam = getQueryParam("direction");
+
+            if (pageParam != null) {
+                try {
+                    page = Integer.parseInt(pageParam);
+                } catch (NumberFormatException e) {
+                    page = 0;
+                }
+            }
+
+            if (sizeParam != null) {
+                try {
+                    size = Integer.parseInt(sizeParam);
+                    if (size < 1) size = 10;
+                    if (size > 50) size = 50; // Max 50 per page for roles
+                } catch (NumberFormatException e) {
+                    size = 10;
+                }
+            }
+
+            if (sortParam != null && !sortParam.trim().isEmpty()) {
+                sortBy = sortParam.trim();
+            }
+
+            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
+                direction = org.ruitx.jaws.types.SortDirection.ASC;
+            }
+
+            // Create PageRequest
+            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
+
+            // Get paginated roles from database
+            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> rolePage = new org.ruitx.jaws.components.Mimir()
+                    .getPage("SELECT * FROM ROLE", pageRequest);
+
+            // Transform Row objects to Role objects
+            List<Role> roles = rolePage.getContent().stream()
+                    .map(row -> Role.builder()
+                            .id(row.getInt("id").orElse(0))
+                            .name(row.getString("name").orElse(""))
+                            .description(row.getString("description").orElse(null))
+                            .createdAt(row.getLong("created_at").orElse(null))
+                            .updatedAt(row.getLong("updated_at").orElse(null))
+                            .build())
+                    .toList();
         
         StringBuilder htmlBuilder = new StringBuilder();
         
@@ -964,7 +1173,14 @@ public class BackofficeController extends Bragi {
             }
         }
         
+        // Add pagination controls
+        htmlBuilder.append(generatePaginationHTML(rolePage, "roles"));
+        
         sendHTMLResponse(OK, htmlBuilder.toString());
+        } catch (Exception e) {
+            log.error("Failed to list roles: {}", e.getMessage(), e);
+            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<tr><td colspan=\"5\">Error loading roles</td></tr>");
+        }
     }
 
     @AccessControl(login = true, role = "admin")
@@ -1133,5 +1349,161 @@ public class BackofficeController extends Bragi {
     
     public record RoleCreateRequest(String name, String description) {}
     public record RoleAssignRequest(Integer userId, Integer roleId) {}
+
+    // =============================================
+    // PAGINATION UTILITIES
+    // =============================================
+
+    /**
+     * Generates pagination HTML controls for a given page result.
+     * 
+     * @param page The Page object containing pagination metadata
+     * @param endpoint The endpoint name (users, jobs, logs, etc.)
+     * @return HTML string with pagination controls
+     */
+    private String generatePaginationHTML(org.ruitx.jaws.types.Page<?> page, String endpoint) {
+        if (page.getTotalElements() == 0) {
+            return ""; // No pagination needed for empty results
+        }
+
+        StringBuilder html = new StringBuilder();
+        
+        // Pagination wrapper
+        html.append("<tr>")
+            .append("<td colspan=\"5\" class=\"bg-gray-50 px-6 py-3 border-t border-gray-200\">")
+            .append("<div class=\"flex items-center justify-between\">")
+            
+            // Left side - Results info
+            .append("<div class=\"flex-1 flex justify-between sm:hidden\">")
+            .append("<span class=\"text-sm text-gray-700\">")
+            .append("Showing ").append(page.getCurrentPage() * page.getPageSize() + 1)
+            .append(" to ").append(Math.min((page.getCurrentPage() + 1) * page.getPageSize(), page.getTotalElements()))
+            .append(" of ").append(page.getTotalElements()).append(" results")
+            .append("</span>")
+            .append("</div>")
+            
+            // Desktop view
+            .append("<div class=\"hidden sm:flex-1 sm:flex sm:items-center sm:justify-between\">")
+            .append("<div>")
+            .append("<p class=\"text-sm text-gray-700\">")
+            .append("Showing <span class=\"font-medium\">").append(page.getCurrentPage() * page.getPageSize() + 1).append("</span>")
+            .append(" to <span class=\"font-medium\">").append(Math.min((page.getCurrentPage() + 1) * page.getPageSize(), page.getTotalElements())).append("</span>")
+            .append(" of <span class=\"font-medium\">").append(page.getTotalElements()).append("</span> results")
+            .append("</p>")
+            .append("</div>")
+            
+            // Navigation controls
+            .append("<div>")
+            .append("<nav class=\"relative z-0 inline-flex rounded-md shadow-sm -space-x-px\" aria-label=\"Pagination\">")
+            
+            // Previous button
+            .append("<button class=\"relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50")
+            .append(page.hasPrevious() ? "\" " : " cursor-not-allowed opacity-50\" disabled ")
+            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(Math.max(0, page.getCurrentPage() - 1))
+            .append("&size=").append(page.getPageSize()).append("\" ")
+            .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
+            .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
+            .append("hx-swap=\"innerHTML transition:true\"")
+            .append(page.hasPrevious() ? ">" : " style=\"pointer-events: none;\">")
+            .append("<span class=\"sr-only\">Previous</span>")
+            .append("<svg class=\"h-5 w-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 19.5L8.25 12l7.5-7.5\" />")
+            .append("</svg>")
+            .append("</button>");
+
+        // Page numbers (show current page +/- 2)
+        int startPage = Math.max(0, page.getCurrentPage() - 2);
+        int endPage = Math.min(page.getTotalPages() - 1, page.getCurrentPage() + 2);
+        
+        // Show first page if not in range
+        if (startPage > 0) {
+            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
+                .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=0&size=").append(page.getPageSize()).append("\" ")
+                .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
+                .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
+                .append("hx-swap=\"innerHTML transition:true\">")
+                .append("1")
+                .append("</button>");
+                
+            if (startPage > 1) {
+                html.append("<span class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...")
+                    .append("</span>");
+            }
+        }
+
+        // Page number buttons
+        for (int i = startPage; i <= endPage; i++) {
+            boolean isCurrent = i == page.getCurrentPage();
+            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border ")
+                .append(isCurrent ? "border-primary-500 bg-primary-50 text-primary-600 z-10" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50")
+                .append(" text-sm font-medium\" ")
+                .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(i).append("&size=").append(page.getPageSize()).append("\" ")
+                .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
+                .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
+                .append("hx-swap=\"innerHTML transition:true\">")
+                .append(i + 1)
+                .append("</button>");
+        }
+
+        // Show last page if not in range
+        if (endPage < page.getTotalPages() - 1) {
+            if (endPage < page.getTotalPages() - 2) {
+                html.append("<span class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...")
+                    .append("</span>");
+            }
+            
+            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
+                .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(page.getTotalPages() - 1).append("&size=").append(page.getPageSize()).append("\" ")
+                .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
+                .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
+                .append("hx-swap=\"innerHTML transition:true\">")
+                .append(page.getTotalPages())
+                .append("</button>");
+        }
+
+        // Next button
+        html.append("<button class=\"relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50")
+            .append(page.hasNext() ? "\" " : " cursor-not-allowed opacity-50\" disabled ")
+            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(Math.min(page.getTotalPages() - 1, page.getCurrentPage() + 1))
+            .append("&size=").append(page.getPageSize()).append("\" ")
+            .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
+            .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
+            .append("hx-swap=\"innerHTML transition:true\"")
+            .append(page.hasNext() ? ">" : " style=\"pointer-events: none;\">")
+            .append("<span class=\"sr-only\">Next</span>")
+            .append("<svg class=\"h-5 w-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
+            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8.25 4.5l7.5 7.5-7.5 7.5\" />")
+            .append("</svg>")
+            .append("</button>");
+
+        html.append("</nav>")
+            .append("</div>")
+            .append("</div>")
+            
+            // Page size selector
+            .append("<div class=\"flex items-center space-x-2 ml-4\">")
+            .append("<label class=\"text-sm text-gray-700\">Show:</label>")
+            .append("<select class=\"block w-20 px-2 py-1 border border-gray-300 rounded-md text-sm\" ")
+            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=0\" ")
+            .append("hx-include=\"this\" ")
+            .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
+            .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
+            .append("hx-swap=\"innerHTML transition:true\" ")
+            .append("name=\"size\">");
+
+        for (int size : new int[]{10, 25, 50, 100}) {
+            html.append("<option value=\"").append(size).append("\"")
+                .append(size == page.getPageSize() ? " selected" : "")
+                .append(">").append(size).append("</option>");
+        }
+
+        html.append("</select>")
+            .append("</div>")
+            .append("</div>")
+            .append("</td>")
+            .append("</tr>");
+
+        return html.toString();
+    }
 
 }

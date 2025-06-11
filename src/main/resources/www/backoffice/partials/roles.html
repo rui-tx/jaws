@@ -84,7 +84,7 @@
                         </thead>
                         <tbody 
                             class="bg-white divide-y divide-gray-200"
-                            hx-get="/htmx/backoffice/roles"
+                            hx-get="/htmx/backoffice/roles?page=0&size=10&sort=name&direction=ASC"
                             hx-indicator="#roles-spinner"
                             hx-swap="innerHTML transition:true"
                             hx-trigger="intersect once, refresh from:body"
