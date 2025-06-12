@@ -669,13 +669,8 @@ public class Mimir {
             return Page.empty(pageRequest);
         }
         
-        // Build paginated SQL
         String paginatedSql = buildPaginatedSql(sql, pageRequest);
-        
-        // Execute paginated query
         List<Row> rows = getRows(paginatedSql, params);
-        
-        // Transform to target type
         List<T> content = rows.stream()
             .map(mapper)
             .toList();

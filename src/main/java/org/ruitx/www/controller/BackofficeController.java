@@ -16,6 +16,7 @@ import org.ruitx.www.model.auth.User;
 import org.ruitx.www.repository.AuthRepo;
 import org.ruitx.www.service.AuthService;
 import org.ruitx.www.service.AuthorizationService;
+import org.ruitx.www.service.BackofficeService;
 import org.ruitx.www.model.auth.Role;
 import org.ruitx.www.model.auth.UserRole;
 import org.slf4j.Logger;
@@ -53,6 +54,7 @@ public class BackofficeController extends Bragi {
     private final AuthorizationService authorizationService;
     private final Freyr jobQueue;
     private final org.ruitx.jaws.components.Mimir logsDb;
+    private final BackofficeService backofficeService;
 
     public BackofficeController() {
         bodyHtmlPath = BODY_HTML_PATH;
@@ -61,6 +63,7 @@ public class BackofficeController extends Bragi {
         this.authorizationService = new AuthorizationService();
         this.jobQueue = Freyr.getInstance();
         this.logsDb = new org.ruitx.jaws.components.Mimir("src/main/resources/logs.db");
+        this.backofficeService = new BackofficeService();
     }
 
     /**
@@ -70,21 +73,7 @@ public class BackofficeController extends Bragi {
      * @return context map with user info and navigation permissions
      */
     private Map<String, String> getBaseContext(User user) {
-        Map<String, String> context = new HashMap<>();
-        
-        // Basic user info
-        context.put("userId", user.id().toString());
-        context.put("currentUser", user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
-        
-        // Role-based navigation visibility
-        boolean isAdmin = authorizationService.hasRole(user.id(), "admin");
-        context.put("canAccessRoles", String.valueOf(isAdmin));
-        context.put("canAccessUserManagement", String.valueOf(isAdmin));
-        
-        return context;
+        return backofficeService.getBaseContext(user);
     }
 
     @AccessControl(login = true)
@@ -304,240 +293,23 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/jobs", method = GET)
     public void listJobsHTMX() {
-        try {
-            // Parse pagination parameters
-            int page = 0;
-            int size = 10;
-            String sortBy = "created_at";
-            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
-            String statusFilter = getQueryParam("status");
-            String typeFilter = getQueryParam("type");
-
-            String pageParam = getQueryParam("page");
-            String sizeParam = getQueryParam("size");
-            String sortParam = getQueryParam("sort");
-            String directionParam = getQueryParam("direction");
-
-            if (pageParam != null) {
-                try {
-                    page = Integer.parseInt(pageParam);
-                } catch (NumberFormatException e) {
-                    page = 0;
-                }
-            }
-
-            if (sizeParam != null) {
-                try {
-                    size = Integer.parseInt(sizeParam);
-                    if (size < 1) size = 10;
-                    if (size > 100) size = 100; // Max 100 per page
-                } catch (NumberFormatException e) {
-                    size = 10;
-                }
-            }
-
-            if (sortParam != null && !sortParam.trim().isEmpty()) {
-                sortBy = sortParam.trim();
-            }
-
-            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
-                direction = org.ruitx.jaws.types.SortDirection.ASC;
-            }
-
-            // Build base SQL with filters
-            StringBuilder sql = new StringBuilder("SELECT * FROM JOBS WHERE 1=1");
-            List<Object> params = new ArrayList<>();
-
-            if (statusFilter != null && !statusFilter.isEmpty()) {
-                sql.append(" AND status = ?");
-                params.add(statusFilter);
-            }
-
-            if (typeFilter != null && !typeFilter.isEmpty()) {
-                sql.append(" AND type = ?");
-                params.add(typeFilter);
-            }
-
-            // Create PageRequest
-            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
-
-            // Get paginated jobs from database
-            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> jobPage = new org.ruitx.jaws.components.Mimir()
-                    .getPage(sql.toString(), pageRequest, params.toArray());
-
-            List<org.ruitx.jaws.types.Row> jobs = jobPage.getContent();
-
-            StringBuilder html = new StringBuilder();
-            
-            // Check if jobs list is empty and return appropriate message
-            if (jobs.isEmpty()) {
-                html.append("<tr>")
-                    .append("<td colspan=\"6\" class=\"px-6 py-4 text-center text-gray-500\">")
-                    .append("<div class=\"flex flex-col items-center justify-center py-8\">")
-                    .append("<svg class=\"h-12 w-12 text-gray-400 mb-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z\" />")
-                    .append("</svg>")
-                    .append("<p class=\"text-sm text-gray-600 mb-1\">No jobs found</p>");
-                    
-                if (statusFilter != null && !statusFilter.isEmpty()) {
-                    html.append("<p class=\"text-xs text-gray-500\">No jobs with status: ").append(statusFilter).append("</p>");
-                } else {
-                    html.append("<p class=\"text-xs text-gray-500\">The job queue is currently empty</p>");
-                }
-                
-                html.append("</div>")
-                    .append("</td>")
-                    .append("</tr>");
-            } else {
-                // Process jobs normally
-                for (org.ruitx.jaws.types.Row job : jobs) {
-                    String status = job.getString("status").orElse("UNKNOWN");
-                    String statusClass = getStatusClass(status);
-                    
-                    html.append("<tr class=\"hover:bg-gray-50\">")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                        .append("<div class=\"flex items-center\">")
-                        .append("<div class=\"h-10 w-10 flex-shrink-0\">")
-                        .append("<span class=\"px-2 inline-flex text-xs leading-5 font-medium text-gray-900\">")
-                        .append(status).append("</span>")
-                        .append("</div>")
-                        .append("</div>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                        .append("<div class=\"text-sm font-medium text-gray-900\">").append(job.getString("type").orElse("Unknown")).append("</div>")
-                        .append("<div class=\"text-sm text-gray-500\">")
-                        .append("<small class=\"has-text-grey\">").append(job.getString("id").orElse("")).append("</small>")
-                        .append("</div>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
-                        .append("<span class=\"px-2 inline-flex text-xs leading-5 font-medium text-gray-900\">Priority: ").append(job.getInt("priority").orElse(5)).append("</span>")
-                        .append("<br>")
-                        .append("<small class=\"has-text-grey\">").append(job.getString("execution_mode").orElse("PARALLEL")).append("</small>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
-                        .append("<time datetime=\"")
-                        .append(job.getLong("created_at").orElse(0L))
-                        .append("\">")
-                        .append(job.getLong("created_at").map(ts -> JawsUtils.formatUnixTimestamp(ts)).orElse("N/A"))
-                        .append("</time>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
-                        .append(job.getInt("current_retries").orElse(0)).append("/").append(job.getInt("max_retries").orElse(3))
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">")
-                        .append("<div class=\"flex space-x-2 justify-end\">")
-                        .append("<a href=\"/backoffice/jobs/").append(job.getString("id").orElse("")).append("\" ")
-                        .append("class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700\" type=\"button\">")
-                        .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                        .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" />")
-                        .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" />")
-                        .append("</svg>")
-                        .append("</a>");
-
-                    // Add reprocess button for failed jobs
-                    if ("FAILED".equals(status) || "DEAD_LETTER".equals(status)) {
-                        html.append("<button class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-yellow-600 hover:bg-yellow-700\" ")
-                            .append("hx-post=\"/htmx/backoffice/jobs/").append(job.getString("id").orElse("")).append("/reprocess\" ")
-                            .append("hx-headers='js:{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-                            .append("hx-swap=\"outerHTML\" ")
-                            .append("hx-target=\"closest tr\" ")
-                            .append("hx-confirm=\"Are you sure you want to reprocess this job?\" ")
-                            .append("type=\"button\">")
-                            .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99\" />")
-                            .append("</svg>")
-                            .append("</button>");
-                    }
-
-                    html.append("</div>")
-                        .append("</td>")
-                        .append("</tr>");
-                }
-            }
-
-            // Add pagination controls
-            html.append(generatePaginationHTML(jobPage, "jobs"));
-
-            sendHTMLResponse(OK, html.toString());
-        } catch (Exception e) {
-            log.error("Failed to list jobs: {}", e.getMessage(), e);
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<tr><td colspan=\"6\">Error loading jobs</td></tr>");
-        }
+        String html = backofficeService.generateJobsTableHTML(
+            getQueryParam("page"),
+            getQueryParam("size"),
+            getQueryParam("sort"),
+            getQueryParam("direction"),
+            getQueryParam("status"),
+            getQueryParam("type")
+        );
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/jobs/:id/reprocess", method = POST)
     public void reprocessJobHTMX() {
-        try {
-            String jobId = getPathParam("id");
-            
-            // Get job details from database
-            org.ruitx.jaws.components.Mimir mimir = new org.ruitx.jaws.components.Mimir();
-            org.ruitx.jaws.types.Row jobRow = mimir.getRow("SELECT * FROM JOBS WHERE id = ?", jobId);
-            
-            if (jobRow == null) {
-                sendHTMLResponse(NOT_FOUND, "<tr><td colspan=\"6\">Job not found</td></tr>");
-                return;
-            }
-
-            String status = jobRow.getString("status").orElse("");
-            
-            if ("DEAD_LETTER".equals(status)) {
-                // Try to find the job in dead letter queue and retry it
-                String newJobId = jobQueue.getDeadLetterQueue().manualRetry(jobId, true);
-                if (newJobId != null) {
-                    sendHTMLResponse(OK, 
-                        "<tr class=\"bg-green-50\">" +
-                        "<td colspan=\"6\" class=\"px-6 py-4\">" +
-                        "<div class=\"bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded\">" +
-                        "<strong>Success!</strong> Job reprocessed successfully. New Job ID: " + newJobId +
-                        "</div>" +
-                        "</td>" +
-                        "</tr>");
-                } else {
-                    sendHTMLResponse(BAD_REQUEST, 
-                        "<tr class=\"bg-red-50\">" +
-                        "<td colspan=\"6\" class=\"px-6 py-4\">" +
-                        "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">" +
-                        "<strong>Error!</strong> Failed to reprocess job from Dead Letter Queue." +
-                        "</div>" +
-                        "</td>" +
-                        "</tr>");
-                }
-            } else if ("FAILED".equals(status)) {
-                // Update job status to retry
-                String updateSql = "UPDATE JOBS SET status = 'PENDING', retry_count = retry_count + 1, started_at = NULL, completed_at = NULL WHERE id = ?";
-                new org.ruitx.jaws.components.Mimir().executeSql(updateSql, jobId);
-                
-                sendHTMLResponse(OK, 
-                    "<tr class=\"bg-green-50\">" +
-                    "<td colspan=\"6\" class=\"px-6 py-4\">" +
-                    "<div class=\"bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded\">" +
-                    "<strong>Success!</strong> Job has been reset to PENDING status and will be retried." +
-                    "</div>" +
-                    "</td>" +
-                    "</tr>");
-            } else {
-                sendHTMLResponse(BAD_REQUEST, 
-                    "<tr class=\"bg-red-50\">" +
-                    "<td colspan=\"6\" class=\"px-6 py-4\">" +
-                    "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">" +
-                    "<strong>Error!</strong> Job status is " + status + ". Only FAILED or DEAD_LETTER jobs can be reprocessed." +
-                    "</div>" +
-                    "</td>" +
-                    "</tr>");
-            }
-        } catch (Exception e) {
-            log.error("Failed to reprocess job: {}", e.getMessage(), e);
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, 
-                "<tr class=\"bg-yellow-50\">" +
-                "<td colspan=\"6\" class=\"px-6 py-4\">" +
-                "<div class=\"bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded\">" +
-                "<strong>Warning!</strong> An error occurred while reprocessing the job." +
-                "</div>" +
-                "</td>" +
-                "</tr>");
-        }
+        String jobId = getPathParam("id");
+        String html = backofficeService.processJobReprocessing(jobId);
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
@@ -572,236 +344,20 @@ public class BackofficeController extends Bragi {
             return;
         }
 
-        try {
-            // Parse pagination parameters
-            int page = 0;
-            int size = 10;
-            String sortBy = "created_at";
-            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
-
-            String pageParam = getQueryParam("page");
-            String sizeParam = getQueryParam("size");
-            String sortParam = getQueryParam("sort");
-            String directionParam = getQueryParam("direction");
-
-            if (pageParam != null) {
-                try {
-                    page = Integer.parseInt(pageParam);
-                } catch (NumberFormatException e) {
-                    page = 0;
-                }
-            }
-
-            if (sizeParam != null) {
-                try {
-                    size = Integer.parseInt(sizeParam);
-                    if (size < 1) size = 10;
-                    if (size > 100) size = 100; // Max 100 per page
-                } catch (NumberFormatException e) {
-                    size = 10;
-                }
-            }
-
-            if (sortParam != null && !sortParam.trim().isEmpty()) {
-                sortBy = sortParam.trim();
-            }
-
-            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
-                direction = org.ruitx.jaws.types.SortDirection.ASC;
-            }
-
-            // Create PageRequest
-            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
-
-            // Get paginated users from database
-            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> userPage = new org.ruitx.jaws.components.Mimir()
-                    .getPage("SELECT * FROM USER", pageRequest);
-
-            // Transform Row objects to User objects
-            List<User> users = userPage.getContent().stream()
-                    .map(row -> User.builder()
-                            .id(row.getInt("id").orElse(0))
-                            .user(row.getString("user").orElse(""))
-                            .passwordHash(row.getString("password_hash").orElse(""))
-                            .email(row.getString("email").orElse(null))
-                            .firstName(row.getString("first_name").orElse(null))
-                            .lastName(row.getString("last_name").orElse(null))
-                            .birthdate(row.getLong("birthdate").orElse(null))
-                            .gender(row.getString("gender").orElse(null))
-                            .phoneNumber(row.getString("phone_number").orElse(null))
-                            .profilePicture(row.getString("profile_picture").orElse(null))
-                            .bio(row.getString("bio").orElse(null))
-                            .location(row.getString("location").orElse(null))
-                            .website(row.getString("website").orElse(null))
-                            .lastLogin(row.getLong("last_login").orElse(null))
-                            .isActive(row.getInt("is_active").orElse(1))
-                            .failedLoginAttempts(row.getInt("failed_login_attempts").orElse(0))
-                            .lockoutUntil(row.getLong("lockout_until").orElse(null))
-                            .createdAt(row.getLong("created_at").orElse(0L))
-                            .updatedAt(row.getLong("updated_at").orElse(null))
-                            .build())
-                    .toList();
-
-            StringBuilder html = new StringBuilder();
-
-            // Generate table rows
-            if (users.isEmpty()) {
-                html.append("<tr>")
-                    .append("<td colspan=\"5\" class=\"px-6 py-4 text-center text-gray-500\">")
-                    .append("<div class=\"flex flex-col items-center justify-center py-8\">")
-                    .append("<svg class=\"h-12 w-12 text-gray-400 mb-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z\" />")
-                    .append("</svg>")
-                    .append("<p class=\"text-sm text-gray-600 mb-1\">No users found</p>")
-                    .append("<p class=\"text-xs text-gray-500\">The user list is currently empty</p>")
-                    .append("</div>")
-                    .append("</td>")
-                    .append("</tr>");
-            } else {
-                for (User user : users) {
-                    html.append("<tr class=\"hover:bg-gray-50\">")
-                            .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                            .append("<div class=\"flex items-center\">")
-                            .append("<div class=\"h-10 w-10 flex-shrink-0\">")
-                            .append(user.profilePicture() != null && !user.profilePicture().isEmpty()
-                                    ? "<img class=\"h-10 w-10 rounded-full\" src=\"" + user.profilePicture() + "\" alt=\"\">"
-                                    : "<img class=\"h-10 w-10 rounded-full\" src=\"https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg\" alt=\"\">")
-                            .append("</div>")
-                            .append("</div>")
-                            .append("</td>")
-                            .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                            .append("<div class=\"text-sm font-medium text-gray-900\">").append(user.user()).append("</div>")
-                            .append("<div class=\"text-sm text-gray-500\">")
-                            .append(user.email() != null ? user.email() : "No email")
-                            .append("</div>")
-                            .append("</td>")
-                            .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-900\">")
-                            .append(user.firstName() != null ? user.firstName() : "")
-                            .append(" ")
-                            .append(user.lastName() != null ? user.lastName() : "")
-                            .append("</td>")
-                            .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
-                            .append("<time datetime=\"")
-                            .append(user.createdAt() != null ? user.createdAt() : "N/A")
-                            .append("\">")
-                            .append(user.createdAt() != null ? JawsUtils.formatUnixTimestamp(user.createdAt()) : "N/A")
-                            .append("</time>")
-                            .append("</td>")
-                            .append("<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">")
-                            .append("<div class=\"flex space-x-2 justify-end\">")
-                            .append("<a href=\"/backoffice/profile/").append(user.id()).append("\" ")
-                            .append("class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700\" type=\"button\">")
-                            .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" />")
-                            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" />")
-                            .append("</svg>")
-                            .append("</a>")
-                            .append("<button class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700\" onclick=\"openModal('sample-modal')\" type=\"button\">")
-                            .append("<svg class=\"mr-1 h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z\" />")
-                            .append("</svg>")
-                            .append("</button>")
-                            .append("</div>")
-                            .append("</td>")
-                            .append("</tr>");
-                }
-            }
-
-            // Add pagination controls
-            html.append(generatePaginationHTML(userPage, "users"));
-
-            sendHTMLResponse(OK, html.toString());
-        } catch (Exception e) {
-            log.error("Failed to list users: {}", e.getMessage(), e);
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<tr><td colspan=\"5\">Error loading users</td></tr>");
-        }
+        String html = backofficeService.generateUsersTableHTML(
+            getQueryParam("page"),
+            getQueryParam("size"),
+            getQueryParam("sort"),
+            getQueryParam("direction")
+        );
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/job-stats", method = GET)
     public void getJobStatsHTMX() {
-        try {
-            // Get job statistics from Freyr
-            Map<String, Object> stats = jobQueue.getStatistics();
-            
-            // Get counts by status
-            org.ruitx.jaws.components.Mimir mimir = new org.ruitx.jaws.components.Mimir();
-            List<org.ruitx.jaws.types.Row> statusCounts = mimir.getRows(
-                "SELECT status, COUNT(*) as count FROM JOBS GROUP BY status"
-            );
-            
-            StringBuilder html = new StringBuilder();
-            html.append("<div class=\"grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4\">");
-            
-            // Total jobs
-            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
-                .append("<div class=\"flex items-center justify-between\">")
-                .append("<div>")
-                .append("<p class=\"text-sm font-medium text-gray-600\">Total Jobs</p>")
-                .append("<p class=\"text-2xl font-bold text-gray-900\">").append(stats.getOrDefault("totalJobs", 0)).append("</p>")
-                .append("</div>")
-                .append("<div class=\"flex-shrink-0\">")
-                .append("<svg class=\"h-8 w-8 text-primary-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z\" />")
-                .append("</svg>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>");
-            
-            // Completed jobs
-            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
-                .append("<div class=\"flex items-center justify-between\">")
-                .append("<div>")
-                .append("<p class=\"text-sm font-medium text-gray-600\">Completed</p>")
-                .append("<p class=\"text-2xl font-bold text-green-600\">").append(stats.getOrDefault("completedJobs", 0)).append("</p>")
-                .append("</div>")
-                .append("<div class=\"flex-shrink-0\">")
-                .append("<svg class=\"h-8 w-8 text-green-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z\" />")
-                .append("</svg>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>");
-            
-            // Failed jobs
-            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
-                .append("<div class=\"flex items-center justify-between\">")
-                .append("<div>")
-                .append("<p class=\"text-sm font-medium text-gray-600\">Failed</p>")
-                .append("<p class=\"text-2xl font-bold text-red-600\">").append(stats.getOrDefault("failedJobs", 0)).append("</p>")
-                .append("</div>")
-                .append("<div class=\"flex-shrink-0\">")
-                .append("<svg class=\"h-8 w-8 text-red-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z\" />")
-                .append("</svg>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>");
-            
-            // Queue size
-            int queueSize = (Integer) stats.getOrDefault("parallelQueueSize", 0) + 
-                           (Integer) stats.getOrDefault("sequentialQueueSize", 0);
-            html.append("<div class=\"bg-white rounded-lg shadow border border-gray-200 p-6\">")
-                .append("<div class=\"flex items-center justify-between\">")
-                .append("<div>")
-                .append("<p class=\"text-sm font-medium text-gray-600\">Queue Size</p>")
-                .append("<p class=\"text-2xl font-bold text-yellow-600\">").append(queueSize).append("</p>")
-                .append("</div>")
-                .append("<div class=\"flex-shrink-0\">")
-                .append("<svg class=\"h-8 w-8 text-yellow-600\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z\" />")
-                .append("</svg>")
-                .append("</div>")
-                .append("</div>")
-                .append("</div>");
-            
-            html.append("</div>");
-            
-            sendHTMLResponse(OK, html.toString());
-        } catch (Exception e) {
-            log.error("Failed to get job statistics: {}", e.getMessage(), e);
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading job statistics</div>");
-        }
+        String html = backofficeService.generateJobStatsHTML();
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
@@ -1014,25 +570,7 @@ public class BackofficeController extends Bragi {
 
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/assign-role", method = POST)
-    public void assignRole(RoleAssignRequest request) {
-        JawsLogger.info("BackofficeController: Assign role request received");
-        
-        if (request == null) {
-            JawsLogger.warn("BackofficeController: Request object is null");
-            sendHTMLResponse(BAD_REQUEST, "Invalid request data");
-            return;
-        }
-        
-        JawsLogger.info("BackofficeController: Parsed request - userId: {}, roleId: {}", 
-            request.userId(), request.roleId());
-        
-        if (request.userId() == null || request.roleId() == null) {
-            JawsLogger.warn("BackofficeController: Missing required fields - userId: {}, roleId: {}", 
-                request.userId(), request.roleId());
-            sendHTMLResponse(BAD_REQUEST, "Missing required fields: userId and roleId are required");
-            return;
-        }
-        
+    public void assignRole(RoleAssignRequest request) {        
         // Get current user ID for audit trail
         Integer assignedBy = Integer.parseInt(Tyr.getUserIdFromJWT(getCurrentToken()));
         
@@ -1051,258 +589,34 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/roles", method = GET)
     public void listRolesHTMX() {
-        try {
-            // Parse pagination parameters
-            int page = 0;
-            int size = 10; // Default 10 for roles
-            String sortBy = "created_at";
-            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
-
-            String pageParam = getQueryParam("page");
-            String sizeParam = getQueryParam("size");
-            String sortParam = getQueryParam("sort");
-            String directionParam = getQueryParam("direction");
-
-            if (pageParam != null) {
-                try {
-                    page = Integer.parseInt(pageParam);
-                } catch (NumberFormatException e) {
-                    page = 0;
-                }
-            }
-
-            if (sizeParam != null) {
-                try {
-                    size = Integer.parseInt(sizeParam);
-                    if (size < 1) size = 10;
-                    if (size > 50) size = 50; // Max 50 per page for roles
-                } catch (NumberFormatException e) {
-                    size = 10;
-                }
-            }
-
-            if (sortParam != null && !sortParam.trim().isEmpty()) {
-                sortBy = sortParam.trim();
-            }
-
-            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
-                direction = org.ruitx.jaws.types.SortDirection.ASC;
-            }
-
-            // Create PageRequest
-            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
-
-            // Get paginated roles from database
-            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> rolePage = new org.ruitx.jaws.components.Mimir()
-                    .getPage("SELECT * FROM ROLE", pageRequest);
-
-            // Transform Row objects to Role objects
-            List<Role> roles = rolePage.getContent().stream()
-                    .map(row -> Role.builder()
-                            .id(row.getInt("id").orElse(0))
-                            .name(row.getString("name").orElse(""))
-                            .description(row.getString("description").orElse(null))
-                            .createdAt(row.getLong("created_at").orElse(null))
-                            .updatedAt(row.getLong("updated_at").orElse(null))
-                            .build())
-                    .toList();
-        
-        StringBuilder htmlBuilder = new StringBuilder();
-        
-        if (roles.isEmpty()) {
-            htmlBuilder.append("""
-                <tr>
-                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                        No roles found. Create your first role!
-                    </td>
-                </tr>
-                """);
-        } else {
-            for (Role role : roles) {
-                int userCount = authorizationService.getUserCountForRole(role.id());
-                
-                htmlBuilder.append(String.format("""
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10">
-                                    <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                                        <svg class="h-5 w-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.623 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                                        </svg>                                        
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">%s</div>
-                                    <div class="text-sm text-gray-500">Role ID: %d</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900">%s</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                %d users
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            %s
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                            <button
-                                class="text-red-600 hover:text-red-900"
-                                hx-delete="/htmx/backoffice/roles/%d"
-                                hx-confirm="Are you sure you want to delete this role? This action cannot be undone."
-                                hx-headers='{"Content-Type": "application/json"}'
-                                hx-swap="innerHTML transition:true"
-                                hx-target="#roles-table-body"
-                                hx-trigger="click">
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                    """,
-                    role.name(),
-                    role.id(),
-                    role.description() != null ? role.description() : "No description",
-                    userCount,
-                    role.createdAt() != null ? JawsUtils.formatUnixTimestamp(role.createdAt()) : "Unknown",
-                    role.id()
-                ));
-            }
-        }
-        
-        // Add pagination controls
-        htmlBuilder.append(generatePaginationHTML(rolePage, "roles"));
-        
-        sendHTMLResponse(OK, htmlBuilder.toString());
-        } catch (Exception e) {
-            log.error("Failed to list roles: {}", e.getMessage(), e);
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<tr><td colspan=\"5\">Error loading roles</td></tr>");
-        }
+        String html = backofficeService.generateRolesTableHTML(
+            getQueryParam("page"),
+            getQueryParam("size"),
+            getQueryParam("sort"),
+            getQueryParam("direction")
+        );
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/user-roles", method = GET)
     public void listUserRolesHTMX() {
-        List<UserRole> userRoles = authorizationService.getAllUserRoles();
-        
-        StringBuilder htmlBuilder = new StringBuilder();
-        
-        if (userRoles.isEmpty()) {
-            htmlBuilder.append("""
-                <tr>
-                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                        No role assignments found. Start assigning roles to users!
-                    </td>
-                </tr>
-                """);
-        } else {
-            for (UserRole userRole : userRoles) {
-                // Get user and role details
-                User user = authRepo.getUserById(userRole.userId().longValue()).orElse(null);
-                Role role = authorizationService.getRoleById(userRole.roleId()).orElse(null);
-                User assignedByUser = userRole.assignedBy() != null ? 
-                    authRepo.getUserById(userRole.assignedBy().longValue()).orElse(null) : null;
-                
-                if (user != null && role != null) {
-                    htmlBuilder.append(String.format("""
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-10 w-10">
-                                        <img class="h-10 w-10 rounded-full" src="%s" alt="">
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">%s %s</div>
-                                        <div class="text-sm text-gray-500">@%s</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                                    %s
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                %s
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                %s
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button
-                                    class="text-red-600 hover:text-red-900"
-                                    hx-delete="/htmx/backoffice/user-roles/%d"
-                                    hx-confirm="Are you sure you want to remove this role from the user?"
-                                    hx-headers='{"Content-Type": "application/json"}'
-                                    hx-swap="innerHTML transition:true"
-                                    hx-target="#user-roles-table-body"
-                                    hx-trigger="click">
-                                    Remove
-                                </button>
-                            </td>
-                        </tr>
-                        """,
-                        user.profilePicture() != null && !user.profilePicture().isEmpty() ? 
-                            user.profilePicture() : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg",
-                        user.firstName() != null ? user.firstName() : "",
-                        user.lastName() != null ? user.lastName() : "",
-                        user.user(),
-                        role.name(),
-                        userRole.assignedAt() != null ? JawsUtils.formatUnixTimestamp(userRole.assignedAt()) : "Unknown",
-                        assignedByUser != null ? assignedByUser.user() : "System",
-                        userRole.id()
-                    ));
-                }
-            }
-        }
-        
-        sendHTMLResponse(OK, htmlBuilder.toString());
+        String html = backofficeService.generateUserRolesTableHTML();
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/users-list", method = GET)
     public void listUsersForDropdownHTMX() {
-        List<User> users = authRepo.getAllUsers();
-        
-        StringBuilder htmlBuilder = new StringBuilder();
-        htmlBuilder.append("<option value=\"\">Select a user...</option>");
-        
-        for (User user : users) {
-            htmlBuilder.append(String.format("""
-                <option value="%d">%s %s (@%s)</option>
-                """,
-                user.id(),
-                user.firstName() != null ? user.firstName() : "",
-                user.lastName() != null ? user.lastName() : "",
-                user.user()
-            ));
-        }
-        
-        sendHTMLResponse(OK, htmlBuilder.toString());
+        String html = backofficeService.generateUsersDropdownHTML();
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/roles-list", method = GET)
     public void listRolesForDropdownHTMX() {
-        List<Role> roles = authorizationService.getAllRoles();
-        
-        StringBuilder htmlBuilder = new StringBuilder();
-        htmlBuilder.append("<option value=\"\">Select a role...</option>");
-        
-        for (Role role : roles) {
-            htmlBuilder.append(String.format("""
-                <option value="%d">%s - %s</option>
-                """,
-                role.id(),
-                role.name(),
-                role.description() != null ? role.description() : "No description"
-            ));
-        }
-        
-        sendHTMLResponse(OK, htmlBuilder.toString());
+        String html = backofficeService.generateRolesDropdownHTML();
+        sendHTMLResponse(OK, html);
     }
 
     @AccessControl(login = true, role = "admin")
