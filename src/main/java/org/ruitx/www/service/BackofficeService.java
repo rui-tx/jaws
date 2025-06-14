@@ -134,17 +134,41 @@ public class BackofficeService {
     public String generateJobStatsHTML(Yggdrasill.RequestContext requestContext) {
         try {
             Map<String, Object> stats = jobQueue.getStatistics();
-            List<Row> statusCounts = backofficeRepo.getJobStatusCounts();
+            
+            // Create a list of stat objects for the template
+            List<Map<String, Object>> statItems = List.of(
+                Map.of(
+                    "title", "Total Jobs",
+                    "value", stats.getOrDefault("totalJobs", 0),
+                    "color", "primary",
+                    "icon", "database"
+                ),
+                Map.of(
+                    "title", "Completed",
+                    "value", stats.getOrDefault("completedJobs", 0),
+                    "color", "green",
+                    "icon", "check-circle"
+                ),
+                Map.of(
+                    "title", "Failed",
+                    "value", stats.getOrDefault("failedJobs", 0),
+                    "color", "red",
+                    "icon", "exclamation-circle"
+                ),
+                Map.of(
+                    "title", "Queue Size",
+                    "value", (Integer) stats.getOrDefault("parallelQueueSize", 0) + (Integer) stats.getOrDefault("sequentialQueueSize", 0),
+                    "color", "yellow",
+                    "icon", "clock"
+                )
+            );
                 
             Context templateContext = Context.builder()
-                .with("totalJobs", stats.getOrDefault("totalJobs", 0))
-                .with("completedJobs", stats.getOrDefault("completedJobs", 0))
-                .with("failedJobs", stats.getOrDefault("failedJobs", 0))
-                .with("queueSize", (Integer) stats.getOrDefault("parallelQueueSize", 0) + (Integer) stats.getOrDefault("sequentialQueueSize", 0))
+                .with("stats", statItems)
                 .build();   
             
-            // Process template using Hermod
-            return Hermod.processTemplate("components/molecule/job-stats.html", requestContext.getRequest(), requestContext.getResponse(), templateContext);
+            // Process template using Hermod with the stats content template
+            return Hermod.processTemplate("components/stats-card/stats-content.html", requestContext.getRequest(), requestContext.getResponse(), templateContext);
             
         } catch (Exception e) {
             log.error("Failed to get job statistics: {}", e.getMessage(), e);

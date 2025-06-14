@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- Stats Content -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <th:block th:each="stat : ${stats}">
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600" th:text="${stat.title}">Title</p>
+                        <p class="text-2xl font-bold" th:classappend="'text-' + ${stat.color} + '-600'" th:text="${stat.value}">Value</p>
+                    </div>
+                    <div th:if="${stat.icon}" class="flex-shrink-0">
+                        <span th:classappend="'text-' + ${stat.color} + '-600'" th:attr="data-icon=${stat.icon}"></span>
+                    </div>
+                </div>
+            </div>
+        </th:block>
+    </div>
+</body>
+</html> 
