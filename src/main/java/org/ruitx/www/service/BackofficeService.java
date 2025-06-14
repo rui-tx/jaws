@@ -12,7 +12,10 @@ import org.ruitx.www.repository.AuthRepo;
 import org.ruitx.www.repository.BackofficeRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ruitx.jaws.components.Hermod;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -123,32 +126,37 @@ public class BackofficeService {
     }
 
     /**
-     * Generate job statistics HTML
+     * Generate job statistics HTML using Thymeleaf template
      */
-    public String generateJobStatsHTML() {
+    public String generateJobStatsHTML(HttpServletRequest request, HttpServletResponse response) {
         try {
             Map<String, Object> stats = jobQueue.getStatistics();
             List<Row> statusCounts = backofficeRepo.getJobStatusCounts();
             
-            StringBuilder html = new StringBuilder();
-            html.append("<div class=\"grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4\">");
-            
-            // Generate stat cards
-            html.append(generateStatCard("Total Jobs", stats.getOrDefault("totalJobs", 0), "primary", "database"));
-            html.append(generateStatCard("Completed", stats.getOrDefault("completedJobs", 0), "green", "check-circle"));
-            html.append(generateStatCard("Failed", stats.getOrDefault("failedJobs", 0), "red", "exclamation-circle"));
+            // Prepare the stats data for the template
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("totalJobs", stats.getOrDefault("totalJobs", 0));
+            templateData.put("completedJobs", stats.getOrDefault("completedJobs", 0));
+            templateData.put("failedJobs", stats.getOrDefault("failedJobs", 0));
             
             int queueSize = (Integer) stats.getOrDefault("parallelQueueSize", 0) + 
                            (Integer) stats.getOrDefault("sequentialQueueSize", 0);
-            html.append(generateStatCard("Queue Size", queueSize, "yellow", "clock"));
+            templateData.put("queueSize", queueSize);
             
-            html.append("</div>");
+            // Set template variables using Hermod
+            for (Map.Entry<String, Object> entry : templateData.entrySet()) {
+                Hermod.setTemplateVariable(entry.getKey(), entry.getValue());
+            }
             
-            return html.toString();
+            // Process template using Hermod
+            return Hermod.processTemplate("components/dashboard/job-stats.html", request, response);
             
         } catch (Exception e) {
             log.error("Failed to get job statistics: {}", e.getMessage(), e);
             return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading job statistics</div>";
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
         }
     }
 

@@ -3,6 +3,7 @@ package org.ruitx.www.controller;
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.components.Tyr;
+import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
@@ -356,8 +357,14 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/job-stats", method = GET)
     public void getJobStatsHTMX() {
-        String html = backofficeService.generateJobStatsHTML();
-        sendHTMLResponse(OK, html);
+        try {
+            Yggdrasill.RequestContext context = getRequestContext();
+            String html = backofficeService.generateJobStatsHTML(context.getRequest(), context.getResponse());
+            sendHTMLResponse(OK, html);
+        } catch (Exception e) {
+            log.error("Failed to get job stats: {}", e.getMessage(), e);
+            sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error loading job statistics");
+        }
     }
 
     @AccessControl(login = true, role = "admin")

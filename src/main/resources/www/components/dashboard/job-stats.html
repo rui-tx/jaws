@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Job Stats</title>
+</head>
+<body>
+    <!-- Job Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <!-- Total Jobs Card -->
+        <div th:replace="~{components/dashboard/job-stats-card.html :: job-stats-card(
+            title='Total Jobs',
+            value=${totalJobs},
+            color='primary',
+            icon='database'
+        )}"></div>
+
+        <!-- Completed Jobs Card -->
+        <div th:replace="~{components/dashboard/job-stats-card.html :: job-stats-card(
+            title='Completed',
+            value=${completedJobs},
+            color='green',
+            icon='check-circle'
+        )}"></div>
+
+        <!-- Failed Jobs Card -->
+        <div th:replace="~{components/dashboard/job-stats-card.html :: job-stats-card(
+            title='Failed',
+            value=${failedJobs},
+            color='red',
+            icon='exclamation-circle'
+        )}"></div>
+
+        <!-- Queue Size Card -->
+        <div th:replace="~{components/dashboard/job-stats-card.html :: job-stats-card(
+            title='Queue Size',
+            value=${queueSize},
+            color='yellow',
+            icon='clock'
+        )}"></div>
+    </div>
+</body>
+</html> 
