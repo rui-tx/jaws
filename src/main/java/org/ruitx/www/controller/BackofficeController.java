@@ -86,8 +86,6 @@ public class BackofficeController extends Bragi {
         context.put("currentPage", "dashboard");
         setContext(context);
 
-        JawsLogger.info("BackofficeController: Rendering dashboard page");
-
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, DASHBOARD_PAGE));
     }
 
@@ -357,14 +355,9 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/job-stats", method = GET)
     public void getJobStatsHTMX() {
-        try {
-            Yggdrasill.RequestContext context = getRequestContext();
-            String html = backofficeService.generateJobStatsHTML(context.getRequest(), context.getResponse());
-            sendHTMLResponse(OK, html);
-        } catch (Exception e) {
-            log.error("Failed to get job stats: {}", e.getMessage(), e);
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error loading job statistics");
-        }
+        String html = backofficeService.generateJobStatsHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
+        return;
     }
 
     @AccessControl(login = true, role = "admin")

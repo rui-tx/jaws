@@ -6,6 +6,7 @@ import org.thymeleaf.context.WebContext;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.web.servlet.JakartaServletWebApplication;
+import org.ruitx.jaws.types.Context;
 import org.ruitx.jaws.utils.JawsLogger;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -149,7 +150,7 @@ public final class Hermod {
      */
     public static String processTemplate(File templateFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
         String templatePath = templateFile.getName();
-        return processTemplate(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response);
+        return processTemplate(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response, null);
     }
 
     /**
@@ -161,8 +162,12 @@ public final class Hermod {
      * @return the processed template
      * @throws IOException if there's an error processing the template
      */
-    public static String processTemplate(String templatePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        return processTemplate(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response);
+    public static String processTemplate(String templatePath, HttpServletRequest request, HttpServletResponse response, Context context) throws IOException {
+        return processTemplate(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response, context);
+    }
+
+    public static String processTemplate(String template, Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        return processTemplate(template, queryParams, bodyParams, request, response, null);
     }
 
     /**
@@ -178,7 +183,7 @@ public final class Hermod {
      * @return the processed template
      * @throws IOException if there's an error processing the template
      */
-    public static String processTemplate(String template, Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public static String processTemplate(String template, Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response, Context templateContext) throws IOException {
         if (queryParams == null) {
             queryParams = new LinkedHashMap<>();
         }
@@ -188,7 +193,7 @@ public final class Hermod {
         
         // If template looks like a file path (doesn't contain HTML tags), use it as a template path
         if (!template.contains("<") && !template.contains(">")) {
-            return processThymeleafTemplate(template, queryParams, bodyParams, request, response);
+            return processThymeleafTemplate(template, queryParams, bodyParams, request, response, templateContext);
         }
         
         // Otherwise, just return content
@@ -199,10 +204,15 @@ public final class Hermod {
     /**
      * Process a template using Thymeleaf engine.
      */
-    private static String processThymeleafTemplate(String templatePath, Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response) {
+    private static String processThymeleafTemplate(String templatePath, Map<String, String> queryParams, Map<String, String> bodyParams, HttpServletRequest request, HttpServletResponse response, Context templateContext) {
         try {
             // Create Thymeleaf web context
             WebContext context = createThymeleafWebContext(queryParams, bodyParams, request, response);
+
+            // Add template context variables
+            if (templateContext != null) {  
+                context.setVariables(templateContext.context());
+            }
             
             // Process the template using the file path
             return templateEngine.process(templatePath, context);
@@ -210,6 +220,9 @@ public final class Hermod {
         } catch (Exception e) {
             JawsLogger.error("Error processing Thymeleaf template '{}': {}", templatePath, e.getMessage());
             return "Error processing template: " + templatePath;
+        } finally {
+            // Clean up template variables
+            clearTemplateVariables();
         }
     }
 

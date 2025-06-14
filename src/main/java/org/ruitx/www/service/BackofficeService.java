@@ -1,6 +1,7 @@
 package org.ruitx.www.service;
 
 import org.ruitx.jaws.components.freyr.Freyr;
+import org.ruitx.jaws.types.Context;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
@@ -13,10 +14,12 @@ import org.ruitx.www.repository.BackofficeRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ruitx.jaws.components.Hermod;
+import org.ruitx.jaws.components.Yggdrasill;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -128,35 +131,24 @@ public class BackofficeService {
     /**
      * Generate job statistics HTML using Thymeleaf template
      */
-    public String generateJobStatsHTML(HttpServletRequest request, HttpServletResponse response) {
+    public String generateJobStatsHTML(Yggdrasill.RequestContext requestContext) {
         try {
             Map<String, Object> stats = jobQueue.getStatistics();
             List<Row> statusCounts = backofficeRepo.getJobStatusCounts();
-            
-            // Prepare the stats data for the template
-            Map<String, Object> templateData = new HashMap<>();
-            templateData.put("totalJobs", stats.getOrDefault("totalJobs", 0));
-            templateData.put("completedJobs", stats.getOrDefault("completedJobs", 0));
-            templateData.put("failedJobs", stats.getOrDefault("failedJobs", 0));
-            
-            int queueSize = (Integer) stats.getOrDefault("parallelQueueSize", 0) + 
-                           (Integer) stats.getOrDefault("sequentialQueueSize", 0);
-            templateData.put("queueSize", queueSize);
-            
-            // Set template variables using Hermod
-            for (Map.Entry<String, Object> entry : templateData.entrySet()) {
-                Hermod.setTemplateVariable(entry.getKey(), entry.getValue());
-            }
+                
+            Context templateContext = Context.builder()
+                .with("totalJobs", stats.getOrDefault("totalJobs", 0))
+                .with("completedJobs", stats.getOrDefault("completedJobs", 0))
+                .with("failedJobs", stats.getOrDefault("failedJobs", 0))
+                .with("queueSize", (Integer) stats.getOrDefault("parallelQueueSize", 0) + (Integer) stats.getOrDefault("sequentialQueueSize", 0))
+                .build();   
             
             // Process template using Hermod
-            return Hermod.processTemplate("components/dashboard/job-stats.html", request, response);
+            return Hermod.processTemplate("components/molecule/job-stats.html", requestContext.getRequest(), requestContext.getResponse(), templateContext);
             
         } catch (Exception e) {
             log.error("Failed to get job statistics: {}", e.getMessage(), e);
             return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading job statistics</div>";
-        } finally {
-            // Clean up template variables
-            Hermod.clearTemplateVariables();
         }
     }
 
