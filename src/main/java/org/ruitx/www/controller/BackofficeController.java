@@ -1,10 +1,7 @@
 package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.components.Tyr;
-import org.ruitx.jaws.components.Yggdrasill;
-import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.ResponseCode;
@@ -18,15 +15,9 @@ import org.ruitx.www.repository.AuthRepo;
 import org.ruitx.www.service.AuthService;
 import org.ruitx.www.service.AuthorizationService;
 import org.ruitx.www.service.BackofficeService;
-import org.ruitx.www.model.auth.Role;
-import org.ruitx.www.model.auth.UserRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
@@ -53,7 +44,6 @@ public class BackofficeController extends Bragi {
     private final AuthRepo authRepo;
     private final AuthService authService;
     private final AuthorizationService authorizationService;
-    private final Freyr jobQueue;
     private final org.ruitx.jaws.components.Mimir logsDb;
     private final BackofficeService backofficeService;
 
@@ -62,7 +52,6 @@ public class BackofficeController extends Bragi {
         this.authRepo = new AuthRepo();
         this.authService = new AuthService();
         this.authorizationService = new AuthorizationService();
-        this.jobQueue = Freyr.getInstance();
         this.logsDb = new org.ruitx.jaws.components.Mimir("src/main/resources/logs.db");
         this.backofficeService = new BackofficeService();
     }
@@ -367,30 +356,6 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, html);
     }
 
-    private String getLogLevelClass(String level) {
-        return switch (level) {
-            case "ERROR" -> "bg-red-100 text-red-800";
-            case "WARN" -> "bg-yellow-100 text-yellow-800";
-            case "INFO" -> "bg-blue-100 text-blue-800";
-            case "DEBUG" -> "bg-gray-100 text-gray-800";
-            case "TRACE" -> "bg-purple-100 text-purple-800";
-            default -> "bg-gray-100 text-gray-800";
-        };
-    }
-
-    private String getStatusClass(String status) {
-        return switch (status) {
-            case "PENDING" -> "is-warning";
-            case "PROCESSING" -> "is-info";
-            case "COMPLETED" -> "is-success";
-            case "FAILED" -> "is-danger";
-            case "TIMEOUT" -> "is-danger";
-            case "RETRY_SCHEDULED" -> "is-warning";
-            case "DEAD_LETTER" -> "is-dark";
-            default -> "is-light";
-        };
-    }
-
     // =============================================
     // ROLE MANAGEMENT ENDPOINTS
     // =============================================
@@ -506,161 +471,5 @@ public class BackofficeController extends Bragi {
     
     public record RoleCreateRequest(String name, String description) {}
     public record RoleAssignRequest(Integer userId, Integer roleId) {}
-
-    // =============================================
-    // PAGINATION UTILITIES
-    // =============================================
-
-    /**
-     * Generates pagination HTML controls for a given page result.
-     * 
-     * @param page The Page object containing pagination metadata
-     * @param endpoint The endpoint name (users, jobs, logs, etc.)
-     * @return HTML string with pagination controls
-     */
-    private String generatePaginationHTML(org.ruitx.jaws.types.Page<?> page, String endpoint) {
-        if (page.getTotalElements() == 0) {
-            return ""; // No pagination needed for empty results
-        }
-
-        StringBuilder html = new StringBuilder();
-        
-        // Pagination wrapper
-        html.append("<tr>")
-            .append("<td colspan=\"5\" class=\"bg-gray-50 px-6 py-3 border-t border-gray-200\">")
-            .append("<div class=\"flex items-center justify-between\">")
-            
-            // Left side - Results info
-            .append("<div class=\"flex-1 flex justify-between sm:hidden\">")
-            .append("<span class=\"text-sm text-gray-700\">")
-            .append("Showing ").append(page.getCurrentPage() * page.getPageSize() + 1)
-            .append(" to ").append(Math.min((page.getCurrentPage() + 1) * page.getPageSize(), page.getTotalElements()))
-            .append(" of ").append(page.getTotalElements()).append(" results")
-            .append("</span>")
-            .append("</div>")
-            
-            // Desktop view
-            .append("<div class=\"hidden sm:flex-1 sm:flex sm:items-center sm:justify-between\">")
-            .append("<div>")
-            .append("<p class=\"text-sm text-gray-700\">")
-            .append("Showing <span class=\"font-medium\">").append(page.getCurrentPage() * page.getPageSize() + 1).append("</span>")
-            .append(" to <span class=\"font-medium\">").append(Math.min((page.getCurrentPage() + 1) * page.getPageSize(), page.getTotalElements())).append("</span>")
-            .append(" of <span class=\"font-medium\">").append(page.getTotalElements()).append("</span> results")
-            .append("</p>")
-            .append("</div>")
-            
-            // Navigation controls
-            .append("<div>")
-            .append("<nav class=\"relative z-0 inline-flex rounded-md shadow-sm -space-x-px\" aria-label=\"Pagination\">")
-            
-            // Previous button
-            .append("<button class=\"relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50")
-            .append(page.hasPrevious() ? "\" " : " cursor-not-allowed opacity-50\" disabled ")
-            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(Math.max(0, page.getCurrentPage() - 1))
-            .append("&size=").append(page.getPageSize()).append("\" ")
-            .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-            .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-            .append("hx-swap=\"innerHTML transition:true\"")
-            .append(page.hasPrevious() ? ">" : " style=\"pointer-events: none;\">")
-            .append("<span class=\"sr-only\">Previous</span>")
-            .append("<svg class=\"h-5 w-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 19.5L8.25 12l7.5-7.5\" />")
-            .append("</svg>")
-            .append("</button>");
-
-        // Page numbers (show current page +/- 2)
-        int startPage = Math.max(0, page.getCurrentPage() - 2);
-        int endPage = Math.min(page.getTotalPages() - 1, page.getCurrentPage() + 2);
-        
-        // Show first page if not in range
-        if (startPage > 0) {
-            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
-                .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=0&size=").append(page.getPageSize()).append("\" ")
-                .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-                .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-                .append("hx-swap=\"innerHTML transition:true\">")
-                .append("1")
-                .append("</button>");
-                
-            if (startPage > 1) {
-                html.append("<span class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...")
-                    .append("</span>");
-            }
-        }
-
-        // Page number buttons
-        for (int i = startPage; i <= endPage; i++) {
-            boolean isCurrent = i == page.getCurrentPage();
-            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border ")
-                .append(isCurrent ? "border-primary-500 bg-primary-50 text-primary-600 z-10" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50")
-                .append(" text-sm font-medium\" ")
-                .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(i).append("&size=").append(page.getPageSize()).append("\" ")
-                .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-                .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-                .append("hx-swap=\"innerHTML transition:true\">")
-                .append(i + 1)
-                .append("</button>");
-        }
-
-        // Show last page if not in range
-        if (endPage < page.getTotalPages() - 1) {
-            if (endPage < page.getTotalPages() - 2) {
-                html.append("<span class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...")
-                    .append("</span>");
-            }
-            
-            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
-                .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(page.getTotalPages() - 1).append("&size=").append(page.getPageSize()).append("\" ")
-                .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-                .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-                .append("hx-swap=\"innerHTML transition:true\">")
-                .append(page.getTotalPages())
-                .append("</button>");
-        }
-
-        // Next button
-        html.append("<button class=\"relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50")
-            .append(page.hasNext() ? "\" " : " cursor-not-allowed opacity-50\" disabled ")
-            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(Math.min(page.getTotalPages() - 1, page.getCurrentPage() + 1))
-            .append("&size=").append(page.getPageSize()).append("\" ")
-            .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-            .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-            .append("hx-swap=\"innerHTML transition:true\"")
-            .append(page.hasNext() ? ">" : " style=\"pointer-events: none;\">")
-            .append("<span class=\"sr-only\">Next</span>")
-            .append("<svg class=\"h-5 w-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8.25 4.5l7.5 7.5-7.5 7.5\" />")
-            .append("</svg>")
-            .append("</button>");
-
-        html.append("</nav>")
-            .append("</div>")
-            .append("</div>")
-            
-            // Page size selector
-            .append("<div class=\"flex items-center space-x-2 ml-4\">")
-            .append("<label class=\"text-sm text-gray-700\">Show:</label>")
-            .append("<select class=\"block w-20 px-2 py-1 border border-gray-300 rounded-md text-sm\" ")
-            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=0\" ")
-            .append("hx-include=\"this\" ")
-            .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-            .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-            .append("hx-swap=\"innerHTML transition:true\" ")
-            .append("name=\"size\">");
-
-        for (int size : new int[]{10, 25, 50, 100}) {
-            html.append("<option value=\"").append(size).append("\"")
-                .append(size == page.getPageSize() ? " selected" : "")
-                .append(">").append(size).append("</option>");
-        }
-
-        html.append("</select>")
-            .append("</div>")
-            .append("</div>")
-            .append("</td>")
-            .append("</tr>");
-
-        return html.toString();
-    }
 
 }

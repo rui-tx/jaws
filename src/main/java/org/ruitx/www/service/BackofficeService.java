@@ -137,8 +137,8 @@ public class BackofficeService {
                     "hxMethod", "POST",
                     "hxUrl", "/htmx/backoffice/jobs/" + id + "/delete",
                     "title", "Delete",
-                    "label", "Delete",
                     "classes", "text-red-600 hover:text-red-900 text-xs",
+                    "icon", "<svg class=\"h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" /><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" /></svg>",
                     "confirm", "Delete this job?",
                     "headers", "{\"Content-Type\": \"application/json\"}",
                     "target", "#jobs-table-body",
@@ -712,178 +712,6 @@ public class BackofficeService {
         }
     }
 
-    private String generateJobTableRow(Row job) {
-        String status = job.getString("status").orElse("UNKNOWN");
-        String statusClass = getJobStatusClass(status);
-        Long createdAt = job.getLong("created_at").orElse(0L);
-        Long completedAt = job.getLong("completed_at").orElse(null);
-        String jobId = job.getString("id").orElse("");
-        
-        return String.format("""
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 py-1 text-xs font-medium rounded-full %s">
-                        %s
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">%s</div>
-                    <div class="text-sm text-gray-500">ID: %s</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    Priority: %d
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    %s
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    %s
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div class="flex space-x-2 justify-end">
-                        <a href="/backoffice/jobs/%s" 
-                           class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700"
-                           title="View job details">
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </a>
-                        %s
-                    </div>
-                </td>
-            </tr>
-            """,
-            statusClass,
-            status,
-            job.getString("type").orElse("Unknown"),
-            jobId,
-            job.getInt("priority").orElse(5),
-            JawsUtils.formatUnixTimestamp(createdAt),
-            completedAt != null ? JawsUtils.formatUnixTimestamp(completedAt) : "In progress",
-            jobId,
-            generateJobActionButtons(status, jobId)
-        );
-    }
-
-    private String getJobStatusClass(String status) {
-        return switch (status) {
-            case "PENDING" -> "bg-yellow-100 text-yellow-800";
-            case "PROCESSING" -> "bg-blue-100 text-blue-800";
-            case "COMPLETED" -> "bg-green-100 text-green-800";
-            case "FAILED" -> "bg-red-100 text-red-800";
-            case "TIMEOUT" -> "bg-red-100 text-red-800";
-            case "RETRY_SCHEDULED" -> "bg-yellow-100 text-yellow-800";
-            case "DEAD_LETTER" -> "bg-gray-100 text-gray-800";
-            default -> "bg-gray-100 text-gray-800";
-        };
-    }
-
-    private String generateJobActionButtons(String status, String jobId) {
-        StringBuilder buttons = new StringBuilder();
-        
-        // Add reprocess button for failed/timeout jobs
-        if ("FAILED".equals(status) || "TIMEOUT".equals(status) || "DEAD_LETTER".equals(status)) {
-            buttons.append(String.format("""
-                <button
-                    class="ml-2 inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                    hx-post="/htmx/backoffice/jobs/%s/reprocess"
-                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-                    hx-target="#jobs-table-body"
-                    hx-swap="innerHTML transition:true"
-                    title="Reprocess job">
-                    ↻
-                </button>
-                """, jobId));
-        }
-        
-        // Add delete button
-        buttons.append(String.format("""
-            <button
-                class="ml-2 inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                hx-post="/htmx/backoffice/jobs/%s/delete"
-                hx-confirm="Are you sure you want to delete this job?"
-                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
-                hx-target="#jobs-table-body"
-                hx-swap="innerHTML transition:true"
-                title="Delete job">
-                ×
-            </button>
-            """, jobId));
-        
-        return buttons.toString();
-    }
-
-    private String generateEmptyJobsRow(String statusFilter) {
-        StringBuilder html = new StringBuilder();
-        html.append("<tr>")
-            .append("<td colspan=\"6\" class=\"px-6 py-4 text-center text-gray-500\">")
-            .append("<div class=\"flex flex-col items-center justify-center py-8\">")
-            .append("<p class=\"text-sm text-gray-600 mb-1\">No jobs found</p>");
-            
-        if (statusFilter != null && !statusFilter.isEmpty()) {
-            html.append("<p class=\"text-xs text-gray-500\">No jobs with status: ").append(statusFilter).append("</p>");
-        } else {
-            html.append("<p class=\"text-xs text-gray-500\">The job queue is currently empty</p>");
-        }
-        
-        html.append("</div>")
-            .append("</td>")
-            .append("</tr>");
-            
-        return html.toString();
-    }
-
-    private String generateUserTableRow(User user) {
-        return String.format("""
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                        <div class="h-10 w-10 flex-shrink-0">
-                            <img class="h-10 w-10 rounded-full" src="%s" alt="">
-                        </div>
-                        <div class="ml-4">
-                            <div class="text-sm font-medium text-gray-900">%s</div>
-                            <div class="text-sm text-gray-500">%s</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">%s %s</div>
-                    <div class="text-sm text-gray-500">%s</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    %s
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    %s
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href="/backoffice/profile/%d" 
-                       class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700"
-                       title="View profile">
-                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        View
-                    </a>
-                </td>
-            </tr>
-            """,
-            user.profilePicture() != null && !user.profilePicture().isEmpty() ? 
-                user.profilePicture() : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg",
-            user.user(),
-            user.email() != null ? user.email() : "No email",
-            user.firstName() != null ? user.firstName() : "",
-            user.lastName() != null ? user.lastName() : "",
-            user.phoneNumber() != null ? user.phoneNumber() : "No phone",
-            user.createdAt() != null ? JawsUtils.formatUnixTimestamp(user.createdAt()) : "Unknown",
-            user.lastLogin() != null ? JawsUtils.formatUnixTimestamp(user.lastLogin(), "yyyy-MM-dd HH:mm") : "Never",
-            user.id()
-        );
-    }
-
     private String generateRoleTableRow(Role role) {
         int userCount = authorizationService.getUserCountForRole(role.id());
         
@@ -1035,19 +863,6 @@ public class BackofficeService {
             """, colspan, message);
     }
 
-    private String generateEmptyUsersRow() {
-        return """
-            <tr>
-                <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                    <div class="flex flex-col items-center justify-center py-8">
-                        <p class="text-sm text-gray-600 mb-1">No users found</p>
-                        <p class="text-xs text-gray-500">The user list is currently empty</p>
-                    </div>
-                </td>
-            </tr>
-            """;
-    }
-
     private String generateEmptyRolesRow() {
         return """
             <tr>
@@ -1068,26 +883,4 @@ public class BackofficeService {
             """;
     }
 
-    private String generateStatCard(String title, Object value, String color, String icon) {
-        return String.format("""
-            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">%s</p>
-                        <p class="text-2xl font-bold text-%s-600">%s</p>
-                    </div>
-                </div>
-            </div>
-            """, title, color, value);
-    }
-
-    private int getTableColspan(String endpoint) {
-        return switch (endpoint) {
-            case "jobs" -> 6;    // Status, Type, Priority, Created, Completed, Actions
-            case "users" -> 5;   // Avatar+Name, Full Name, Created, Last Login, Actions  
-            case "roles" -> 5;   // Role, Description, Users, Created, Actions
-            case "logs" -> 6;    // Level, Message, Logger, Timestamp, Thread, Actions
-            default -> 5;        // Default fallback
-        };
-    }
 } 
