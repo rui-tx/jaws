@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.www.util.Icon;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -114,7 +115,7 @@ public class BackofficeService {
                     "href", "/backoffice/jobs/" + id,
                     "title", "View details",
                     "classes", "inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700",
-                    "icon", "<svg class=\"h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" /><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" /></svg>"
+                    "icon", Icon.feather("eye", "h-3 w-3")
                 ));
 
                 if ("FAILED".equals(status) || "DEAD_LETTER".equals(status)) {
@@ -138,7 +139,7 @@ public class BackofficeService {
                     "hxUrl", "/htmx/backoffice/jobs/" + id + "/delete",
                     "title", "Delete",
                     "classes", "text-red-600 hover:text-red-900 text-xs",
-                    "icon", "<svg class=\"h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" /><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" /></svg>",
+                    "icon", Icon.feather("trash", "h-3 w-3"),
                     "confirm", "Delete this job?",
                     "target", "#jobs-table-body",
                     "swap", "innerHTML transition:true"
@@ -519,9 +520,7 @@ public class BackofficeService {
             .append("hx-swap=\"innerHTML transition:true\"")
             .append(page.hasPrevious() ? ">" : " style=\"pointer-events: none;\">")
             .append("<span class=\"sr-only\">Previous</span>")
-            .append("<svg class=\"h-5 w-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 19.5L8.25 12l7.5-7.5\" />")
-            .append("</svg>")
+            .append(Icon.feather("chevron-left", "h-5 w-5"))
             .append("</button>");
 
         // Page numbers (show current page +/- 2)
@@ -585,9 +584,7 @@ public class BackofficeService {
             .append("hx-swap=\"innerHTML transition:true\"")
             .append(page.hasNext() ? ">" : " style=\"pointer-events: none;\">")
             .append("<span class=\"sr-only\">Next</span>")
-            .append("<svg class=\"h-5 w-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-            .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8.25 4.5l7.5 7.5-7.5 7.5\" />")
-            .append("</svg>")
+            .append(Icon.feather("chevron-right", "h-5 w-5"))
             .append("</button>")
             .append("</nav>")
             .append("</div>")
