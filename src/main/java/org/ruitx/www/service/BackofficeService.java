@@ -223,7 +223,7 @@ public class BackofficeService {
                 .with("headers", headers)
                 .with("fields", fields)
                 .with("items", usersPage.getContent())
-                .with("page", new PageInfo(usersPage))
+                .with("page", usersPage)
                 .with("avatarFields", avatarFields)
                 .with("dateFields", dateFields)
                 .with("endpoint", "/htmx/backoffice/users")
@@ -236,37 +236,6 @@ public class BackofficeService {
             log.error("Failed to generate users table: {}", e.getMessage(), e);
             return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading users</div>";
         }
-    }
-
-    /**
-     * Helper class to provide pagination information to templates
-     */
-    private static class PageInfo {
-        private final int currentPage;
-        private final int pageSize;
-        private final long totalItems;
-        private final boolean hasNext;
-        private final boolean hasPrevious;
-        private final int firstItemNumber;
-        private final int lastItemNumber;
-        
-        public PageInfo(Page<?> page) {
-            this.currentPage = page.getCurrentPage();
-            this.pageSize = page.getPageSize();
-            this.totalItems = page.getTotalElements();
-            this.hasNext = page.hasNext();
-            this.hasPrevious = page.hasPrevious();
-            this.firstItemNumber = page.getCurrentPage() * page.getPageSize() + 1;
-            this.lastItemNumber = Math.min(firstItemNumber + page.getPageSize() - 1, (int) page.getTotalElements());
-        }
-        
-        public int getCurrentPage() { return currentPage; }
-        public int getPageSize() { return pageSize; }
-        public long getTotalItems() { return totalItems; }
-        public boolean isHasNext() { return hasNext; }
-        public boolean isHasPrevious() { return hasPrevious; }
-        public int getFirstItemNumber() { return firstItemNumber; }
-        public int getLastItemNumber() { return lastItemNumber; }
     }
 
     // =============================================

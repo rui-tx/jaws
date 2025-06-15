@@ -43,7 +43,7 @@
                         <!-- Avatar Field -->
                         <div th:if="${avatarFields != null and avatarFields.containsKey(field)}"
                              class="flex items-center">
-                            <div class="h-10 w-10 flex-shrink-0"
+                            <div class="flex-shrink-0 h-10 w-10"
                                  th:with="imageField=${avatarFields[field]['image']},
                                          imageValue=${item[imageField]},
                                          defaultImage='https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg'">
@@ -72,7 +72,7 @@
                                 'bg-' + status.colors[item[field]] + '-100 text-' + status.colors[item[field]] + '-800' : 
                                 'bg-gray-100 text-gray-800'
                               }">
-                            <svg th:if="${status.icons != null and status.icons[item[field]] != null}" 
+                            <svg th:if="${status.showDot}"
                                  class="mr-1.5 h-2 w-2"
                                  th:classappend="'text-' + ${status.colors[item[field]]} + '-400'"
                                  fill="currentColor" viewBox="0 0 8 8">
@@ -99,65 +99,7 @@
         </table>
         
         <!-- Pagination -->
-        <div th:if="${page != null}" class="flex items-center justify-between py-3 border-t border-gray-200">
-            <div class="flex-1 flex justify-between sm:hidden">
-                <button th:if="${page.hasPrevious}"
-                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        th:attr="hx-get=${endpoint + '?page=' + (page.currentPage - 1) + '&size=10'}"
-                        hx-target="#table-content"
-                        hx-indicator="#table-spinner"
-                        hx-swap="innerHTML transition:true">
-                    Previous
-                </button>
-                <button th:if="${page.hasNext}"
-                        class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        th:attr="hx-get=${endpoint + '?page=' + (page.currentPage + 1) + '&size=10'}"
-                        hx-target="#table-content"
-                        hx-indicator="#table-spinner"
-                        hx-swap="innerHTML transition:true">
-                    Next
-                </button>
-            </div>
-            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm text-gray-700">
-                        Showing
-                        <span class="font-medium" th:text="${page.firstItemNumber}">1</span>
-                        to
-                        <span class="font-medium" th:text="${page.lastItemNumber}">10</span>
-                        of
-                        <span class="font-medium" th:text="${page.totalItems}">20</span>
-                        results
-                    </p>
-                </div>
-                <div>
-                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                        <button th:if="${page.hasPrevious}"
-                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                                th:attr="hx-get=${endpoint + '?page=' + (page.currentPage - 1) + '&size=10'}"
-                                hx-target="#table-content"
-                                hx-indicator="#table-spinner"
-                                hx-swap="innerHTML transition:true">
-                            <span class="sr-only">Previous</span>
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                            </svg>
-                        </button>
-                        <button th:if="${page.hasNext}"
-                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                                th:attr="hx-get=${endpoint + '?page=' + (page.currentPage + 1) + '&size=10'}"
-                                hx-target="#table-content"
-                                hx-indicator="#table-spinner"
-                                hx-swap="innerHTML transition:true">
-                            <span class="sr-only">Next</span>
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                            </svg>
-                        </button>
-                    </nav>
-                </div>
-            </div>
-        </div>
+        <div th:if="${page != null}" th:replace="components/pagination/pagination.html :: pagination(${page}, ${endpoint})"></div>
     </div>
 </body>
 </html> 

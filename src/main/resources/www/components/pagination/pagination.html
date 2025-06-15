@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div th:fragment="pagination(page, endpoint)" 
+         class="flex items-center justify-between py-3 border-t border-gray-200">
+        <!-- Mobile view -->
+        <div class="flex-1 flex justify-between sm:hidden">
+            <button th:if="${page.hasPrevious()}"
+                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    th:attr="hx-get=${endpoint + '?page=' + (page.getCurrentPage() - 1) + '&size=' + page.getPageSize()}"
+                    th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                    hx-indicator="#table-spinner"
+                    hx-swap="innerHTML transition:true">
+                Previous
+            </button>
+            <button th:if="${page.hasNext()}"
+                    class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    th:attr="hx-get=${endpoint + '?page=' + (page.getCurrentPage() + 1) + '&size=' + page.getPageSize()}"
+                    th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                    hx-indicator="#table-spinner"
+                    hx-swap="innerHTML transition:true">
+                Next
+            </button>
+        </div>
+
+        <!-- Desktop view -->
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Showing
+                    <span class="font-medium" th:text="${page.getCurrentPage() * page.getPageSize() + 1}">1</span>
+                    to
+                    <span class="font-medium"
+                          th:text="${#numbers.formatInteger(
+                                       ((page.getCurrentPage() + 1) * page.getPageSize()) > page.getTotalElements()
+                                         ? page.getTotalElements()
+                                         : ((page.getCurrentPage() + 1) * page.getPageSize()),
+                                       1)}">
+                        10
+                    </span>
+                    of
+                    <span class="font-medium" th:text="${page.getTotalElements()}">20</span>
+                    results
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <!-- Previous -->
+                    <button th:class="${'relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50' + (!page.hasPrevious() ? ' cursor-not-allowed opacity-50' : '')}"
+                            th:disabled="${!page.hasPrevious()}"
+                            th:attr="hx-get=${endpoint + '?page=' + (page.getCurrentPage() - 1) + '&size=' + page.getPageSize()}"
+                            th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                            hx-indicator="#table-spinner"
+                            hx-swap="innerHTML transition:true"
+                            th:style="${!page.hasPrevious() ? 'pointer-events: none;' : ''}">
+                        <span class="sr-only">Previous</span>
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                    </button>
+
+                    <!-- Page numbers -->
+                    <th:block
+                          th:with="startPage=${(page.getCurrentPage() - 2) < 0 ? 0 : page.getCurrentPage() - 2},
+                                   endPage  =${(page.getCurrentPage() + 2) > (page.getTotalPages() - 1)
+                                               ? page.getTotalPages() - 1
+                                               : page.getCurrentPage() + 2}">
+                        
+                        <!-- First page if not in range -->
+                        <th:block th:if="${startPage > 0}">
+                            <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    th:attr="hx-get=${endpoint + '?page=0&size=' + page.getPageSize()}"
+                                    th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                                    hx-indicator="#table-spinner"
+                                    hx-swap="innerHTML transition:true">1</button>
+                            <span th:if="${startPage > 1}" 
+                                  class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
+                        </th:block>
+
+                        <!-- Page numbers -->
+                        <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
+                            <span th:if="${i == page.getCurrentPage()}"
+                                  class="relative inline-flex items-center px-4 py-2 border border-primary-500 bg-primary-50 text-sm font-medium text-primary-600"
+                                  th:text="${i + 1}">1</span>
+                            <button th:unless="${i == page.getCurrentPage()}"
+                                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    th:attr="hx-get=${endpoint + '?page=' + i + '&size=' + page.getPageSize()}"
+                                    th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                                    hx-indicator="#table-spinner"
+                                    hx-swap="innerHTML transition:true"
+                                    th:text="${i + 1}">2</button>
+                        </th:block>
+
+                        <!-- Last page if not in range -->
+                        <th:block th:if="${endPage < page.getTotalPages() - 1}">
+                            <span th:if="${endPage < page.getTotalPages() - 2}"
+                                  class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
+                            <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    th:attr="hx-get=${endpoint + '?page=' + (page.getTotalPages() - 1) + '&size=' + page.getPageSize()}"
+                                    th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                                    hx-indicator="#table-spinner"
+                                    hx-swap="innerHTML transition:true"
+                                    th:text="${page.getTotalPages()}">10</button>
+                        </th:block>
+                    </th:block>
+
+                    <!-- Next -->
+                    <button th:class="${'relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50' + (!page.hasNext() ? ' cursor-not-allowed opacity-50' : '')}"
+                            th:disabled="${!page.hasNext()}"
+                            th:attr="hx-get=${endpoint + '?page=' + (page.getCurrentPage() + 1) + '&size=' + page.getPageSize()}"
+                            th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("auth_token")}'
+                            hx-indicator="#table-spinner"
+                            hx-swap="innerHTML transition:true"
+                            th:style="${!page.hasNext() ? 'pointer-events: none;' : ''}">
+                        <span class="sr-only">Next</span>
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
