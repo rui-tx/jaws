@@ -1,6 +1,7 @@
 package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
+import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
@@ -44,7 +45,7 @@ public class BackofficeController extends Bragi {
     private final AuthRepo authRepo;
     private final AuthService authService;
     private final AuthorizationService authorizationService;
-    private final org.ruitx.jaws.components.Mimir logsDb;
+    private final Mimir logsDb;
     private final BackofficeService backofficeService;
 
     public BackofficeController() {
@@ -52,7 +53,7 @@ public class BackofficeController extends Bragi {
         this.authRepo = new AuthRepo();
         this.authService = new AuthService();
         this.authorizationService = new AuthorizationService();
-        this.logsDb = new org.ruitx.jaws.components.Mimir("src/main/resources/logs.db");
+        this.logsDb = new Mimir("src/main/resources/logs.db");
         this.backofficeService = new BackofficeService();
     }
 

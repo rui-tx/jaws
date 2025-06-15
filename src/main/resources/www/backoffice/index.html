@@ -30,7 +30,7 @@
     <link href="https://fonts.gstatic.com" rel="dns-prefetch">
     <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css">
 </head>
-<body class="font-nunito h-full bg-gray-100">
+<body class="font-nunito h-full bg-gray-100" hx-boost="true">
 <div id="app" class="flex h-full">
     <!-- Top Navigation -->
     <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 h-16" id="navbar-main">
@@ -100,37 +100,37 @@
                 <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 sidebar-text">General</p>
                 
                 <!-- Dashboard link -->
-                <a th:class="${currentPage == 'dashboard'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice">
+                <a th:class="${currentPage == 'dashboard'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice" hx-target="#bodytemplate" hx-select="#bodytemplate" hx-swap="innerHTML">
                     <i data-feather="home" th:class="${currentPage == 'dashboard'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'"></i>
                     <span class="sidebar-text">Dashboard</span>
                 </a>
 
                 <!-- Users link -->
-                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'users'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/users">
+                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'users'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/users" hx-target="#bodytemplate" hx-select="#bodytemplate" hx-swap="innerHTML">
                     <i data-feather="users" th:class="${currentPage == 'users'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'"></i>
                     <span class="sidebar-text">Users</span>
                 </a>
 
                 <!-- Roles link -->
-                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'roles'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/roles">
+                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'roles'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/roles" hx-target="#bodytemplate" hx-select="#bodytemplate" hx-swap="innerHTML">
                     <i data-feather="shield" th:class="${currentPage == 'roles'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'"></i>
                     <span class="sidebar-text">Roles</span>
                 </a>
 
                 <!-- Jobs link -->
-                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'jobs'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/jobs">
+                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'jobs'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/jobs" hx-target="#bodytemplate" hx-select="#bodytemplate" hx-swap="innerHTML">
                     <i data-feather="briefcase" th:class="${currentPage == 'jobs'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'"></i>
                     <span class="sidebar-text">Jobs</span>
                 </a>
 
                 <!-- Logs link -->
-                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'logs'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/logs">
+                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'logs'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/logs" hx-target="#bodytemplate" hx-select="#bodytemplate" hx-swap="innerHTML">
                     <i data-feather="file-text" th:class="${currentPage == 'logs'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'"></i>
                     <span class="sidebar-text">Logs</span>
                 </a>
 
                 <!-- Settings link -->
-                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'settings'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/settings">
+                <a th:if="${canAccessRoles == 'true'}" th:class="${currentPage == 'settings'} ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700 group flex items-center px-3 py-2 text-sm font-medium rounded-l-md' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md'" href="/backoffice/settings" hx-target="#bodytemplate" hx-select="#bodytemplate" hx-swap="innerHTML">
                     <i data-feather="settings" th:class="${currentPage == 'settings'} ? 'text-primary-500 mr-3 h-5 w-5' : 'text-gray-400 group-hover:text-gray-500 mr-3 h-5 w-5'"></i>
                     <span class="sidebar-text">Settings</span>
                 </a>
@@ -202,6 +202,57 @@
   if (window.htmx) {
     htmx.on('htmx:afterSettle', () => feather.replace());
   }
+</script>
+
+<!-- Sidebar active state updater -->
+<script>
+(function(){
+  const ACTIVE_CLASSES = ['bg-primary-50','border-r-2','border-primary-500','text-primary-700'];
+  const INACTIVE_TEXT_CLASSES = ['text-gray-600','hover:text-gray-900'];
+
+  function setActive(link){
+    document.querySelectorAll('#sidebar a[href^="/backoffice"]').forEach(a=>{
+      ACTIVE_CLASSES.forEach(c=>a.classList.remove(c));
+      // ensure inactive text color
+      INACTIVE_TEXT_CLASSES.forEach(c=>{
+        if(!a.classList.contains(c)) a.classList.add(c);
+      });
+      const icon=a.querySelector('svg, i');
+      if(icon){
+        icon.classList.remove('text-primary-500');
+        icon.classList.add('text-gray-400','group-hover:text-gray-500');
+      }
+    });
+    if(link){
+      ACTIVE_CLASSES.forEach(c=>link.classList.add(c));
+      INACTIVE_TEXT_CLASSES.forEach(c=>link.classList.remove(c));
+      const icon=link.querySelector('svg, i');
+      if(icon){
+        icon.classList.remove('text-gray-400','group-hover:text-gray-500');
+        icon.classList.add('text-primary-500');
+      }
+    }
+  }
+
+  function updateByPath(){
+    const path=window.location.pathname;
+    const link=document.querySelector('#sidebar a[href="'+path+'"]');
+    setActive(link);
+  }
+
+  document.addEventListener('DOMContentLoaded', updateByPath);
+  if(window.htmx){
+    htmx.on('htmx:afterSwap', function(e){
+      if(e.detail && e.detail.target && e.detail.target.id==='bodytemplate'){
+        updateByPath();
+      }
+    });
+  }
+  document.getElementById('sidebar').addEventListener('click', function(e){
+    const link=e.target.closest('a[href^="/backoffice"]');
+    if(link) setActive(link);
+  });
+})();
 </script>
 
 <style>
