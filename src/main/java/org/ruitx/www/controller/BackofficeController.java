@@ -299,7 +299,7 @@ public class BackofficeController extends Bragi {
     }
 
     @AccessControl(login = true, role = "admin")
-    @Route(endpoint = "/htmx/backoffice/jobs/:id/delete", method = POST)
+    @Route(endpoint = "/htmx/backoffice/jobs/:id/delete", method = DELETE)
     public void deleteJobHTMX() {
         try {
             String jobId = getPathParam("id");
