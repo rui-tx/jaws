@@ -65,33 +65,3 @@
         )}">
     </div>
 </section>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const filterButton = document.getElementById('filter-button');
-    const statusFilter = document.getElementById('status-filter');
-    const jobsTableBody = document.getElementById('jobs-table-body');
-
-    if (filterButton && statusFilter && jobsTableBody) {
-        filterButton.addEventListener('click', function () {
-            const status = statusFilter.value;
-            const baseUrl = '/htmx/backoffice/jobs?page=0&size=10&sort=created_at&direction=DESC';
-            const url = status ? `${baseUrl}&status=${encodeURIComponent(status)}` : baseUrl;
-            
-            htmx.ajax('GET', url, {
-                target: '#jobs-table-body',
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-                }
-            });
-        });
-
-        // Allow Enter key to trigger filter
-        statusFilter.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                filterButton.click();
-            }
-        });
-    }
-});
-</script> 
