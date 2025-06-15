@@ -57,9 +57,7 @@
                             hx-swap="innerHTML transition:true"
                             th:style="${!page.hasPrevious() ? 'pointer-events: none;' : ''}">
                         <span class="sr-only">Previous</span>
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                        </svg>
+                        <i data-feather="chevron-left" class="h-5 w-5"></i>
                     </button>
 
                     <!-- Page numbers -->
@@ -120,9 +118,7 @@
                             hx-swap="innerHTML transition:true"
                             th:style="${!page.hasNext() ? 'pointer-events: none;' : ''}">
                         <span class="sr-only">Next</span>
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
+                        <i data-feather="chevron-right" class="h-5 w-5"></i>
                     </button>
                 </nav>
             </div>
