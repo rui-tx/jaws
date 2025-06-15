@@ -16,10 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.components.Yggdrasill;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -183,31 +180,93 @@ public class BackofficeService {
     /**
      * Generate users table HTML for HTMX response
      */
-    public String generateUsersTableHTML(String pageParam, String sizeParam, String sortParam, String directionParam) {
+    public String generateUsersTableHTML(Yggdrasill.RequestContext requestContext) {
         try {
-            PageRequest pageRequest = backofficeRepo.parsePageRequest(pageParam, sizeParam, sortParam, directionParam);
-            Page<Row> userPage = backofficeRepo.getUsersPage(pageRequest);
-            List<User> users = backofficeRepo.transformRowsToUsers(userPage.getContent());
-
-            StringBuilder html = new StringBuilder();
-
-            if (users.isEmpty()) {
-                html.append(generateEmptyUsersRow());
-            } else {
-                for (User user : users) {
-                    html.append(generateUserTableRow(user));
-                }
-            }
-
-            // Add pagination controls
-            html.append(generatePaginationHTML(userPage, "users"));
-
-            return html.toString();
+            // Get page parameters
+            String pageParam = requestContext.getRequest().getParameter("page");
+            String sizeParam = requestContext.getRequest().getParameter("size");
+            int page = pageParam != null ? Integer.parseInt(pageParam) : 0;
+            int size = sizeParam != null ? Integer.parseInt(sizeParam) : 10;
+            
+            // Get users with pagination
+            PageRequest pageRequest = new PageRequest(page, size);
+            Page<Row> rowsPage = backofficeRepo.getUsersPage(pageRequest);
+            Page<User> usersPage = rowsPage.map(row -> User.builder()
+                .id(row.getInt("id").orElse(0))
+                .user(row.getString("user").orElse(""))
+                .email(row.getString("email").orElse(null))
+                .firstName(row.getString("first_name").orElse(null))
+                .lastName(row.getString("last_name").orElse(null))
+                .profilePicture(row.getString("profile_picture").orElse(null))
+                .createdAt(row.getLong("created_at").orElse(0L))
+                .build());
+            
+            // Define table structure
+            List<String> headers = List.of("User", "Full Name", "Created", "Actions");
+            List<String> fields = List.of("user", "fullName", "createdAt", "actions");
+            
+            // Define special field configurations
+            Map<String, Map<String, String>> avatarFields = Map.of(
+                "user", Map.of(
+                    "image", "profilePicture",
+                    "text", "user",
+                    "subtext", "email"
+                )
+            );
+            
+            Map<String, String> dateFields = Map.of(
+                "createdAt", "MMM d, yyyy"
+            );
+            
+            // Create context for template
+            Context templateContext = Context.builder()
+                .with("headers", headers)
+                .with("fields", fields)
+                .with("items", usersPage.getContent())
+                .with("page", new PageInfo(usersPage))
+                .with("avatarFields", avatarFields)
+                .with("dateFields", dateFields)
+                .with("endpoint", "/htmx/backoffice/users")
+                .build();
+            
+            // Process template
+            return Hermod.processTemplate("components/data-table/data-table-content.html", requestContext.getRequest(), requestContext.getResponse(), templateContext);
             
         } catch (Exception e) {
-            log.error("Failed to generate users table HTML: {}", e.getMessage(), e);
-            return "<tr><td colspan=\"5\">Error loading users</td></tr>";
+            log.error("Failed to generate users table: {}", e.getMessage(), e);
+            return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading users</div>";
         }
+    }
+
+    /**
+     * Helper class to provide pagination information to templates
+     */
+    private static class PageInfo {
+        private final int currentPage;
+        private final int pageSize;
+        private final long totalItems;
+        private final boolean hasNext;
+        private final boolean hasPrevious;
+        private final int firstItemNumber;
+        private final int lastItemNumber;
+        
+        public PageInfo(Page<?> page) {
+            this.currentPage = page.getCurrentPage();
+            this.pageSize = page.getPageSize();
+            this.totalItems = page.getTotalElements();
+            this.hasNext = page.hasNext();
+            this.hasPrevious = page.hasPrevious();
+            this.firstItemNumber = page.getCurrentPage() * page.getPageSize() + 1;
+            this.lastItemNumber = Math.min(firstItemNumber + page.getPageSize() - 1, (int) page.getTotalElements());
+        }
+        
+        public int getCurrentPage() { return currentPage; }
+        public int getPageSize() { return pageSize; }
+        public long getTotalItems() { return totalItems; }
+        public boolean isHasNext() { return hasNext; }
+        public boolean isHasPrevious() { return hasPrevious; }
+        public int getFirstItemNumber() { return firstItemNumber; }
+        public int getLastItemNumber() { return lastItemNumber; }
     }
 
     // =============================================
@@ -353,10 +412,9 @@ public class BackofficeService {
 
         StringBuilder html = new StringBuilder();
         
-        // Pagination wrapper - dynamic colspan based on endpoint
-        int colspan = getTableColspan(endpoint);
+        // Pagination wrapper
         html.append("<tr>")
-            .append("<td colspan=\"").append(colspan).append("\" class=\"bg-gray-50 px-6 py-3 border-t border-gray-200\">")
+            .append("<td colspan=\"5\" class=\"bg-gray-50 px-6 py-3 border-t border-gray-200\">")
             .append("<div class=\"flex items-center justify-between\">")
             
             // Left side - Results info
@@ -403,7 +461,7 @@ public class BackofficeService {
         
         // Show first page if not in range
         if (startPage > 0) {
-            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
+            html.append("<button class=\"relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
                 .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=0&size=").append(page.getPageSize()).append("\" ")
                 .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
                 .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
@@ -412,33 +470,34 @@ public class BackofficeService {
                 .append("</button>");
                 
             if (startPage > 1) {
-                html.append("<span class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...")
-                    .append("</span>");
+                html.append("<span class=\"relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...</span>");
             }
         }
 
-        // Page number buttons
+        // Page numbers
         for (int i = startPage; i <= endPage; i++) {
-            boolean isCurrent = i == page.getCurrentPage();
-            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border ")
-                .append(isCurrent ? "border-primary-500 bg-primary-50 text-primary-600 z-10" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50")
-                .append(" text-sm font-medium\" ")
-                .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(i).append("&size=").append(page.getPageSize()).append("\" ")
-                .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-                .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-                .append("hx-swap=\"innerHTML transition:true\">")
-                .append(i + 1)
-                .append("</button>");
+            if (i == page.getCurrentPage()) {
+                html.append("<span class=\"relative inline-flex items-center px-4 py-2 border border-primary-500 bg-primary-50 text-sm font-medium text-primary-600\">")
+                    .append(i + 1)
+                    .append("</span>");
+            } else {
+                html.append("<button class=\"relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
+                    .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(i).append("&size=").append(page.getPageSize()).append("\" ")
+                    .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
+                    .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
+                    .append("hx-swap=\"innerHTML transition:true\">")
+                    .append(i + 1)
+                    .append("</button>");
+            }
         }
-
+        
         // Show last page if not in range
         if (endPage < page.getTotalPages() - 1) {
             if (endPage < page.getTotalPages() - 2) {
-                html.append("<span class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...")
-                    .append("</span>");
+                html.append("<span class=\"relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700\">...</span>");
             }
             
-            html.append("<button class=\"relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
+            html.append("<button class=\"relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50\" ")
                 .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(page.getTotalPages() - 1).append("&size=").append(page.getPageSize()).append("\" ")
                 .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
                 .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
@@ -446,11 +505,11 @@ public class BackofficeService {
                 .append(page.getTotalPages())
                 .append("</button>");
         }
-
+        
         // Next button
         html.append("<button class=\"relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50")
             .append(page.hasNext() ? "\" " : " cursor-not-allowed opacity-50\" disabled ")
-            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(Math.min(page.getTotalPages() - 1, page.getCurrentPage() + 1))
+            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=").append(page.getCurrentPage() + 1)
             .append("&size=").append(page.getPageSize()).append("\" ")
             .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
             .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
@@ -460,35 +519,13 @@ public class BackofficeService {
             .append("<svg class=\"h-5 w-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
             .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8.25 4.5l7.5 7.5-7.5 7.5\" />")
             .append("</svg>")
-            .append("</button>");
-
-        html.append("</nav>")
-            .append("</div>")
-            .append("</div>")
-            
-            // Page size selector
-            .append("<div class=\"flex items-center space-x-2 ml-4\">")
-            .append("<label class=\"text-sm text-gray-700\">Show:</label>")
-            .append("<select class=\"block w-20 px-2 py-1 border border-gray-300 rounded-md text-sm\" ")
-            .append("hx-get=\"/htmx/backoffice/").append(endpoint).append("?page=0\" ")
-            .append("hx-include=\"this\" ")
-            .append("hx-headers='{\"Authorization\": \"Bearer \" + localStorage.getItem(\"auth_token\")}' ")
-            .append("hx-target=\"#").append(endpoint).append("-table-body\" ")
-            .append("hx-swap=\"innerHTML transition:true\" ")
-            .append("name=\"size\">");
-
-        for (int size : new int[]{10, 25, 50, 100}) {
-            html.append("<option value=\"").append(size).append("\"")
-                .append(size == page.getPageSize() ? " selected" : "")
-                .append(">").append(size).append("</option>");
-        }
-
-        html.append("</select>")
+            .append("</button>")
+            .append("</nav>")
             .append("</div>")
             .append("</div>")
             .append("</td>")
             .append("</tr>");
-
+        
         return html.toString();
     }
 

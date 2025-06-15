@@ -344,10 +344,7 @@ public class BackofficeController extends Bragi {
         }
 
         String html = backofficeService.generateUsersTableHTML(
-            getQueryParam("page"),
-            getQueryParam("size"),
-            getQueryParam("sort"),
-            getQueryParam("direction")
+            getRequestContext()
         );
         sendHTMLResponse(OK, html);
     }
