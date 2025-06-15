@@ -24,7 +24,7 @@ LABEL maintainer="Rui Teixeira <ruiteixeira@mailbox.org>" \
       description="Just Another Web Server"
 
 ENV PORT=15000 \
-    WWWPATH=/app/www \
+    WWWPATH=/app/www/ \
     DBPATH=/app/src/main/resources/db.db \
     DBSCHEMAPATH=/app/src/main/resources/sql/create_schema_v1.sql
 
