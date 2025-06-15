@@ -66,32 +66,3 @@
     </div>
 </section>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const filterButton = document.getElementById('filter-button');
-    const levelFilter = document.getElementById('level-filter');
-    const logsTableBody = document.getElementById('logs-table-body');
-
-    if (filterButton && levelFilter && logsTableBody) {
-        filterButton.addEventListener('click', function () {
-            const level = levelFilter.value;
-            const baseUrl = '/htmx/backoffice/logs?page=0&size=25&sort=timestamp&direction=DESC';
-            const url = level ? `${baseUrl}&level=${encodeURIComponent(level)}` : baseUrl;
-            
-            htmx.ajax('GET', url, {
-                target: '#logs-table-body',
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-                }
-            });
-        });
-
-        // Allow Enter key to trigger filter
-        levelFilter.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                filterButton.click();
-            }
-        });
-    }
-});
-</script> 
