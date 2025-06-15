@@ -27,7 +27,7 @@ Among other features, these are the main ones
 
 ### Prerequisites
 
-- Java 17 or higher
+- Java 19 or higher
 - Maven (for dependency management and building the project)
 
 ### Build
@@ -59,6 +59,27 @@ WWWPATH="/Downloads/www" PORT="8080" java -jar jaws[version].jar
 ```
 
 > Note: Please use absolute paths for the WWWPATH environment variable.
+
+### Running JAWS with Docker
+
+Build the image:
+
+```sh
+docker build -t jaws .
+```
+
+Run the container, overriding any configuration you need via environment variables. For example:
+
+```sh
+docker run -p 15000:15000 \
+  -e PORT=15000 \
+  -e WWWPATH=/app/www \
+  -e DBPATH=/app/src/main/resources/db.db \
+  jaws
+```
+
+Every configuration key found in `application.properties` has a corresponding environment variable
+(checked first at startup). Whatever you pass with `-e` overrides the value in the properties file.
 
 ## Usage
 
