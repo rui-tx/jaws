@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- Generic Data Table Component -->
+    <div th:fragment="data-table(title, icon, endpoint, refreshable)" 
+         th:id="${endpoint + '-table'}"
+         class="bg-white rounded-lg shadow border border-gray-200">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <i th:if="${icon}" th:attr="data-feather=${icon}" class="h-5 w-5 text-gray-400"></i>
+                <h2 class="text-lg font-medium text-gray-900" th:text="${title}">Table Title</h2>
+            </div>
+            
+            <!-- Refresh Button -->
+            <button th:if="${refreshable}"
+                class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                th:attr="hx-get=${endpoint}"
+                hx-headers='{"Content-Type": "application/json"}'
+                th:attrappend="hx-target='#' + ${#strings.substringAfter(endpoint, '/htmx/backoffice/')} + '-table-body'"
+                hx-indicator="#table-spinner"
+                hx-swap="innerHTML transition:true"
+                hx-trigger="click"
+                title="Refresh list">
+                <i data-feather="refresh-cw" class="h-4 w-4"></i>
+            </button>
+        </div>
+
+        <!-- Table Content Container -->
+        <div class="overflow-hidden">
+            <div th:id="${#strings.substringAfter(endpoint, '/htmx/backoffice/') + '-table-body'}"
+                 th:attr="hx-get=${endpoint}"
+                 hx-headers='{"Content-Type": "application/json"}'
+                 hx-indicator="#table-spinner"
+                 hx-swap="innerHTML transition:true"
+                 hx-trigger="load">
+                <!-- Loading indicator -->
+                <div class="flex justify-center items-center py-8">
+                    <img alt="Loading..." class="h-8 w-8" src="https://htmx.org/img/bars.svg"/>
+                </div>
+            </div>
+            <div class="flex justify-center py-4 htmx-indicator" id="table-spinner">
+                <img alt="Loading..." class="h-8 w-8" src="https://htmx.org/img/bars.svg"/>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
