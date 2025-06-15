@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.components.Yggdrasill;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,33 +69,132 @@ public class BackofficeService {
     // =============================================
 
     /**
-     * Generate jobs table HTML for HTMX response
+     * Generate jobs table HTML using the generic data-table component and composite fields.
      */
-    public String generateJobsTableHTML(String pageParam, String sizeParam, String sortParam, 
-                                      String directionParam, String statusFilter, String typeFilter) {
+    public String generateJobsTableHTML(Yggdrasill.RequestContext requestContext) {
         try {
-            PageRequest pageRequest = backofficeRepo.parsePageRequest(pageParam, sizeParam, sortParam, directionParam);
-            Page<Row> jobPage = backofficeRepo.getJobsPage(pageRequest, statusFilter, typeFilter);
-            List<Row> jobs = jobPage.getContent();
+            // Collect query parameters
+            String pageParam = requestContext.getRequest().getParameter("page");
+            String sizeParam = requestContext.getRequest().getParameter("size");
+            String sortParam = requestContext.getRequest().getParameter("sort");
+            String directionParam = requestContext.getRequest().getParameter("direction");
+            String statusFilter = requestContext.getRequest().getParameter("status");
+            String typeFilter = requestContext.getRequest().getParameter("type");
 
-            StringBuilder html = new StringBuilder();
-            
-            if (jobs.isEmpty()) {
-                html.append(generateEmptyJobsRow(statusFilter));
-            } else {
-                for (Row job : jobs) {
-                    html.append(generateJobTableRow(job));
+            PageRequest pageRequest = backofficeRepo.parsePageRequest(pageParam, sizeParam, sortParam, directionParam);
+            Page<Row> rowsPage = backofficeRepo.getJobsPage(pageRequest, statusFilter, typeFilter);
+
+            List<Map<String,Object>> mappedItems = new ArrayList<>();
+            for (Row row : rowsPage.getContent()) {
+                String id = row.getString("id").orElse("");
+                String status = row.getString("status").orElse("UNKNOWN");
+                String type = row.getString("type").orElse("");
+                Integer priority = row.getInt("priority").orElse(0);
+                String execMode = row.getString("execution_mode").orElse("");
+                Long createdAt = row.getLong("created_at").orElse(0L);
+                Integer retries = row.getInt("current_retries").orElse(0);
+
+                Map<String,Object> map = new HashMap<>();
+                map.put("id", id);
+                map.put("status", status);
+                map.put("type", type);
+                map.put("idShort", "ID: " + id);
+                map.put("priority", priority);
+                map.put("executionMode", execMode);
+                map.put("createdAt", createdAt);
+                map.put("retries", retries);
+                // convenience keys for composite
+                map.put("typeId", "");
+                map.put("priorityMode", "");
+
+                // Attach buttons list
+                List<Map<String,Object>> btns = new ArrayList<>();
+                btns.add(Map.of(
+                    "type", "link",
+                    "href", "/backoffice/jobs/" + id,
+                    "title", "View details",
+                    "classes", "inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700",
+                    "icon", "<svg class=\"h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" /><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" /></svg>"
+                ));
+
+                if ("FAILED".equals(status) || "DEAD_LETTER".equals(status)) {
+                    btns.add(Map.of(
+                        "type", "hx",
+                        "hxMethod", "POST",
+                        "hxUrl", "/htmx/backoffice/jobs/" + id + "/reprocess",
+                        "title", "Reprocess",
+                        "label", "Reprocess",
+                        "classes", "text-yellow-600 hover:text-yellow-900 text-xs",
+                        "confirm", "Reprocess this job?",
+                        "headers", "{\"Content-Type\": \"application/json\"}",
+                        "target", "#jobs-table-body",
+                        "swap", "innerHTML transition:true"
+                    ));
                 }
+
+                btns.add(Map.of(
+                    "type", "hx",
+                    "hxMethod", "POST",
+                    "hxUrl", "/htmx/backoffice/jobs/" + id + "/delete",
+                    "title", "Delete",
+                    "label", "Delete",
+                    "classes", "text-red-600 hover:text-red-900 text-xs",
+                    "confirm", "Delete this job?",
+                    "headers", "{\"Content-Type\": \"application/json\"}",
+                    "target", "#jobs-table-body",
+                    "swap", "innerHTML transition:true"
+                ));
+
+                map.put("buttons", btns);
+
+                mappedItems.add(map);
             }
 
-            // Add pagination controls
-            html.append(generatePaginationHTML(jobPage, "jobs"));
+            // Build custom Page<Map> to reuse pagination utils
+            Page<Map<String, Object>> jobsPage = new Page<Map<String, Object>>(mappedItems, pageRequest, rowsPage.getTotalElements());
 
-            return html.toString();
-            
+            List<String> headers = List.of("Status", "Type / ID", "Priority / Mode", "Created", "Retries", "Actions");
+            List<String> fields  = List.of("status", "typeId", "priorityMode", "createdAt", "retries", "actions");
+
+            // Status badge colours
+            Map<String, String> statusColors = Map.of(
+                "PENDING", "yellow",
+                "PROCESSING", "blue",
+                "COMPLETED", "green",
+                "FAILED", "red",
+                "DEAD_LETTER", "gray",
+                "TIMEOUT", "red"
+            );
+            Map<String, Object> statusCfg = new java.util.HashMap<>();
+            statusCfg.put("colors", statusColors);
+            statusCfg.put("showDot", true);
+            Map<String, Map<String, Object>> statusFields = Map.of("status", statusCfg);
+
+            // Composite cell definitions
+            Map<String, Map<String, String>> compositeFields = Map.of(
+                "typeId", Map.of("primary", "type", "secondary", "idShort"),
+                "priorityMode", Map.of("primary", "priority", "secondary", "executionMode")
+            );
+
+            Map<String, String> dateFields = Map.of("createdAt", "MMM d, yyyy");
+
+            Context ctx = Context.builder()
+                .with("headers", headers)
+                .with("fields", fields)
+                .with("items", jobsPage.getContent())
+                .with("page", jobsPage)
+                .with("statusFields", statusFields)
+                .with("compositeFields", compositeFields)
+                .with("dateFields", dateFields)
+                .with("endpoint", "/htmx/backoffice/jobs")
+                .with("actionPrefix", "/backoffice/jobs/")
+                .build();
+
+            return Hermod.processTemplate("components/data-table/data-table-content.html", requestContext.getRequest(), requestContext.getResponse(), ctx);
+
         } catch (Exception e) {
-            log.error("Failed to generate jobs table HTML: {}", e.getMessage(), e);
-            return "<tr><td colspan=\"6\">Error loading jobs</td></tr>";
+            log.error("Failed to generate jobs table: {}", e.getMessage(), e);
+            return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading jobs</div>";
         }
     }
 

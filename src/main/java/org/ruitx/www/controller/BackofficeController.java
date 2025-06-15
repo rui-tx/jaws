@@ -292,14 +292,12 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/jobs", method = GET)
     public void listJobsHTMX() {
-        String html = backofficeService.generateJobsTableHTML(
-            getQueryParam("page"),
-            getQueryParam("size"),
-            getQueryParam("sort"),
-            getQueryParam("direction"),
-            getQueryParam("status"),
-            getQueryParam("type")
-        );
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+
+        String html = backofficeService.generateJobsTableHTML(getRequestContext());
         sendHTMLResponse(OK, html);
     }
 

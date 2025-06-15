@@ -30,14 +30,24 @@
                         
                         <!-- Actions -->
                         <div th:if="${field == 'actions'}" class="flex space-x-2 justify-end">
-                            <a th:href="|${actionPrefix}${item.id}|" 
-                               class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700"
-                               title="View details">
-                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                            </a>
+                            <!-- Map items with buttons list -->
+                            <th:block th:if="${item instanceof java.util.Map and item.containsKey('buttons')}">
+                                <th:block th:each="btn : ${item.buttons}">
+                                    <th:block th:replace="~{components/data-table/row-button.html :: rowButton(${btn})}"></th:block>
+                                </th:block>
+                            </th:block>
+
+                            <!-- fallback eye-link -->
+                            <th:block th:unless="${item instanceof java.util.Map and item.containsKey('buttons')}">
+                                <a th:href="|${actionPrefix}${item.id}|"
+                                   class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700"
+                                   title="View details">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </a>
+                            </th:block>
                         </div>
                         
                         <!-- Avatar Field -->
@@ -88,8 +98,19 @@
                             Date
                         </span>
                         
+                        <!-- Composite Field (primary + secondary) -->
+                        <div th:if="${compositeFields != null and compositeFields.containsKey(field)}">
+                            <div class="text-sm font-medium text-gray-900" th:text="${item[compositeFields[field]['primary']]}">Primary</div>
+                            <div class="text-xs text-gray-500" th:text="${item[compositeFields[field]['secondary']]}">Secondary</div>
+                        </div>
+                        
                         <!-- Default Text -->
-                        <span th:unless="${(avatarFields != null and avatarFields.containsKey(field)) or field == 'fullName' or field == 'actions' or (dateFields != null and dateFields.containsKey(field)) or (statusFields != null and statusFields.containsKey(field))}"
+                        <span th:unless="${(avatarFields != null and avatarFields.containsKey(field))
+                                         or field == 'fullName'
+                                         or field == 'actions'
+                                         or (dateFields != null and dateFields.containsKey(field))
+                                         or (statusFields != null and statusFields.containsKey(field))
+                                         or (compositeFields != null and compositeFields.containsKey(field))}"
                               th:text="${item[field]}">
                             Default
                         </span>
@@ -99,7 +120,7 @@
         </table>
         
         <!-- Pagination -->
-        <div th:if="${page != null}" th:replace="components/pagination/pagination.html :: pagination(${page}, ${endpoint})"></div>
+        <div th:if="${page != null}" th:replace="~{components/pagination/pagination.html :: pagination(${page}, ${endpoint})}"></div>
     </div>
 </body>
 </html> 

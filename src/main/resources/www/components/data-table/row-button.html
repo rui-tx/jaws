@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:fragment="rowButton(btn)">
+
+  <!-- link -->
+  <a th:if="${btn.type == 'link'}"
+     th:href="${btn.href}"
+     th:title="${btn.title}"
+     th:class="${btn.classes}"
+     th:utext="${btn.icon != null ? btn.icon : btn.label}">
+  </a>
+
+  <!-- generic HTMX button -->
+  <button th:if="${btn.type == 'hx'}"
+          th:title="${btn.title}"
+          th:class="${btn.classes}"
+          th:attrappend="
+              hx-get=${btn.hxMethod == 'GET' ? btn.hxUrl : null},
+              hx-post=${btn.hxMethod == 'POST' ? btn.hxUrl : null},
+              hx-put=${btn.hxMethod == 'PUT' ? btn.hxUrl : null},
+              hx-delete=${btn.hxMethod == 'DELETE' ? btn.hxUrl : null},
+              hx-confirm=${btn.confirm},
+              hx-headers=${btn.headers},
+              hx-target=${btn.target},
+              hx-swap=${btn.swap},
+              hx-trigger=${btn.trigger}"
+          th:utext="${btn.icon != null ? btn.icon : btn.label}">
+  </button>
+</html>
