@@ -360,162 +360,13 @@ public class BackofficeController extends Bragi {
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/htmx/backoffice/logs", method = GET)
     public void listLogsHTMX() {
-        try {
-            // Parse pagination parameters
-            int page = 0;
-            int size = 25; // Default 25 for logs (they can be verbose)
-            String sortBy = "timestamp";
-            org.ruitx.jaws.types.SortDirection direction = org.ruitx.jaws.types.SortDirection.DESC;
-            String levelFilter = getQueryParam("level");
-            String loggerFilter = getQueryParam("logger");
-
-            String pageParam = getQueryParam("page");
-            String sizeParam = getQueryParam("size");
-            String sortParam = getQueryParam("sort");
-            String directionParam = getQueryParam("direction");
-
-            if (pageParam != null) {
-                try {
-                    page = Integer.parseInt(pageParam);
-                } catch (NumberFormatException e) {
-                    page = 0;
-                }
-            }
-
-            if (sizeParam != null) {
-                try {
-                    size = Integer.parseInt(sizeParam);
-                    if (size < 1) size = 25;
-                    if (size > 100) size = 100; // Max 100 per page
-                } catch (NumberFormatException e) {
-                    size = 25;
-                }
-            }
-
-            if (sortParam != null && !sortParam.trim().isEmpty()) {
-                sortBy = sortParam.trim();
-            }
-
-            if (directionParam != null && "ASC".equalsIgnoreCase(directionParam)) {
-                direction = org.ruitx.jaws.types.SortDirection.ASC;
-            }
-
-            // Build base SQL with filters
-            StringBuilder sql = new StringBuilder("SELECT * FROM LOG_ENTRIES WHERE 1=1");
-            List<Object> params = new ArrayList<>();
-
-            if (levelFilter != null && !levelFilter.isEmpty()) {
-                sql.append(" AND level = ?");
-                params.add(levelFilter);
-            }
-
-            if (loggerFilter != null && !loggerFilter.isEmpty()) {
-                sql.append(" AND logger LIKE ?");
-                params.add("%" + loggerFilter + "%");
-            }
-
-            // Create PageRequest
-            org.ruitx.jaws.types.PageRequest pageRequest = new org.ruitx.jaws.types.PageRequest(page, size, sortBy, direction);
-
-            // Get paginated logs from database
-            org.ruitx.jaws.types.Page<org.ruitx.jaws.types.Row> logPage = logsDb
-                    .getPage(sql.toString(), pageRequest, params.toArray());
-
-            List<org.ruitx.jaws.types.Row> logs = logPage.getContent();
-
-            StringBuilder html = new StringBuilder();
-            
-            // Check if logs list is empty and return appropriate message
-            if (logs.isEmpty()) {
-                html.append("<tr>")
-                    .append("<td colspan=\"6\" class=\"px-6 py-4 text-center text-gray-500\">")
-                    .append("<div class=\"flex flex-col items-center justify-center py-8\">")
-                    .append("<svg class=\"h-12 w-12 text-gray-400 mb-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                    .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c0 .621-.504 1.125-1.125 1.125H11.25a9 9 0 01-9-9V3.375c0-.621.504-1.125 1.125-1.125z\" />")
-                    .append("</svg>")
-                    .append("<p class=\"text-sm text-gray-600 mb-1\">No logs found</p>");
-                    
-                if (levelFilter != null && !levelFilter.isEmpty()) {
-                    html.append("<p class=\"text-xs text-gray-500\">No logs with level: ").append(levelFilter).append("</p>");
-                } else {
-                    html.append("<p class=\"text-xs text-gray-500\">No log entries are available</p>");
-                }
-                
-                html.append("</div>")
-                    .append("</td>")
-                    .append("</tr>");
-            } else {
-                // Process logs normally
-                for (org.ruitx.jaws.types.Row logEntry : logs) {
-                    String level = logEntry.getString("level").orElse("UNKNOWN");
-                    String levelClass = getLogLevelClass(level);
-                    String message = logEntry.getString("message").orElse("");
-                    String logger = logEntry.getString("logger").orElse("Unknown");
-                    String method = logEntry.getString("method").orElse("");
-                    String thread = logEntry.getString("thread").orElse("");
-                    Long timestamp = logEntry.getLong("timestamp").orElse(0L);
-                    Integer lineNumber = logEntry.getInt("line").orElse(0);
-                    
-                    // Truncate long messages for table display
-                    String displayMessage = message.length() > 100 ? message.substring(0, 100) + "..." : message;
-                    
-                    // Extract class name from logger (remove package)
-                    String displayLogger = logger.contains(".") ? logger.substring(logger.lastIndexOf(".") + 1) : logger;
-                    
-                    html.append("<tr class=\"hover:bg-gray-50\">")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                        .append("<span class=\"px-2 py-1 text-xs font-medium rounded-full ").append(levelClass).append("\">")
-                        .append(level)
-                        .append("</span>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4\">")
-                        .append("<div class=\"text-sm text-gray-900 max-w-md\">")
-                        .append("<span title=\"").append(message.replace("\"", "&quot;")).append("\">")
-                        .append(displayMessage)
-                        .append("</span>")
-                        .append("</div>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap\">")
-                        .append("<div class=\"text-sm font-medium text-gray-900\">").append(displayLogger).append("</div>")
-                        .append("<div class=\"text-sm text-gray-500\">")
-                        .append(method).append(lineNumber > 0 ? ":" + lineNumber : "")
-                        .append("</div>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
-                        .append("<time datetime=\"").append(timestamp).append("\">")
-                        .append(JawsUtils.formatUnixTimestamp(timestamp, "yyyy-MM-dd HH:mm:ss"))
-                        .append("</time>")
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-500\">")
-                        .append(thread)
-                        .append("</td>")
-                        .append("<td class=\"px-6 py-4 whitespace-nowrap text-right text-sm font-medium\">")
-                        .append("<div class=\"flex space-x-2 justify-end\">");
-                    
-                    // Add view details button for all logs
-                    html.append("<a href=\"/backoffice/logs/").append(logEntry.getInt("id").orElse(0)).append("\" ")
-                        .append("class=\"inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-primary-600 hover:bg-primary-700\" ")
-                        .append("title=\"View log details\">")
-                        .append("<svg class=\"h-3 w-3\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\">")
-                        .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z\" />")
-                        .append("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\" />")
-                        .append("</svg>")
-                        .append("</a>");
-                    
-                    html.append("</div>")
-                        .append("</td>")
-                        .append("</tr>");
-                }
-            }
-
-            // Add pagination controls
-            html.append(generatePaginationHTML(logPage, "logs"));
-
-            sendHTMLResponse(OK, html.toString());
-        } catch (Exception e) {
-            JawsLogger.error(e, "Failed to list logs: {}", e.getMessage());
-            sendHTMLResponse(INTERNAL_SERVER_ERROR, "<tr><td colspan=\"6\">Error loading logs</td></tr>");
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
         }
+
+        String html = backofficeService.generateLogsTableHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
     }
 
     private String getLogLevelClass(String level) {
@@ -576,10 +427,7 @@ public class BackofficeController extends Bragi {
             request.roleId(), 
             assignedBy
         );
-        
-        JawsLogger.info("BackofficeController: Assign role response - code: {}, message: {}", 
-            response.code(), response.info());
-        
+                
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
     }
 

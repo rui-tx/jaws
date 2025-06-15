@@ -227,6 +227,7 @@ public class BackofficeService {
                 .with("avatarFields", avatarFields)
                 .with("dateFields", dateFields)
                 .with("endpoint", "/htmx/backoffice/users")
+                .with("actionPrefix", "/backoffice/profile/")
                 .build();
             
             // Process template
@@ -497,6 +498,97 @@ public class BackofficeService {
         
         return html.toString();
     }
+
+    // =============================================
+    // LOG MANAGEMENT
+    // =============================================
+
+    /**
+     * Generate logs table HTML for HTMX response
+     */
+    public String generateLogsTableHTML(Yggdrasill.RequestContext requestContext) {
+        try {
+            // Extract query parameters
+            String pageParam = requestContext.getRequest().getParameter("page");
+            String sizeParam = requestContext.getRequest().getParameter("size");
+            String sortParam = requestContext.getRequest().getParameter("sort");
+            String directionParam = requestContext.getRequest().getParameter("direction");
+            String levelFilter = requestContext.getRequest().getParameter("level");
+            String loggerFilter = requestContext.getRequest().getParameter("logger");
+
+            // Build page request with sensible defaults for logs
+            PageRequest pageRequest = backofficeRepo.parsePageRequestForLogs(pageParam, sizeParam, sortParam, directionParam);
+
+            // Query paginated logs
+            Page<Row> rowsPage = backofficeRepo.getLogsPage(pageRequest, levelFilter, loggerFilter);
+
+            // Map to LogEntry records and truncate long messages for display
+            Page<LogEntry> logsPage = rowsPage.map(row -> {
+                String fullLogger = row.getString("logger").orElse("Unknown");
+                String displayLogger = fullLogger.contains(".") ? fullLogger.substring(fullLogger.lastIndexOf('.') + 1) : fullLogger;
+                return new LogEntry(
+                    row.getInt("id").orElse(0),
+                    row.getString("level").orElse("UNKNOWN"),
+                    truncate(row.getString("message").orElse(""), 60),
+                    displayLogger,
+                    row.getLong("timestamp").orElse(0L)
+                );
+            });
+
+            // Table metadata
+            List<String> headers = List.of("Level", "Message", "Logger", "Time", "Actions");
+            List<String> fields = List.of("level", "message", "logger", "timestamp", "actions");
+
+            // Status/badge color mapping for log levels
+            Map<String, Map<String, Object>> statusFields = new java.util.HashMap<>();
+            Map<String, String> levelColors = Map.of(
+                "ERROR", "red",
+                "WARN", "yellow",
+                "INFO", "blue",
+                "DEBUG", "gray",
+                "TRACE", "purple"
+            );
+            Map<String, Object> levelStatusConfig = new java.util.HashMap<>();
+            levelStatusConfig.put("colors", levelColors);
+            levelStatusConfig.put("showDot", true);
+            statusFields.put("level", levelStatusConfig);
+
+            Map<String, String> dateFields = Map.of(
+                "timestamp", "yyyy-MM-dd HH:mm:ss"
+            );
+
+            // Build template context
+            Context templateContext = Context.builder()
+                .with("headers", headers)
+                .with("fields", fields)
+                .with("items", logsPage.getContent())
+                .with("page", logsPage)
+                .with("statusFields", statusFields)
+                .with("dateFields", dateFields)
+                .with("endpoint", "/htmx/backoffice/logs")
+                .with("actionPrefix", "/backoffice/logs/")
+                .build();
+
+            return Hermod.processTemplate("components/data-table/data-table-content.html", requestContext.getRequest(), requestContext.getResponse(), templateContext);
+
+        } catch (Exception e) {
+            log.error("Failed to generate logs table: {}", e.getMessage(), e);
+            return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading logs</div>";
+        }
+    }
+
+    /**
+     * Simple utility to truncate long strings with ellipsis.
+     */
+    private static String truncate(String value, int max) {
+        if (value == null) return "";
+        return value.length() > max ? value.substring(0, max) + "..." : value;
+    }
+
+    /**
+     * Lightweight record representing a log entry for the data table component.
+     */
+    private record LogEntry(Integer id, String level, String message, String logger, Long timestamp) {}
 
     // =============================================
     // PRIVATE HELPER METHODS
