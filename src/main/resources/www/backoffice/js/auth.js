@@ -65,14 +65,15 @@ function clearExpiredTokens() {
 
 let refreshing = false;
 
-async function refreshAccessToken() {
+// Export the refresh token function for use in auth-handler.js
+export async function refreshAccessToken() {
     const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) {
-        console.log('No refresh token available for refreshAccessToken.'); // Debug log
+        console.log('No refresh token available for refreshAccessToken.');
         throw new Error('No refresh token available');
     }
 
-    console.log('Attempting to refresh access token.'); // Debug log
+    console.log('Attempting to refresh access token.');
     return originalFetch('/api/v1/auth/refresh', {
         method: 'POST',
         headers: {
@@ -82,56 +83,65 @@ async function refreshAccessToken() {
             refresh_token: refreshToken
         })
     })
-        .then(response => {
-            console.log('Refresh token response status:', response.status); // Debug log
-            if (!response.ok) {
-                console.error('Token refresh failed with status:', response.status); // Debug log
-                throw new Error('Token refresh failed');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Refresh token response data:', data); // Debug log
-            if (data.success && data.data && data.data.access_token && data.data.refresh_token) {
-                localStorage.setItem('auth_token', data.data.access_token);
-                localStorage.setItem('refresh_token', data.data.refresh_token);
-                document.cookie = "auth_token=" + data.data.access_token + "; path=/; SameSite=Strict; Secure"; // Added Secure flag
-                console.log('Access token refreshed and stored.'); // Debug log
-                return data.data.access_token;
-            }
-            console.error('Invalid refresh response structure:', data); // Debug log
-            throw new Error('Invalid refresh response');
-        });
+    .then(response => {
+        console.log('Refresh token response status:', response.status);
+        if (!response.ok) {
+            console.error('Token refresh failed with status:', response.status);
+            throw new Error('Token refresh failed');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Refresh token response data:', data);
+        if (data.success && data.data && data.data.access_token && data.data.refresh_token) {
+            localStorage.setItem('auth_token', data.data.access_token);
+            localStorage.setItem('refresh_token', data.data.refresh_token);
+            document.cookie = "auth_token=" + data.data.access_token + "; path=/; SameSite=Strict; Secure";
+            console.log('Access token refreshed and stored.');
+            return data.data.access_token;
+        }
+        console.error('Invalid refresh response structure:', data);
+        throw new Error('Invalid refresh response');
+    });
 }
 
+// Override fetch to handle authentication
 window.fetch = async function (url, options = {}) {
     let token = localStorage.getItem('auth_token');
 
     // Check if token is expired before making any request
-    if (token && isTokenExpired(token)) {
-        console.log('Token is expired, attempting refresh before request...');
-        if (!refreshing) {
-            refreshing = true;
-            try {
-                token = await refreshAccessToken();
-            } catch (error) {
-                console.error('Token refresh failed:', error);
-                clearExpiredTokens();
-                // Only redirect if not already on login page
-                if (!window.location.pathname.includes('login')) {
-                    window.location.href = '/backoffice/login.html';
+    if (token) {
+        try {
+            const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+            const currentTime = Math.floor(Date.now() / 1000);
+            
+            if (tokenPayload.exp && tokenPayload.exp < currentTime) {
+                console.log('Token is expired, attempting refresh before request...');
+                if (!refreshing) {
+                    refreshing = true;
+                    try {
+                        token = await refreshAccessToken();
+                    } catch (error) {
+                        console.error('Token refresh failed:', error);
+                        localStorage.removeItem('auth_token');
+                        localStorage.removeItem('refresh_token');
+                        document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        if (!window.location.pathname.includes('login')) {
+                            window.location.href = '/backoffice/login.html';
+                        }
+                        throw error;
+                    } finally {
+                        refreshing = false;
+                    }
                 }
-                throw error;
-            } finally {
-                refreshing = false;
             }
+        } catch (error) {
+            console.error('Error checking token expiration:', error);
         }
     }
 
     // Add auth header if token exists and it's not a request to the auth server itself
-    // to prevent sending tokens to login/refresh endpoints unnecessarily or causing issues.
     const isAuthEndpoint = url.startsWith('/api/v1/auth/');
-
     if (token && !isAuthEndpoint) {
         options.headers = {
             ...options.headers,
@@ -142,11 +152,10 @@ window.fetch = async function (url, options = {}) {
     // Use originalFetch for the actual request
     let response = await originalFetch(url, options);
 
-    // Handle 401 responses, but not for auth endpoints (to avoid loops on failed refresh)
-    // and not if we are already trying to refresh the token.
+    // Handle 401 responses
     if (response.status === 401 && !refreshing && !isAuthEndpoint) {
         refreshing = true;
-        console.log('Received 401, attempting to refresh token.'); // Debug log
+        console.log('Received 401, attempting to refresh token.');
         try {
             const newToken = await refreshAccessToken();
             // Retry the original request with new token
@@ -157,17 +166,17 @@ window.fetch = async function (url, options = {}) {
                     'Authorization': `Bearer ${newToken}`
                 }
             };
-            console.log('Retrying original request with new token.'); // Debug log
+            console.log('Retrying original request with new token.');
             response = await originalFetch(url, newOptions);
         } catch (error) {
-            console.error('Error during token refresh or retrying request:', error); // Debug log
-            // If refresh fails, logout
-            clearExpiredTokens();
-            // Only redirect if not already on login page
+            console.error('Error during token refresh or retrying request:', error);
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+            document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             if (!window.location.pathname.includes('login')) {
                 window.location.href = '/backoffice/login.html';
             }
-            throw error; // Re-throw error to be caught by the original fetch's caller
+            throw error;
         } finally {
             refreshing = false;
         }

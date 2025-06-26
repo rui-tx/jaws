@@ -1,3 +1,4 @@
+<div th:fragment="body">
 <!-- Breadcrumb Section -->
 <section class="bg-white border-b border-gray-200 px-6 py-4">
     <div class="flex items-center justify-between">
@@ -170,7 +171,7 @@
 </section>
 
 <!-- Create Role Modal -->
-<div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden" id="create-role-modal">
+<div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 invisible opacity-0 transition-all duration-200" id="create-role-modal">
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 class="text-lg font-medium text-gray-900">Create New Role</h3>
@@ -238,7 +239,7 @@
 </div>
 
 <!-- Assign Role Modal -->
-<div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden" id="assign-role-modal">
+<div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden" id="assign-role-modal" data-modal="assign-role">
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 class="text-lg font-medium text-gray-900">Assign Role to User</h3>
@@ -250,7 +251,7 @@
             </button>
         </div>
         
-            <form id="assign-role-form" class="p-6 space-y-4">
+        <form id="assign-role-form" class="p-6 space-y-4">
             <div>
                 <label for="assign-user-select" class="block text-sm font-medium text-gray-700">Select User</label>
                 <div class="mt-1">
@@ -299,6 +300,7 @@
         
         <div id="assign-form-response" class="px-6 pb-6"></div>
     </div>
+</div>
 </div>
 
  

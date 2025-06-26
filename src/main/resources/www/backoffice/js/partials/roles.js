@@ -55,25 +55,61 @@ export default function initRoles() {
     const assignRoleForm = document.getElementById('assign-role-form');
     const assignRoleMessage = document.getElementById('assign-role-message');
     const assignRoleSpinner = document.getElementById('assign-role-spinner');
+    const assignRoleModal = document.getElementById('assign-role-modal');
 
     function loadAssignRoleDropdowns() {
+        console.log('Loading dropdowns...');
         // Load users
         fetch('/htmx/backoffice/users-list', {
             headers: { 'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : '' }
         }).then(r=>r.text()).then(html=>{
-            const sel=document.getElementById('assign-user-select'); if(sel) sel.innerHTML = html;
+            const sel=document.getElementById('assign-user-select'); 
+            if(sel) {
+                console.log('Setting users HTML:', html);
+                sel.innerHTML = html;
+            }
         }).catch(err=>{
-            console.error(err);
-            const sel=document.getElementById('assign-user-select'); if(sel) sel.innerHTML='<option>Error loading users</option>';
+            console.error('Error loading users:', err);
+            const sel=document.getElementById('assign-user-select'); 
+            if(sel) sel.innerHTML='<option>Error loading users</option>';
         });
         // Load roles
         fetch('/htmx/backoffice/roles-list', {
             headers: { 'Authorization': localStorage.getItem('auth_token') ? 'Bearer ' + localStorage.getItem('auth_token') : '' }
         }).then(r=>r.text()).then(html=>{
-            const sel=document.getElementById('assign-role-select'); if(sel) sel.innerHTML = html;
+            const sel=document.getElementById('assign-role-select'); 
+            if(sel) {
+                console.log('Setting roles HTML:', html);
+                sel.innerHTML = html;
+            }
         }).catch(err=>{
-            console.error(err);
-            const sel=document.getElementById('assign-role-select'); if(sel) sel.innerHTML='<option>Error loading roles</option>';
+            console.error('Error loading roles:', err);
+            const sel=document.getElementById('assign-role-select'); 
+            if(sel) sel.innerHTML='<option>Error loading roles</option>';
+        });
+    }
+
+    // Watch for modal visibility changes
+    if (assignRoleModal) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const isVisible = !assignRoleModal.classList.contains('hidden');
+                    console.log('Modal visibility changed:', isVisible);
+                    if (isVisible) {
+                        console.log('Modal is visible, waiting before loading dropdowns...');
+                        setTimeout(() => {
+                            console.log('Loading dropdowns after delay...');
+                            loadAssignRoleDropdowns();
+                        }, 100);
+                    }
+                }
+            });
+        });
+
+        observer.observe(assignRoleModal, {
+            attributes: true,
+            attributeFilter: ['class']
         });
     }
 
@@ -81,7 +117,13 @@ export default function initRoles() {
     const originalOpenModal = window.openModal;
     window.openModal = function(modalId) {
         originalOpenModal(modalId);
-        if (modalId === 'assign-role-modal') loadAssignRoleDropdowns();
+        if (modalId === 'assign-role-modal') {
+            console.log('Opening modal, waiting before loading dropdowns...');
+            setTimeout(() => {
+                console.log('Loading dropdowns after delay...');
+                loadAssignRoleDropdowns();
+            }, 100);
+        }
     };
 
     if (assignRoleForm && !assignRoleForm.dataset.bound) {

@@ -29,8 +29,120 @@
     <!-- Fonts -->
     <link href="https://fonts.gstatic.com" rel="dns-prefetch">
     <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css">
+
+    <!-- Styles -->
+    <style>
+    /* Sidebar collapsed states */
+    .sidebar-collapsed {
+        width: 4rem !important; /* w-16 */
+    }
+
+    .sidebar-collapsed .sidebar-text {
+        display: none;
+    }
+
+    /* Adjust container padding when collapsed */
+    .sidebar-collapsed .px-4 {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    /* Navigation links styling when collapsed */
+    .sidebar-collapsed nav a {
+        justify-content: center !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    /* Remove icon margins when collapsed and ensure proper size */
+    .sidebar-collapsed nav a svg {
+        margin-right: 0 !important;
+        width: 1.25rem !important; /* h-5 w-5 */
+        height: 1.25rem !important;
+        flex-shrink: 0;
+    }
+
+    /* Hide section labels when collapsed */
+    .sidebar-collapsed nav p {
+        display: none;
+    }
+
+    /* Main content adjustment for collapsed sidebar */
+    .main-content-collapsed {
+        margin-left: 4rem !important; /* lg:ml-16 */
+    }
+
+    /* Adjust header margin when collapsed */
+    .sidebar-collapsed .mb-8 {
+        margin-bottom: 1rem !important;
+        text-align: center;
+    }
+
+    /* Add tooltip-like behavior for collapsed items */
+    .sidebar-collapsed nav a {
+        position: relative;
+    }
+
+    /* Hover expansion for collapsed sidebar */
+    .sidebar-collapsed.sidebar-hover-expanded {
+        width: 16rem !important; /* w-64 */
+        z-index: 60; /* Higher than overlay to ensure it's on top */
+    }
+
+    .sidebar-collapsed.sidebar-hover-expanded .sidebar-text {
+        display: inline !important;
+    }
+
+    .sidebar-collapsed.sidebar-hover-expanded nav a {
+        justify-content: flex-start !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    .sidebar-collapsed.sidebar-hover-expanded nav a svg {
+        margin-right: 0.75rem !important;
+    }
+
+    .sidebar-collapsed.sidebar-hover-expanded nav p {
+        display: block !important;
+    }
+
+    .sidebar-collapsed.sidebar-hover-expanded .px-4 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    @media (max-width: 1024px) {
+        .sidebar-collapsed {
+            width: 16rem !important; /* Keep normal width on mobile */
+        }
+        
+        .main-content-collapsed {
+            margin-left: 0 !important; /* Remove margin on mobile */
+        }
+        
+        /* Restore normal behavior on mobile */
+        .sidebar-collapsed .sidebar-text {
+            display: inline !important;
+        }
+        
+        .sidebar-collapsed nav a {
+            justify-content: flex-start !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.5rem !important;
+        }
+        
+        .sidebar-collapsed nav a svg {
+            margin-right: 0.75rem !important;
+        }
+        
+        .sidebar-collapsed nav p {
+            display: block !important;
+        }
+    }
+    </style>
 </head>
-<body class="font-nunito h-full bg-gray-100" hx-boost="true">
+<body class="font-nunito h-full bg-gray-100" hx-boost="true" >
 <div id="app" class="flex h-full">
     <!-- Top Navigation -->
     <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 h-16" id="navbar-main">
@@ -143,7 +255,8 @@
     <!-- Main content -->
     <div class="flex-1 lg:ml-64 pt-16 min-h-screen bg-gray-100 transition-all duration-200 ease-in-out" id="main-content">
         <div id="bodytemplate">
-            <div th:if="${bodyContent}" th:insert="~{${bodyContent}}"></div>
+            <div th:if="${bodyContent}"
+                 th:replace="~{${bodyContent} :: body}"></div>
         </div>
 
         <!-- Footer -->
@@ -172,7 +285,7 @@
 </div>
 
 <!-- Modal -->
-<div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden" id="sample-modal">
+<div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 invisible opacity-0 transition-all duration-200" id="sample-modal">
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 class="text-lg font-medium text-gray-900">Confirm action</h3>
@@ -194,358 +307,42 @@
 
 <!-- Scripts -->
 <script th:src="${utils.getPathFor('backoffice/js/htmx.min.js')}"></script>
-<script th:src="${utils.getPathFor('backoffice/js/auth.js')}"></script>
+<script type="module" th:src="${utils.getPathFor('backoffice/js/auth.js')}"></script>
+<script type="module" th:src="${utils.getPathFor('backoffice/js/auth-handler.js')}"></script>
 <script src="https://unpkg.com/feather-icons@4/dist/feather.min.js" defer></script>
 <script type="module" th:src="${utils.getPathFor('backoffice/js/index.js')}"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => feather.replace());
-  if (window.htmx) {
-    htmx.on('htmx:afterSettle', () => feather.replace());
-  }
-</script>
 
-<!-- Sidebar active state updater -->
-<script>
-(function(){
-  const ACTIVE_CLASSES = ['bg-primary-50','border-r-2','border-primary-500','text-primary-700'];
-  const INACTIVE_TEXT_CLASSES = ['text-gray-600','hover:text-gray-900'];
+<!-- HTMX Configuration -->
+<script type="module">
+    import { initializeAuth } from './js/auth-handler.js';
 
-  function setActive(link){
-    document.querySelectorAll('#sidebar a[href^="/backoffice"]').forEach(a=>{
-      ACTIVE_CLASSES.forEach(c=>a.classList.remove(c));
-      // ensure inactive text color
-      INACTIVE_TEXT_CLASSES.forEach(c=>{
-        if(!a.classList.contains(c)) a.classList.add(c);
-      });
-      const icon=a.querySelector('svg, i');
-      if(icon){
-        icon.classList.remove('text-primary-500');
-        icon.classList.add('text-gray-400','group-hover:text-gray-500');
-      }
-    });
-    if(link){
-      ACTIVE_CLASSES.forEach(c=>link.classList.add(c));
-      INACTIVE_TEXT_CLASSES.forEach(c=>link.classList.remove(c));
-      const icon=link.querySelector('svg, i');
-      if(icon){
-        icon.classList.remove('text-gray-400','group-hover:text-gray-500');
-        icon.classList.add('text-primary-500');
-      }
-    }
-  }
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize auth
+        initializeAuth();
 
-  function updateByPath(){
-    const path=window.location.pathname;
-    const link=document.querySelector('#sidebar a[href="'+path+'"]');
-    setActive(link);
-  }
-
-  document.addEventListener('DOMContentLoaded', updateByPath);
-  if(window.htmx){
-    htmx.on('htmx:afterSwap', function(e){
-      if(e.detail && e.detail.target && e.detail.target.id==='bodytemplate'){
-        updateByPath();
-      }
-    });
-  }
-  document.getElementById('sidebar').addEventListener('click', function(e){
-    const link=e.target.closest('a[href^="/backoffice"]');
-    if(link) setActive(link);
-  });
-})();
-</script>
-
-<style>
-/* Sidebar collapsed states */
-.sidebar-collapsed {
-    width: 4rem !important; /* w-16 */
-}
-
-.sidebar-collapsed .sidebar-text {
-    display: none;
-}
-
-/* Adjust container padding when collapsed */
-.sidebar-collapsed .px-4 {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-}
-
-/* Navigation links styling when collapsed */
-.sidebar-collapsed nav a {
-    justify-content: center !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-}
-
-/* Remove icon margins when collapsed and ensure proper size */
-.sidebar-collapsed nav a svg {
-    margin-right: 0 !important;
-    width: 1.25rem !important; /* h-5 w-5 */
-    height: 1.25rem !important;
-    flex-shrink: 0;
-}
-
-/* Hide section labels when collapsed */
-.sidebar-collapsed nav p {
-    display: none;
-}
-
-/* Main content adjustment for collapsed sidebar */
-.main-content-collapsed {
-    margin-left: 4rem !important; /* lg:ml-16 */
-}
-
-/* Adjust header margin when collapsed */
-.sidebar-collapsed .mb-8 {
-    margin-bottom: 1rem !important;
-    text-align: center;
-}
-
-/* Add tooltip-like behavior for collapsed items */
-.sidebar-collapsed nav a {
-    position: relative;
-}
-
-/* Hover expansion for collapsed sidebar */
-.sidebar-collapsed.sidebar-hover-expanded {
-    width: 16rem !important; /* w-64 */
-    z-index: 60; /* Higher than overlay to ensure it's on top */
-}
-
-.sidebar-collapsed.sidebar-hover-expanded .sidebar-text {
-    display: inline !important;
-}
-
-.sidebar-collapsed.sidebar-hover-expanded nav a {
-    justify-content: flex-start !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.5rem !important;
-}
-
-.sidebar-collapsed.sidebar-hover-expanded nav a svg {
-    margin-right: 0.75rem !important;
-}
-
-.sidebar-collapsed.sidebar-hover-expanded nav p {
-    display: block !important;
-}
-
-.sidebar-collapsed.sidebar-hover-expanded .px-4 {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-}
-
-@media (max-width: 1024px) {
-    .sidebar-collapsed {
-        width: 16rem !important; /* Keep normal width on mobile */
-    }
-    
-    .main-content-collapsed {
-        margin-left: 0 !important; /* Remove margin on mobile */
-    }
-    
-    /* Restore normal behavior on mobile */
-    .sidebar-collapsed .sidebar-text {
-        display: inline !important;
-    }
-    
-    .sidebar-collapsed nav a {
-        justify-content: flex-start !important;
-        padding-left: 0.75rem !important;
-        padding-right: 0.5rem !important;
-    }
-    
-    .sidebar-collapsed nav a svg {
-        margin-right: 0.75rem !important;
-    }
-    
-    .sidebar-collapsed nav p {
-        display: block !important;
-    }
-}
-</style>
-
-<script>
-// Token validation and expiration handling
-function validateTokenAndRedirect() {
-    const authToken = localStorage.getItem('auth_token');
-    
-    if (!authToken) {
-        console.log('No auth token found, redirecting to login');
-        window.location.href = '/backoffice/login.html';
-        return false;
-    }
-    
-    // Check if token is expired by trying to decode it (basic check)
-    try {
-        const tokenPayload = JSON.parse(atob(authToken.split('.')[1]));
-        const currentTime = Math.floor(Date.now() / 1000);
+        // Configure HTMX
+        htmx.config.defaultSettleDelay = 0;
+        htmx.config.defaultSwapStyle = 'innerHTML';
+        htmx.config.includeScriptTags = false;
         
-        if (tokenPayload.exp && tokenPayload.exp < currentTime) {
-            console.log('Token expired, attempting refresh...');
-            // Try to refresh the token
-            refreshAccessToken()
-                .then(() => {
-                    console.log('Token refreshed successfully');
-                    // Reload the page with fresh token
-                    window.location.reload();
-                })
-                .catch((error) => {
-                    console.error('Token refresh failed:', error);
-                    // Clear expired tokens and redirect to login
-                    localStorage.removeItem('auth_token');
-                    localStorage.removeItem('refresh_token');
-                    document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                    window.location.href = '/backoffice/login.html';
-                });
-            return false;
-        }
-    } catch (error) {
-        console.error('Error validating token:', error);
-        // If token is malformed, clear it and redirect
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        window.location.href = '/backoffice/login.html';
-        return false;
-    }
-    
-    return true;
-}
+        // Global event listeners for HTMX events
+        htmx.on('htmx:afterSettle', function(evt) {
+            if (window.initializeLayout) {
+                window.initializeLayout();
+            }
+            if (window.feather) {
+                window.feather.replace();
+            }
+        });
 
-// Configure HTMX to include auth headers
-document.addEventListener('htmx:configRequest', function(event) {
-    const authToken = localStorage.getItem('auth_token');
-    if (authToken) {
-        event.detail.headers['Authorization'] = 'Bearer ' + authToken;
-    }
-});
-
-// Handle HTMX authentication errors
-document.addEventListener('htmx:responseError', function(event) {
-    if (event.detail.xhr.status === 401) {
-        console.log('HTMX request got 401, attempting token refresh...');
-        // Clear token and redirect to login
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        window.location.href = '/backoffice/login.html';
-    }
-});
-
-// Handle HTMX errors gracefully
-document.addEventListener('htmx:error', function(event) {
-    console.error('HTMX error:', event.detail);
-    // Don't let HTMX errors break the page
-    event.preventDefault();
-});
-
-// Run token validation when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Skip validation if we're on the login page
-    if (!window.location.pathname.endsWith('/login.html') && !window.location.pathname.endsWith('/login')) {
-        validateTokenAndRedirect();
-    }
-    
-    // Restore sidebar state from localStorage
-    const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-    if (isCollapsed) {
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('main-content');
-        
-        sidebar.classList.remove('sidebar-expanded');
-        sidebar.classList.add('sidebar-collapsed');
-        mainContent.classList.add('main-content-collapsed');
-    }
-});
-
-// Mobile menu toggle
-document.getElementById('mobile-menu-button').addEventListener('click', function() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    
-    sidebar.classList.toggle('-translate-x-full');
-    overlay.classList.toggle('hidden');
-});
-
-// Desktop sidebar toggle
-document.getElementById('sidebar-toggle-button').addEventListener('click', function() {
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.getElementById('main-content');
-    
-    // Toggle collapsed state
-    sidebar.classList.toggle('sidebar-collapsed');
-    sidebar.classList.toggle('sidebar-expanded');
-    mainContent.classList.toggle('main-content-collapsed');
-    
-    // Save state to localStorage
-    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-    localStorage.setItem('sidebar-collapsed', isCollapsed.toString());
-});
-
-// Sidebar hover functionality
-let hoverTimeout;
-const sidebar = document.getElementById('sidebar');
-
-sidebar.addEventListener('mouseenter', function() {
-    // Clear any existing timeout
-    clearTimeout(hoverTimeout);
-    
-    // Only expand on hover if sidebar is collapsed
-    if (sidebar.classList.contains('sidebar-collapsed')) {
-        sidebar.classList.add('sidebar-hover-expanded');
-    }
-});
-
-sidebar.addEventListener('mouseleave', function() {
-    // Add slight delay before collapsing to prevent flicker
-    hoverTimeout = setTimeout(() => {
-        sidebar.classList.remove('sidebar-hover-expanded');
-    }, 300);
-});
-
-// Close sidebar when overlay is clicked
-document.getElementById('sidebar-overlay').addEventListener('click', function() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    
-    sidebar.classList.add('-translate-x-full');
-    overlay.classList.add('hidden');
-});
-
-// User menu dropdown
-document.getElementById('user-menu-button').addEventListener('click', function() {
-    const menu = document.getElementById('user-menu');
-    menu.classList.toggle('hidden');
-});
-
-// Close user menu when clicking outside
-document.addEventListener('click', function(event) {
-    const userMenuButton = document.getElementById('user-menu-button');
-    const userMenu = document.getElementById('user-menu');
-    
-    if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
-        userMenu.classList.add('hidden');
-    }
-});
-
-// Modal functions
-function openModal(modalId) {
-    document.getElementById(modalId).classList.remove('hidden');
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
-}
-
-// Logout function
-function logout() {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refresh_token');
-    document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    window.location.href = '/backoffice/login.html';
-}
+        // Handle browser back/forward buttons
+        window.onpopstate = function() {
+            if (window.initializeLayout) {
+                window.initializeLayout();
+            }
+        };
+    });
 </script>
+
 </body>
 </html>

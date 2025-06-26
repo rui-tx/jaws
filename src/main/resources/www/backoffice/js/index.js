@@ -1,3 +1,6 @@
+import { initializeLayout } from './layout.js';
+import { initializeAuth } from './auth-handler.js';
+
 const pageModules = {
     '/backoffice/users': () => import('./partials/users.js'),
     '/backoffice/logs': () => import('./partials/logs.js'),
@@ -7,9 +10,13 @@ const pageModules = {
 };
 
 function resolveModule(path) {
-    if (pageModules[path]) return pageModules[path];
-    // wildcard match for profile/id paths
-    if (path.startsWith('/backoffice/profile')) return pageModules['/backoffice/profile'];
+    // Get the base route (e.g., /backoffice/logs from /backoffice/logs/123)
+    const baseRoute = path.split('/').slice(0, 3).join('/');
+    
+    if (pageModules[baseRoute]) return pageModules[baseRoute];
+    if (baseRoute.startsWith('/backoffice/profile')) return pageModules['/backoffice/profile'];
+    if (baseRoute.startsWith('/backoffice/jobs')) return pageModules['/backoffice/jobs'];
+    if (baseRoute.startsWith('/backoffice/logs')) return pageModules['/backoffice/logs'];
     return null;
 }
 
@@ -27,19 +34,22 @@ async function initPage() {
 }
 
 // Initial page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPage);
-} else {
+function initialize() {
+    initializeAuth();
+    initializeLayout();
     initPage();
 }
 
-// Re-run after HTMX swaps main content
+// Initialize on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}
+
+// Handle HTMX page transitions
 if (window.htmx) {
-    htmx.on('htmx:afterSwap', evt => {
-        // Only react when the #bodytemplate container was replaced
-        const target = evt.detail && evt.detail.target;
-        if (target && target.id === 'bodytemplate') {
-            initPage();
-        }
+    htmx.on('htmx:afterSettle', () => {
+        initPage();
     });
 } 

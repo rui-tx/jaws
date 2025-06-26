@@ -275,7 +275,6 @@ public class BackofficeController extends Bragi {
         context.put("jobCompletedAt", jobRow.getLong("completed_at").map(ts -> JawsUtils.formatUnixTimestamp(ts)).orElse(""));
         
         setContext(context);
-
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, JOB_DETAILS_PAGE));
     }
 

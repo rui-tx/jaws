@@ -6,33 +6,32 @@ import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
-import static org.ruitx.jaws.configs.ApplicationConfig.QUEUE_CAPACITY;
-import static org.ruitx.jaws.configs.ApplicationConfig.WORKER_THREADS;
-import static org.ruitx.jaws.configs.ApplicationConfig.CLEANUP_INTERVAL_MS;
-
 import java.time.Instant;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.*;
+
 /**
  * Freyr
- * 
+ * <p>
  * Freyr is the main entry point for the job queue system.
  * It is responsible for submitting jobs, processing them, and managing their status.
- * 
- * It uses a priority queue to process jobs in the order of their priority. 
+ * <p>
+ * It uses a priority queue to process jobs in the order of their priority.
  */
 public class Freyr implements Runnable {
-    
+
     private static final int DEFAULT_WORKER_THREADS = WORKER_THREADS;
     private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
     //private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes
-    
-    private static Freyr instance;
     private static final Object instanceLock = new Object();
-    
+    private static Freyr instance;
     private final Mimir mimir = new Mimir();
     private final JobRegistry jobRegistry;
     private final ExecutorService workerPool;
@@ -44,35 +43,35 @@ public class Freyr implements Runnable {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicInteger activeWorkers = new AtomicInteger(0);
     private final ScheduledExecutorService cleanupScheduler;
-    
+
     // Statistics
-    private final AtomicInteger totalJobs = new AtomicInteger(0);   
+    private final AtomicInteger totalJobs = new AtomicInteger(0);
     private final AtomicInteger completedJobs = new AtomicInteger(0);
     private final AtomicInteger failedJobs = new AtomicInteger(0);
     private final AtomicInteger retriedJobs = new AtomicInteger(0);
-        
+
     private Freyr(Map<String, Object> config) {
         // Get singleton JobRegistry instance
         this.jobRegistry = JobRegistry.getInstance();
-        
-        this.workerPool = Executors.newFixedThreadPool(DEFAULT_WORKER_THREADS, 
-            r -> new Thread(r, "job-worker-" + Thread.currentThread().threadId()));
-        this.jobQueue = new PriorityBlockingQueue<>(DEFAULT_QUEUE_CAPACITY, 
-            Comparator.comparingInt((JobInstance ji) -> ji.job.getPriority())
-                     .thenComparingLong(ji -> ji.createdAt));
+
+        this.workerPool = Executors.newFixedThreadPool(DEFAULT_WORKER_THREADS,
+                r -> new Thread(r, "job-worker-" + Thread.currentThread().getName()));
+        this.jobQueue = new PriorityBlockingQueue<>(DEFAULT_QUEUE_CAPACITY,
+                Comparator.comparingInt((JobInstance ji) -> ji.job.getPriority())
+                        .thenComparingLong(ji -> ji.createdAt));
         this.retryManager = new JobRetryManager();
         this.deadLetterQueue = new DeadLetterQueue();
         this.sequentialJobQueue = new SequentialJobQueue(this.deadLetterQueue);
         this.retryScheduler = new JobRetryScheduler(this.deadLetterQueue);
         this.cleanupScheduler = Executors.newSingleThreadScheduledExecutor(
-            r -> new Thread(r, "job-cleanup"));
-        
+                r -> new Thread(r, "job-cleanup"));
+
         loadPendingJobs();
-        
-        Logger.info("JobQueue initialized with {} worker threads, queue capacity of {}, and shared DLQ", 
-                   DEFAULT_WORKER_THREADS, DEFAULT_QUEUE_CAPACITY);
+
+        Logger.info("JobQueue initialized with {} worker threads, queue capacity of {}, and shared DLQ",
+                DEFAULT_WORKER_THREADS, DEFAULT_QUEUE_CAPACITY);
     }
-    
+
     /**
      * Get the singleton instance
      */
@@ -86,7 +85,7 @@ public class Freyr implements Runnable {
         }
         return instance;
     }
-    
+
     /**
      * Submit a job for processing
      * Routes to appropriate queue based on execution mode
@@ -94,7 +93,7 @@ public class Freyr implements Runnable {
     public String submit(Job job) {
         try {
             persistJob(job);
-            
+
             if (job.getExecutionMode() == ExecutionMode.SEQUENTIAL) {
                 boolean queued = sequentialJobQueue.submit(job);
                 if (!queued) {
@@ -105,17 +104,17 @@ public class Freyr implements Runnable {
                 jobQueue.offer(new JobInstance(job));
                 Logger.trace("Job submitted to parallel queue: {}", job);
             }
-            
+
             totalJobs.incrementAndGet();
-            
+
             return job.getId();
-            
+
         } catch (Exception e) {
             Logger.error("Failed to submit job: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to submit job", e);
         }
     }
-    
+
     /**
      * Get job status
      */
@@ -124,8 +123,8 @@ public class Freyr implements Runnable {
             Row row = mimir.getRow("SELECT status FROM JOBS WHERE id = ?", jobId);
             if (row != null) {
                 return row.getString("status")
-                    .map(JobStatus::valueOf)
-                    .orElse(null);
+                        .map(JobStatus::valueOf)
+                        .orElse(null);
             }
             return null;
         } catch (Exception e) {
@@ -133,25 +132,25 @@ public class Freyr implements Runnable {
             return null;
         }
     }
-    
+
     /**
      * Get job result
      */
     public JobResult getJobResult(String jobId) {
         try {
             Row row = mimir.getRow(
-                "SELECT * FROM JOB_RESULTS WHERE job_id = ? AND expires_at > ?", 
-                jobId, Instant.now().toEpochMilli());
-            
+                    "SELECT * FROM JOB_RESULTS WHERE job_id = ? AND expires_at > ?",
+                    jobId, Instant.now().toEpochMilli());
+
             if (row != null) {
                 Map<String, String> headers = parseHeaders(row.getString("headers").orElse(null));
                 return new JobResult(
-                    row.getString("job_id").orElse(jobId),
-                    row.getInt("status_code").orElse(500),
-                    headers,
-                    row.getString("body").orElse(""),
-                    row.getString("content_type").orElse("application/json"),
-                    row.getLong("expires_at").orElse(0L)
+                        row.getString("job_id").orElse(jobId),
+                        row.getInt("status_code").orElse(500),
+                        headers,
+                        row.getString("body").orElse(""),
+                        row.getString("content_type").orElse("application/json"),
+                        row.getLong("expires_at").orElse(0L)
                 );
             }
             return null;
@@ -160,46 +159,46 @@ public class Freyr implements Runnable {
             return null;
         }
     }
-    
+
     /**
      * Start the job processing system
      */
     public void start() {
         if (running.compareAndSet(false, true)) {
             Logger.info("Starting JobQueue processing system...");
-            
+
             // Start parallel worker threads
             for (int i = 0; i < DEFAULT_WORKER_THREADS; i++) {
                 workerPool.execute(new JobWorker());
             }
-            
+
             // Start sequential processing
             sequentialJobQueue.start();
-            
+
             // Start retry scheduler
             retryScheduler.start();
-            
+
             // Start cleanup scheduler
-            cleanupScheduler.scheduleAtFixedRate(this::cleanupExpiredData, 
-                                               CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS, 
-                                               TimeUnit.MILLISECONDS);
-            
+            cleanupScheduler.scheduleAtFixedRate(this::cleanupExpiredData,
+                    CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS,
+                    TimeUnit.MILLISECONDS);
+
             Logger.info("JobQueue started with {} parallel workers, 1 sequential worker, and retry scheduler", DEFAULT_WORKER_THREADS);
         }
     }
-    
+
     /**
      * Shutdown the job processing system
      */
     public void shutdown() {
         if (running.compareAndSet(true, false)) {
             Logger.info("Shutting down JobQueue processing system...");
-            
+
             workerPool.shutdown();
             sequentialJobQueue.shutdown();
             retryScheduler.stop();
             cleanupScheduler.shutdown();
-            
+
             try {
                 if (!workerPool.awaitTermination(30, TimeUnit.SECONDS)) {
                     workerPool.shutdownNow();
@@ -212,11 +211,11 @@ public class Freyr implements Runnable {
                 cleanupScheduler.shutdownNow();
                 Thread.currentThread().interrupt();
             }
-            
+
             Logger.info("JobQueue shutdown complete");
         }
     }
-    
+
     /**
      * Get system statistics
      */
@@ -231,11 +230,11 @@ public class Freyr implements Runnable {
         stats.put("activeParallelWorkers", activeWorkers.get());
         stats.put("sequentialProcessing", sequentialJobQueue.isProcessingJob());
         stats.put("running", running.get());
-        
+
         // Add sequential queue statistics
         Map<String, Object> sequentialStats = sequentialJobQueue.getStatistics();
         stats.put("sequential", sequentialStats);
-        
+
         // Add retry statistics
         try {
             JobRetryManager.RetryStatistics retryStats = retryManager.getRetryStatistics();
@@ -252,7 +251,7 @@ public class Freyr implements Runnable {
             fallbackRetryStats.put("totalRetryAttempts", 0);
             stats.put("retry", fallbackRetryStats);
         }
-        
+
         // Add Dead Letter Queue statistics
         try {
             DeadLetterQueue.DLQStatistics dlqStats = deadLetterQueue.getStatistics();
@@ -272,7 +271,7 @@ public class Freyr implements Runnable {
             fallbackDlqStats.put("oldestEntryTimestamp", null);
             stats.put("deadLetterQueue", fallbackDlqStats);
         }
-        
+
         // Add Retry Scheduler statistics
         try {
             JobRetryScheduler.RetrySchedulerStatistics schedulerStats = retryScheduler.getStatistics();
@@ -293,48 +292,48 @@ public class Freyr implements Runnable {
             fallbackSchedulerStats.put("running", false);
             stats.put("retryScheduler", fallbackSchedulerStats);
         }
-        
+
         return stats;
     }
-    
+
     // Private helper methods
-    
+
     private void persistJob(Job job) {
         try {
             String payloadJson = Odin.getMapper().writeValueAsString(job.getPayload());
-            
+
             mimir.executeSql(
-                "INSERT INTO JOBS (id, type, payload, priority, max_retries, current_retries, timeout_ms, execution_mode, status, created_at, client_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                job.getId(),
-                job.getType(),
-                payloadJson,
-                job.getPriority(),
-                job.getMaxRetries(),
-                0, // current_retries starts at 0
-                job.getTimeoutMs(),
-                job.getExecutionMode().name(),
-                JobStatus.PENDING.name(),
-                Instant.now().toEpochMilli(),
-                job.getClientId(),
-                job.getUserId()
+                    "INSERT INTO JOBS (id, type, payload, priority, max_retries, current_retries, timeout_ms, execution_mode, status, created_at, client_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    job.getId(),
+                    job.getType(),
+                    payloadJson,
+                    job.getPriority(),
+                    job.getMaxRetries(),
+                    0, // current_retries starts at 0
+                    job.getTimeoutMs(),
+                    job.getExecutionMode().name(),
+                    JobStatus.PENDING.name(),
+                    Instant.now().toEpochMilli(),
+                    job.getClientId(),
+                    job.getUserId()
             );
         } catch (Exception e) {
             throw new RuntimeException("Failed to persist job", e);
         }
     }
-    
+
     private void loadPendingJobs() {
         try {
             List<Row> rows = mimir.getRows("SELECT * FROM JOBS WHERE status IN ('PENDING', 'PROCESSING') ORDER BY priority, created_at");
             int parallelLoaded = 0;
             int sequentialLoaded = 0;
-            
+
             for (Row row : rows) {
                 try {
                     String jobType = row.getString("type").orElse("");
                     String payloadJson = row.getString("payload").orElse("{}");
                     Map<String, Object> payload = Odin.getMapper().readValue(payloadJson, Map.class);
-                    
+
                     // Create job instance using registry
                     Job job = jobRegistry.createJob(jobType, payload);
                     if (job != null) {
@@ -351,14 +350,14 @@ public class Freyr implements Runnable {
                     Logger.error("Failed to load pending job from row: {}", e.getMessage());
                 }
             }
-            
-            Logger.info("Loaded {} parallel jobs and {} sequential jobs from database", 
-                       parallelLoaded, sequentialLoaded);
+
+            Logger.info("Loaded {} parallel jobs and {} sequential jobs from database",
+                    parallelLoaded, sequentialLoaded);
         } catch (Exception e) {
             Logger.error("Failed to load pending jobs: {}", e.getMessage());
         }
     }
-    
+
     private Map<String, String> parseHeaders(String headersJson) {
         if (headersJson == null || headersJson.trim().isEmpty()) return new HashMap<>();
         try {
@@ -368,62 +367,76 @@ public class Freyr implements Runnable {
             return new HashMap<>();
         }
     }
-    
+
     private void cleanupExpiredData() {
         try {
             long now = Instant.now().toEpochMilli();
-            
+
             // Cleanup expired results
             int expiredResults = mimir.executeSql(
-                "DELETE FROM JOB_RESULTS WHERE expires_at < ?", now);
-            
+                    "DELETE FROM JOB_RESULTS WHERE expires_at < ?", now);
+
             // Cleanup old completed/failed jobs (older than 24 hours)
             long dayAgo = now - 86400000;
             int oldJobs = mimir.executeSql(
-                "DELETE FROM JOBS WHERE status IN ('COMPLETED', 'FAILED') AND completed_at < ?", dayAgo);
-            
+                    "DELETE FROM JOBS WHERE status IN ('COMPLETED', 'FAILED') AND completed_at < ?", dayAgo);
+
             if (expiredResults > 0 || oldJobs > 0) {
-                Logger.info("Cleanup: removed {} expired results and {} old jobs", 
-                          expiredResults, oldJobs);
+                Logger.info("Cleanup: removed {} expired results and {} old jobs",
+                        expiredResults, oldJobs);
             }
         } catch (Exception e) {
             Logger.error("Failed to cleanup expired data: {}", e.getMessage());
         }
     }
-    
+
     @Override
     public void run() {
         // Background tasks can be added here if needed
     }
-    
+
+    /**
+     * Get access to the Dead Letter Queue for admin operations
+     */
+    public DeadLetterQueue getDeadLetterQueue() {
+        return deadLetterQueue;
+    }
+
+    /**
+     * Get access to the Retry Scheduler for admin operations
+     */
+    public JobRetryScheduler getRetryScheduler() {
+        return retryScheduler;
+    }
+
     /**
      * Job status enum
      */
     public enum JobStatus {
         PENDING, PROCESSING, COMPLETED, FAILED, TIMEOUT, RETRY_SCHEDULED, DEAD_LETTER
     }
-    
+
     /**
      * Internal job instance wrapper
      */
     private static class JobInstance {
         final Job job;
         final long createdAt;
-        
+
         JobInstance(Job job) {
             this.job = job;
             this.createdAt = Instant.now().toEpochMilli();
         }
     }
-    
+
     /**
      * Worker thread that processes jobs
      */
     private class JobWorker implements Runnable {
         @Override
         public void run() {
-            Thread.currentThread().setName("job-worker-" + Thread.currentThread().threadId());
-            
+            Thread.currentThread().setName("job-worker-" + Thread.currentThread().getName());
+
             while (running.get()) {
                 try {
                     JobInstance jobInstance = jobQueue.poll(1, TimeUnit.SECONDS);
@@ -438,68 +451,54 @@ public class Freyr implements Runnable {
                 }
             }
         }
-        
+
         private void processJob(Job job) {
             activeWorkers.incrementAndGet();
-            
+
             try {
                 Logger.trace("Processing parallel job: {}", job);
-                
+
                 updateJobStatus(job.getId(), JobStatus.PROCESSING, null, Instant.now().toEpochMilli(), null);
-                job.execute();                
+                job.execute();
                 updateJobStatus(job.getId(), JobStatus.COMPLETED, null, null, Instant.now().toEpochMilli());
-                
+
                 completedJobs.incrementAndGet();
                 Logger.trace("Completed parallel job: {}", job.getId());
-                
+
             } catch (Exception e) {
                 Logger.error("Failed to process parallel job {}: {}", job.getId(), e.getMessage(), e);
-                
+
                 int currentRetries = retryManager.getCurrentRetryCount(job.getId());
                 JobRetryManager.RetryDecision decision = retryManager.shouldRetry(
-                    job.getId(), job.getType(), e, currentRetries, job.getMaxRetries());
-                
+                        job.getId(), job.getType(), e, currentRetries, job.getMaxRetries());
+
                 // Schedule for retry
-                if (decision.shouldRetry()) {    
+                if (decision.shouldRetry()) {
                     retryManager.scheduleRetry(job.getId(), decision.getRetryDelayMs(), e);
                     retriedJobs.incrementAndGet();
                     Logger.info("Parallel job {} scheduled for retry: {}", job.getId(), decision.getReason());
                 } else {
-                    
+
                     // Mark as permanently failed and move to DLQ
                     retryManager.markAsPermanentlyFailed(job.getId(), e, decision.getReason());
                     deadLetterQueue.moveToDeadLetterQueue(job.getId(), decision.getReason());
                     failedJobs.incrementAndGet();
                     Logger.warn("Parallel job {} permanently failed and moved to DLQ: {}", job.getId(), decision.getReason());
                 }
-                
+
             } finally {
                 activeWorkers.decrementAndGet();
             }
         }
-        
+
         private void updateJobStatus(String jobId, JobStatus status, String errorMessage, Long startedAt, Long completedAt) {
             try {
                 mimir.executeSql(
-                    "UPDATE JOBS SET status = ?, error_message = ?, started_at = ?, completed_at = ? WHERE id = ?",
-                    status.name(), errorMessage, startedAt, completedAt, jobId);
+                        "UPDATE JOBS SET status = ?, error_message = ?, started_at = ?, completed_at = ? WHERE id = ?",
+                        status.name(), errorMessage, startedAt, completedAt, jobId);
             } catch (Exception e) {
                 Logger.error("Failed to update job status for {}: {}", jobId, e.getMessage());
             }
         }
-    }
-    
-    /**
-     * Get access to the Dead Letter Queue for admin operations
-     */
-    public DeadLetterQueue getDeadLetterQueue() {
-        return deadLetterQueue;
-    }
-    
-    /**
-     * Get access to the Retry Scheduler for admin operations
-     */
-    public JobRetryScheduler getRetryScheduler() {
-        return retryScheduler;
     }
 } 
