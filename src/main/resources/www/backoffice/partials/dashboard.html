@@ -1,59 +1,61 @@
 <!-- Breadcrumb Section -->
-<section class="bg-white border-b border-gray-200 px-6 py-4">
-    <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-            <nav class="flex" aria-label="Breadcrumb">
-                <ol class="flex items-center space-x-2">
-                    <li>
-                        <span class="text-sm font-medium text-gray-900" th:text="${currentUser}">User Name</span>
-                    </li>
-                    <li>
-                        <span class="text-gray-400">/</span>
-                    </li>
-                    <li>
-                        <span class="text-sm text-gray-500">Dashboard</span>
-                    </li>
-                </ol>
-            </nav>
-        </div>
-        <div class="flex items-center space-x-3">
-            <!-- Additional buttons can go here -->
-        </div>
-    </div>
-</section>
-
-<!-- Hero Section -->
-<section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-    <div class="px-6 py-8">
+<div th:fragment="body">
+    <section class="bg-white border-b border-gray-200 px-6 py-4">
         <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold">Dashboard</h1>
-                <p class="mt-2 text-primary-100">Welcome to the Jaws Backoffice</p>
+            <div class="flex items-center space-x-2">
+                <nav class="flex" aria-label="Breadcrumb">
+                    <ol class="flex items-center space-x-2">
+                        <li>
+                            <span class="text-sm font-medium text-gray-900" th:text="${currentUser}">User Name</span>
+                        </li>
+                        <li>
+                            <span class="text-gray-400">/</span>
+                        </li>
+                        <li>
+                            <span class="text-sm text-gray-500">Dashboard</span>
+                        </li>
+                    </ol>
+                </nav>
             </div>
-            <div class="hidden lg:block">
-                <i data-feather="home" class="h-16 w-16 text-primary-200"></i>
+            <div class="flex items-center space-x-3">
+                <!-- Additional buttons can go here -->
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- Main Content Section -->
-<section class="px-6 py-6 space-y-6">
-    <!-- Job Statistics Section -->
-    <div th:if="${canAccessRoles == 'true'}" 
-         th:replace="~{components/stats-card/stats-card.html :: stats-card(
-             title='Job Queue Statistics',
-             endpoint='/htmx/backoffice/job-stats',
-             refreshable=true
-         )}"></div>
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+        <div class="px-6 py-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Dashboard</h1>
+                    <p class="mt-2 text-primary-100">Welcome to the Jaws Backoffice</p>
+                </div>
+                <div class="hidden lg:block">
+                    <i data-feather="home" class="h-16 w-16 text-primary-200"></i>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <!-- Users Table Section -->
-    <div th:if="${canAccessRoles == 'true'}"
-         th:replace="~{components/data-table/data-table.html :: data-table(
-             title='Users',
-             icon='users',
-             endpoint='/htmx/backoffice/users',
-             refreshable=true
-         )}">
-    </div>
-</section>
+    <!-- Main Content Section -->
+    <section class="px-6 py-6 space-y-6">
+        <!-- Job Statistics Section -->
+        <div th:if="${canAccessRoles == 'true'}" 
+             th:replace="~{components/stats-card/stats-card.html :: stats-card(
+                 title='Job Queue Statistics',
+                 endpoint='/htmx/backoffice/job-stats',
+                 refreshable=true
+             )}"></div>
+
+        <!-- Users Table Section -->
+        <div th:if="${canAccessRoles == 'true'}"
+             th:replace="~{components/data-table/data-table.html :: data-table(
+                 title='Users',
+                 icon='users',
+                 endpoint='/htmx/backoffice/users',
+                 refreshable=true
+             )}">
+        </div>
+    </section>
+</div>
