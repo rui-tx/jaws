@@ -8,6 +8,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * JawsUtils - Utility class providing various helper methods for the Jaws framework.
+ * <p>
+ * This class includes methods for formatting Unix timestamps, generating random passwords,
+ * and other utility functions that are commonly used across the Jaws framework.
+ */
 public class JawsUtils {
 
     private JawsUtils() {
@@ -68,14 +74,14 @@ public class JawsUtils {
      * The generated password will consist of characters within the predefined range
      * of ASCII values ranging from 33 (inclusive) to 122 (exclusive).
      *
-     * @param streamSize the desired length of the password to be generated
+     * @param length the desired length of the password to be generated
      * @return an {@code Optional<String>} containing the generated password if successful,
      * or an empty {@code Optional} if the password is empty
      */
-    public static Optional<String> newPassword(int streamSize) {
+    public static Optional<String> newPassword(int length) {
         int randomNumberOrigin = 33;
         int randomNumberBound = 122;
-        return newPassword(streamSize, randomNumberOrigin, randomNumberBound);
+        return newPassword(length, randomNumberOrigin, randomNumberBound);
     }
 
     /**

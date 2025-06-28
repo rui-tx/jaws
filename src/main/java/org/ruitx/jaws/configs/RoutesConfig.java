@@ -1,15 +1,13 @@
 package org.ruitx.jaws.configs;
 
+import org.ruitx.www.controller.*;
+
 import java.util.List;
 
-import org.ruitx.www.controller.PasteitController;
-import org.ruitx.www.controller.APIController;
-import org.ruitx.www.controller.AdminController;
-import org.ruitx.www.controller.AuthController;
-import org.ruitx.www.controller.BackofficeController;
-import org.ruitx.www.controller.ImageController;
-import org.ruitx.www.controller.JobController;
-
+/**
+ * Configuration class for dynamic routes in the application.
+ * This class holds a list of route controllers that will be registered with the Yggdrasill framework.
+ */
 public class RoutesConfig {
 
     // All the dynamic routes that will be registered

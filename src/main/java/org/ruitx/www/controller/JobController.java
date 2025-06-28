@@ -11,7 +11,6 @@ import org.ruitx.www.jobs.SequentialPingJob;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 import static org.ruitx.jaws.strings.ResponseType.JSON;
@@ -20,10 +19,10 @@ import static org.ruitx.jaws.strings.ResponseType.JSON;
  * JobController - The async controller that queues jobs and returns immediately
  */
 public class JobController extends Bragi {
-    
+
     private static final String API_ENDPOINT = "/api/jobs/";
     private final Freyr jobQueue;
-    
+
     public JobController() {
         this.jobQueue = Freyr.getInstance();
     }
@@ -35,7 +34,7 @@ public class JobController extends Bragi {
             Map<String, Object> payload = new HashMap<>();
             payload.put("clientId", getClientIpAddress());
             payload.put("submittedBy", getCurrentToken() != null ? getCurrentToken() : "anonymous");
-            
+
             // Optional parameters from request body
             String requestBody = getRequestContext().getRequestBody();
             if (requestBody != null && !requestBody.trim().isEmpty()) {
@@ -47,7 +46,7 @@ public class JobController extends Bragi {
                     // If body parsing fails, continue with default values
                 }
             }
-            
+
             // Set defaults if not provided
             if (!payload.containsKey("message")) {
                 payload.put("message", "Parallel Ping Test");
@@ -58,11 +57,11 @@ public class JobController extends Bragi {
             if (!payload.containsKey("pingNumber")) {
                 payload.put("pingNumber", 1);
             }
-            
+
             // Create and submit job
             ParallelPingJob job = new ParallelPingJob(payload);
             String jobId = jobQueue.submit(job);
-            
+
             // Return immediate response with job tracking info
             Map<String, Object> response = new HashMap<>();
             response.put("jobId", jobId);
@@ -70,18 +69,18 @@ public class JobController extends Bragi {
             response.put("executionMode", "SEQUENTIAL");
             response.put("message", "Parallel ping job queued - will execute in parallel");
             response.put("pingInfo", Map.of(
-                "message", payload.get("message"),
-                "delayMs", payload.get("delayMs"),
-                "pingNumber", payload.get("pingNumber")
+                    "message", payload.get("message"),
+                    "delayMs", payload.get("delayMs"),
+                    "pingNumber", payload.get("pingNumber")
             ));
             response.put("endpoints", Map.of(
-                "status", "/api/jobs/status/" + jobId,
-                "result", "/api/jobs/result/" + jobId
+                    "status", "/api/jobs/status/" + jobId,
+                    "result", "/api/jobs/result/" + jobId
             ));
             response.put("tip", "Submit multiple pings quickly to see them process in parallel!");
-            
-            sendSucessfulResponse(ACCEPTED, response);
-            
+
+            sendSuccessfulResponse(ACCEPTED, response);
+
         } catch (Exception e) {
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to queue parallel ping job: " + e.getMessage());
         }
@@ -94,7 +93,7 @@ public class JobController extends Bragi {
             Map<String, Object> payload = new HashMap<>();
             payload.put("clientId", getClientIpAddress());
             payload.put("submittedBy", getCurrentToken() != null ? getCurrentToken() : "anonymous");
-            
+
             // Optional parameters from request body
             String requestBody = getRequestContext().getRequestBody();
             if (requestBody != null && !requestBody.trim().isEmpty()) {
@@ -106,7 +105,7 @@ public class JobController extends Bragi {
                     // If body parsing fails, continue with default values
                 }
             }
-            
+
             // Set defaults if not provided
             if (!payload.containsKey("message")) {
                 payload.put("message", "Sequential Ping Test");
@@ -117,11 +116,11 @@ public class JobController extends Bragi {
             if (!payload.containsKey("pingNumber")) {
                 payload.put("pingNumber", 1);
             }
-            
+
             // Create and submit job
             SequentialPingJob job = new SequentialPingJob(payload);
             String jobId = jobQueue.submit(job);
-            
+
             // Return immediate response with job tracking info
             Map<String, Object> response = new HashMap<>();
             response.put("jobId", jobId);
@@ -129,23 +128,23 @@ public class JobController extends Bragi {
             response.put("executionMode", "SEQUENTIAL");
             response.put("message", "Sequential ping job queued - will execute one at a time");
             response.put("pingInfo", Map.of(
-                "message", payload.get("message"),
-                "delayMs", payload.get("delayMs"),
-                "pingNumber", payload.get("pingNumber")
+                    "message", payload.get("message"),
+                    "delayMs", payload.get("delayMs"),
+                    "pingNumber", payload.get("pingNumber")
             ));
             response.put("endpoints", Map.of(
-                "status", "/api/jobs/status/" + jobId,
-                "result", "/api/jobs/result/" + jobId
+                    "status", "/api/jobs/status/" + jobId,
+                    "result", "/api/jobs/result/" + jobId
             ));
             response.put("tip", "Submit multiple pings quickly to see them process sequentially!");
-            
-            sendSucessfulResponse(ACCEPTED, response);
-            
+
+            sendSuccessfulResponse(ACCEPTED, response);
+
         } catch (Exception e) {
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to queue sequential ping job: " + e.getMessage());
         }
     }
-        
+
     @Route(endpoint = API_ENDPOINT + "external-api", method = POST, responseType = JSON)
     public void queueExternalApiCall() {
         try {
@@ -153,7 +152,7 @@ public class JobController extends Bragi {
             Map<String, Object> payload = new HashMap<>();
             payload.put("clientId", getClientIpAddress());
             payload.put("requestedBy", getCurrentToken());
-            
+
             // Parse request body for URL and other parameters
             String requestBody = getRequestContext().getRequestBody();
             if (requestBody != null && !requestBody.trim().isEmpty()) {
@@ -166,35 +165,33 @@ public class JobController extends Bragi {
                     return;
                 }
             }
-            
+
             // Create and submit job
             ExternalApiJob job = new ExternalApiJob(payload);
             String jobId = jobQueue.submit(job);
-            
+
             // Return immediate response
             Map<String, Object> response = new HashMap<>();
             response.put("jobId", jobId);
             response.put("status", "QUEUED");
             response.put("message", "External API call job queued for processing");
             response.put("endpoints", Map.of(
-                "status", "/api/jobs/status/" + jobId,
-                "result", "/api/jobs/result/" + jobId
+                    "status", "/api/jobs/status/" + jobId,
+                    "result", "/api/jobs/result/" + jobId
             ));
-            
-            sendSucessfulResponse(ACCEPTED, response);
-            
+
+            sendSuccessfulResponse(ACCEPTED, response);
+
         } catch (Exception e) {
             sendErrorResponse(INTERNAL_SERVER_ERROR, "Failed to queue external API job: " + e.getMessage());
         }
     }
-        
 
 
-    
     // ========================================
     // Job Management Endpoints
     // ========================================
-    
+
     /**
      * Get job status
      */
@@ -205,21 +202,21 @@ public class JobController extends Bragi {
             sendErrorResponse(BAD_REQUEST, "Job ID is required");
             return;
         }
-        
+
         Freyr.JobStatus status = jobQueue.getJobStatus(jobId);
         if (status == null) {
             sendErrorResponse(NOT_FOUND, "Job not found");
             return;
         }
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("jobId", jobId);
         response.put("status", status.name());
         response.put("statusDescription", getStatusDescription(status));
-        
-        sendSucessfulResponse(OK, response);
+
+        sendSuccessfulResponse(OK, response);
     }
-    
+
     /**
      * Get job result
      */
@@ -230,29 +227,29 @@ public class JobController extends Bragi {
             sendErrorResponse(BAD_REQUEST, "Job ID is required");
             return;
         }
-        
+
         Freyr.JobStatus status = jobQueue.getJobStatus(jobId);
         if (status == null) {
             sendErrorResponse(NOT_FOUND, "Job not found");
             return;
         }
-        
+
         if (status != Freyr.JobStatus.COMPLETED) {
             Map<String, Object> response = new HashMap<>();
             response.put("jobId", jobId);
             response.put("status", status.name());
             response.put("message", "Job not yet completed");
-            
-            sendSucessfulResponse(OK, response);
+
+            sendSuccessfulResponse(OK, response);
             return;
         }
-        
+
         JobResult jobResult = jobQueue.getJobResult(jobId);
         if (jobResult == null) {
             sendErrorResponse(NOT_FOUND, "Job result not found or expired");
             return;
         }
-        
+
         // Return the job result with metadata
         Map<String, Object> response = new HashMap<>();
         response.put("jobId", jobId);
@@ -262,7 +259,7 @@ public class JobController extends Bragi {
         response.put("contentType", jobResult.getContentType());
         response.put("createdAt", jobResult.getCreatedAt());
         response.put("expiresAt", jobResult.getExpiresAt());
-        
+
         // Try to parse the body as JSON, fallback to string
         String body = jobResult.getBody();
         try {
@@ -271,23 +268,23 @@ public class JobController extends Bragi {
         } catch (Exception e) {
             response.put("data", body);
         }
-        
-        sendSucessfulResponse(OK, response);
+
+        sendSuccessfulResponse(OK, response);
     }
-    
+
     /**
      * Get job queue statistics
      */
     @Route(endpoint = API_ENDPOINT + "stats", responseType = JSON)
     public void getJobStatistics() {
         Map<String, Object> stats = jobQueue.getStatistics();
-        sendSucessfulResponse(OK, stats);
+        sendSuccessfulResponse(OK, stats);
     }
-    
+
     // ========================================
     // Helper Methods
     // ========================================
-    
+
     /**
      * Get a human-readable description for each job status
      */

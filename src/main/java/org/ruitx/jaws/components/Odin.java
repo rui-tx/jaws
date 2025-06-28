@@ -1,14 +1,13 @@
 package org.ruitx.jaws.components;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
+import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.www.service.AuthService;
 import org.ruitx.www.service.ImageService;
 import org.ruitx.www.service.PasteService;
-import org.ruitx.jaws.utils.JawsLogger;
 
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -42,10 +41,19 @@ public final class Odin {
     private Odin() {
     }
 
+    /**
+     * Get the ObjectMapper instance used for JSON serialization/deserialization.
+     *
+     * @return the ObjectMapper instance
+     */
     public static ObjectMapper getMapper() {
         return objectMapper;
     }
 
+    /**
+     * Start the Jaws server.
+     * This method initializes all components and starts the server.
+     */
     public static void start() {
         startComponents();
     }
@@ -85,17 +93,17 @@ public final class Odin {
     private static Thread createYggdrasill() {
         return new Thread(() -> {
             yggdrasill = new Yggdrasill(ApplicationConfig.PORT, ApplicationConfig.WWW_PATH);
-            
+
             // Add middleware from configuration
             createBifrost(yggdrasill);
-            
+
             yggdrasill.start();
         });
     }
 
     // Bifrost is the middleware that processes the requests
     private static void createBifrost(Yggdrasill yggdrasill) {
-        MiddlewareConfig.MIDDLEWARE.forEach( m -> {
+        MiddlewareConfig.MIDDLEWARE.forEach(m -> {
             yggdrasill.addMiddleware(m);
             JawsLogger.info("Configured {} middleware", m.getClass().getSimpleName());
         });
@@ -136,23 +144,22 @@ public final class Odin {
     private static void createFreyr() {
         Freyr freyr = Freyr.getInstance();
         freyr.start();
-        JawsLogger.info("Freyr started successfully");
     }
 
     // Hel is the shutdown hook that gracefully stops all services
     private static void createHel(ExecutorService executor) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             JawsLogger.info("Shutdown hook triggered, stopping services...");
-            
+
             // Stop Freyr gracefully
             Freyr jobQueue = Freyr.getInstance();
             jobQueue.shutdown();
-            
+
             // Stop Yggdrasill gracefully
             if (yggdrasill != null) {
                 yggdrasill.shutdown();
             }
-            
+
             // Stop other services
             try {
                 executor.shutdown();
@@ -163,14 +170,14 @@ public final class Odin {
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
-            
+
             JawsLogger.info("JAWS shutdown complete");
         }));
     }
 
     /**
      * Get the current Yggdrasill instance.
-     * 
+     *
      * @return the Yggdrasill instance, or null if not yet started
      */
     public static Yggdrasill getYggdrasill() {

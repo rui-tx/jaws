@@ -5,26 +5,35 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.ruitx.jaws.types.Row;
-import org.ruitx.www.model.auth.UserSession;
 import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.www.model.auth.UserSession;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
 import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
 import static org.ruitx.jaws.configs.ApplicationConfig.JWT_SECRET;
 
+/**
+ * Tyr is a utility class for handling JWT token creation, validation, and refresh operations.
+ * It provides methods to create access and refresh tokens, validate them, and manage user sessions.
+ */
 public class Tyr {
     private static final long ACCESS_TOKEN_EXPIRATION = 6 * 60 * 60L; // 6 hours in seconds
     private static final long REFRESH_TOKEN_EXPIRATION = 30 * 24 * 60 * 60L; // 30 days in seconds
 
+    /**
+     * Creates a new access and refresh token pair for the given user.
+     *
+     * @param userId    the ID of the user.
+     * @param userRoles the roles of the user.
+     * @param userAgent the user agent string of the client.
+     * @param ipAddress the IP address of the client.
+     * @return a TokenPair containing the access and refresh tokens.
+     */
     public static TokenPair createTokenPair(String userId, List<String> userRoles, String userAgent, String ipAddress) {
         Key key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
         long now = Instant.now().getEpochSecond();
@@ -67,6 +76,14 @@ public class Tyr {
         return new TokenPair(accessToken, refreshToken);
     }
 
+    /**
+     * Refreshes the access token using the provided refresh token.
+     *
+     * @param refreshToken the refresh token to validate and use for generating a new access token.
+     * @param userAgent    the user agent string of the client.
+     * @param ipAddress    the IP address of the client.
+     * @return an Optional containing a TokenPair with new access and refresh tokens, or empty if validation fails.
+     */
     public static Optional<TokenPair> refreshToken(String refreshToken, String userAgent, String ipAddress) {
         SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
 
@@ -155,6 +172,12 @@ public class Tyr {
         return Base64.getEncoder().encodeToString(key);
     }
 
+    /**
+     * Extracts the user ID from the provided JWT token.
+     *
+     * @param token the JWT token.
+     * @return the user ID, or an empty string if extraction fails.
+     */
     public static String getUserIdFromJWT(String token) {
         SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
         String userId;
@@ -174,12 +197,12 @@ public class Tyr {
         return userId == null ? "" : userId;
     }
 
-    public static String getUserRoleFromJWT(String token) {
-        // Legacy method - returns first role or empty string for backwards compatibility
-        List<String> roles = getUserRolesFromJWT(token);
-        return roles.isEmpty() ? "" : roles.get(0);
-    }
-
+    /**
+     * Extracts user roles from the provided JWT token.
+     *
+     * @param token the JWT token.
+     * @return a list of user roles, or an empty list if extraction fails.
+     */
     public static List<String> getUserRolesFromJWT(String token) {
         SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
         try {
@@ -194,7 +217,7 @@ public class Tyr {
                 List<String> roles = (List<String>) rolesObj;
                 return roles != null ? roles : new ArrayList<>();
             }
-            
+
             // Handle legacy single role claim or null
             return new ArrayList<>();
 
@@ -204,6 +227,12 @@ public class Tyr {
         }
     }
 
+    /**
+     * Represents a pair of tokens: access token and refresh token.
+     *
+     * @param accessToken  the access token
+     * @param refreshToken the refresh token
+     */
     public record TokenPair(String accessToken, String refreshToken) {
     }
 }

@@ -4,10 +4,10 @@ import jakarta.servlet.http.Part;
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.www.model.Image;
 import org.ruitx.www.model.ImageVariant;
 import org.ruitx.www.service.ImageService;
-import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,7 +28,7 @@ public class ImageController extends Bragi {
     private static final String BASE_HTML_PATH = "images/index.html";
     private static final String BODY_HTML_PATH = "images/_body.html";
     private static final String GALLERY_HTML_PATH = "images/gallery.html";
-    
+
     private final ImageService imageService;
 
     public ImageController() {
@@ -55,17 +55,17 @@ public class ImageController extends Bragi {
     @Route(endpoint = "/images", method = GET)
     public void renderIndex() {
         String userSession = getSessionId();
-        
+
         Map<String, String> context = new HashMap<>();
-        
+
         // Get recent images for this user session
         APIResponse<List<Image>> response = imageService.getImagesByUserSession(userSession, 20);
         if (response.success()) {
             List<Image> images = response.data();
-            
+
             StringBuilder galleryHtml = new StringBuilder();
             galleryHtml.append("<div class=\"image-gallery\">");
-            
+
             if (images.isEmpty()) {
                 galleryHtml.append("<div class=\"empty-gallery\">");
                 // galleryHtml.append("<h3>No images yet</h3>");
@@ -74,54 +74,54 @@ public class ImageController extends Bragi {
                 galleryHtml.append("</div>");
             } else {
                 galleryHtml.append("<div class=\"gallery-grid\">");
-                
+
                 for (Image image : images) {
                     galleryHtml.append(String.format("""
-                        <div class="image-card" data-image-id="%s">
-                            <div class="image-preview">
-                                <img src="/api/images/%s/serve" alt="%s" loading="lazy">
-                                <div class="image-overlay">
-                                    <span class="status status-%s">%s</span>
-                                </div>
-                            </div>
-                            <div class="image-info">
-                                <h4>%s</h4>
-                                <div class="image-meta">
-                                    <span>%s</span>
-                                    <span>%s KB</span>
-                                    %s
-                                </div>
-                                <div class="image-actions">
-                                    <button onclick="viewImage('%s')" class="btn-secondary">View</button>
-                                    <button onclick="deleteImage('%s')" class="btn-danger">Delete</button>
-                                </div>
-                            </div>
-                        </div>
-                        """,
-                        image.id(),
-                        image.id(),
-                        escapeHtml(image.originalFilename()),
-                        image.status().toLowerCase(),
-                        capitalize(image.status()),
-                        escapeHtml(image.originalFilename()),
-                        image.mimeType(),
-                        image.fileSize() / 1024,
-                        image.width() != null && image.height() != null ? 
-                            String.format("<span>%dx%d</span>", image.width(), image.height()) : "",
-                        image.id(),
-                        image.id()
+                                    <div class="image-card" data-image-id="%s">
+                                        <div class="image-preview">
+                                            <img src="/api/images/%s/serve" alt="%s" loading="lazy">
+                                            <div class="image-overlay">
+                                                <span class="status status-%s">%s</span>
+                                            </div>
+                                        </div>
+                                        <div class="image-info">
+                                            <h4>%s</h4>
+                                            <div class="image-meta">
+                                                <span>%s</span>
+                                                <span>%s KB</span>
+                                                %s
+                                            </div>
+                                            <div class="image-actions">
+                                                <button onclick="viewImage('%s')" class="btn-secondary">View</button>
+                                                <button onclick="deleteImage('%s')" class="btn-danger">Delete</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    """,
+                            image.id(),
+                            image.id(),
+                            escapeHtml(image.originalFilename()),
+                            image.status().toLowerCase(),
+                            capitalize(image.status()),
+                            escapeHtml(image.originalFilename()),
+                            image.mimeType(),
+                            image.fileSize() / 1024,
+                            image.width() != null && image.height() != null ?
+                                    String.format("<span>%dx%d</span>", image.width(), image.height()) : "",
+                            image.id(),
+                            image.id()
                     ));
                 }
-                
+
                 galleryHtml.append("</div>");
             }
-            
+
             galleryHtml.append("</div>");
             context.put("galleryContent", galleryHtml.toString());
         } else {
             context.put("galleryContent", "<div class=\"error\">Failed to load images: " + response.info() + "</div>");
         }
-        
+
         setContext(context);
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, GALLERY_HTML_PATH));
     }
@@ -185,7 +185,7 @@ public class ImageController extends Bragi {
             APIResponse<String> response = imageService.uploadImage(fileData, filename, contentType, userSession, userId);
 
             if (response.success()) {
-                sendSucessfulResponse(response.code(), response.data());
+                sendSuccessfulResponse(response.code(), response.data());
             } else {
                 sendErrorResponse(response.code(), response.info());
             }
@@ -202,11 +202,11 @@ public class ImageController extends Bragi {
     @Route(endpoint = "/api/images/:id", method = GET, responseType = JSON)
     public void getImage() {
         String imageId = getPathParam("id");
-        
+
         APIResponse<Image> response = imageService.getImage(imageId);
-        
+
         if (response.success()) {
-            sendSucessfulResponse(response.code(), response.data());
+            sendSuccessfulResponse(response.code(), response.data());
         } else {
             sendErrorResponse(response.code(), response.info());
         }
@@ -218,11 +218,11 @@ public class ImageController extends Bragi {
     @Route(endpoint = "/api/images/:id/variants", method = GET, responseType = JSON)
     public void getImageVariants() {
         String imageId = getPathParam("id");
-        
+
         APIResponse<List<ImageVariant>> response = imageService.getImageVariants(imageId);
-        
+
         if (response.success()) {
-            sendSucessfulResponse(response.code(), response.data());
+            sendSuccessfulResponse(response.code(), response.data());
         } else {
             sendErrorResponse(response.code(), response.info());
         }
@@ -236,7 +236,7 @@ public class ImageController extends Bragi {
         String imageId = getPathParam("id");
         JawsLogger.info("serveImageFile called with imageId: {}", imageId);
         String variant = getQueryParam("variant"); // optional: thumbnail, medium, large
-        
+
         try {
             APIResponse<Image> imageResponse = imageService.getImage(imageId);
             if (!imageResponse.success()) {
@@ -257,9 +257,9 @@ public class ImageController extends Bragi {
                 }
 
                 ImageVariant requestedVariant = variantsResponse.data().stream()
-                    .filter(v -> variant.equals(v.variantType()))
-                    .findFirst()
-                    .orElse(null);
+                        .filter(v -> variant.equals(v.variantType()))
+                        .findFirst()
+                        .orElse(null);
 
                 if (requestedVariant == null) {
                     sendErrorResponse(NOT_FOUND, "Variant not found: " + variant);
@@ -294,13 +294,13 @@ public class ImageController extends Bragi {
     @Route(endpoint = "/api/images/:id", method = DELETE, responseType = JSON)
     public void deleteImage() {
         String imageId = getPathParam("id");
-        
+
         APIResponse<Boolean> response = imageService.deleteImage(imageId);
-        
+
         if (response.success()) {
-            sendSucessfulResponse(response.code(), Map.of(
-                "deleted", response.data(),
-                "message", response.info()
+            sendSuccessfulResponse(response.code(), Map.of(
+                    "deleted", response.data(),
+                    "message", response.info()
             ));
         } else {
             sendErrorResponse(response.code(), response.info());
@@ -323,9 +323,9 @@ public class ImageController extends Bragi {
         }
 
         APIResponse<List<Image>> response = imageService.getRecentImages(limit);
-        
+
         if (response.success()) {
-            sendSucessfulResponse(response.code(), response.data());
+            sendSuccessfulResponse(response.code(), response.data());
         } else {
             sendErrorResponse(response.code(), response.info());
         }
@@ -337,9 +337,9 @@ public class ImageController extends Bragi {
     @Route(endpoint = "/api/images/stats", method = GET, responseType = JSON)
     public void getImageStatistics() {
         APIResponse<Map<String, Object>> response = imageService.getImageStatistics();
-        
+
         if (response.success()) {
-            sendSucessfulResponse(response.code(), response.data());
+            sendSuccessfulResponse(response.code(), response.data());
         } else {
             sendErrorResponse(response.code(), response.info());
         }
@@ -350,7 +350,7 @@ public class ImageController extends Bragi {
      */
     @Route(endpoint = "/api/images/test", method = GET, responseType = JSON)
     public void testRoute() {
-        sendSucessfulResponse("200 OK", "Test route works!");
+        sendSuccessfulResponse("200 OK", "Test route works!");
     }
 
     // ========================================
@@ -390,10 +390,10 @@ public class ImageController extends Bragi {
     private String escapeHtml(String input) {
         if (input == null) return "";
         return input.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("'", "&#x27;");
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#x27;");
     }
 
     /**

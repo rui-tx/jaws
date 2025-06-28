@@ -43,7 +43,7 @@ public class AuthController extends Bragi {
             return;
         }
 
-        sendSucessfulResponse(OK, response.data());
+        sendSuccessfulResponse(OK, response.data());
     }
 
     @AccessControl(login = true)
@@ -55,7 +55,7 @@ public class AuthController extends Bragi {
             return;
         }
 
-        sendSucessfulResponse(OK, null);
+        sendSuccessfulResponse(OK, null);
     }
 
     @Route(endpoint = API_ENDPOINT + "refresh", method = POST, responseType = JSON)
@@ -74,7 +74,7 @@ public class AuthController extends Bragi {
             return;
         }
 
-        sendSucessfulResponse(OK, response.data());
+        sendSuccessfulResponse(OK, response.data());
     }
 
     @AccessControl(login = true)
@@ -93,6 +93,6 @@ public class AuthController extends Bragi {
             return;
         }
 
-        sendSucessfulResponse(OK, null);
+        sendSuccessfulResponse(OK, null);
     }
 }

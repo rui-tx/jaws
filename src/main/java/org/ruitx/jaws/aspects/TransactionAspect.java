@@ -14,20 +14,26 @@ import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+/**
+ * TransactionAspect - Manages database transactions for methods annotated with @Transactional.
+ * <p>
+ * This aspect ensures that methods are executed within a transaction, committing or rolling back
+ * based on the method's success or failure.
+ */
 @Aspect
 public class TransactionAspect {
-    @Pointcut("execution(* org.ruitx.www..*(..))")
-    public void apiMethods() {
+    @Pointcut("execution(* org.ruitx..*(..))")
+    public void methods() {
     }
 
     /**
      * Manage a transaction.
-     * 
+     *
      * @param joinPoint The join point
      * @return The result of the method
      * @throws Throwable If the method throws an exception
      */
-    @Around("apiMethods() && @annotation(org.ruitx.jaws.interfaces.Transactional)")
+    @Around("methods() && @annotation(org.ruitx.jaws.interfaces.Transactional)")
     public Object manageTransaction(ProceedingJoinPoint joinPoint) throws Throwable {
         Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
         Transactional transactional = method.getAnnotation(Transactional.class);
@@ -68,7 +74,7 @@ public class TransactionAspect {
 
     /**
      * Find the Mimir instance in the method arguments or fields of the target object.
-     * 
+     *
      * @param joinPoint The join point
      * @return The Mimir instance or null if not found
      */
@@ -98,8 +104,8 @@ public class TransactionAspect {
 
     /**
      * Set the transaction isolation level.
-     * 
-     * @param conn The connection
+     *
+     * @param conn  The connection
      * @param level The isolation level
      * @throws SQLException If the transaction isolation level fails
      */

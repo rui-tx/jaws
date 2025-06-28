@@ -42,6 +42,11 @@ public final class Volundr {
                 "\r\n";
     }
 
+    /**
+     * Convert the header to a byte array.
+     *
+     * @return the header as a byte array
+     */
     public byte[] headerToBytes() {
         return headerToString().getBytes();
     }

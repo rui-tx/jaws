@@ -6,22 +6,52 @@ import java.time.ZoneId;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Represents a single row of data with column name as key and its corresponding value.
+ * Provides methods to retrieve values by column name with type safety.
+ *
+ * @param data A map containing column name as key and its corresponding value.
+ */
 public record Row(Map<String, Object> data) {
 
+    /**
+     * Gets the value associated with the specified column name.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return The value associated with the column name, or null if not found.
+     */
     public Object get(String columnName) {
         return data.get(columnName);
     }
 
+    /**
+     * Gets the string value associated with the specified column name as an Optional.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return An Optional containing the value as a string if present, or empty if not found.
+     */
     public Optional<String> getString(String columnName) {
         Object value = data.get(columnName);
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
     }
 
+    /**
+     * Gets the integer value associated with the specified column name as an Optional.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return An Optional containing the value as an Integer if present, or empty if not found.
+     */
     public Optional<Integer> getInt(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Integer ? Optional.of((Integer) value) : Optional.empty();
     }
 
+    /**
+     * Gets the long value associated with the specified column name as an Optional.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return An Optional containing the value as a Long if present, or empty if not found.
+     */
     public Optional<Long> getLong(String columnName) {
         Object value = data.get(columnName);
         if (value instanceof Integer) {
@@ -30,11 +60,23 @@ public record Row(Map<String, Object> data) {
         return value instanceof Long ? Optional.of((Long) value) : Optional.empty();
     }
 
+    /**
+     * Gets the double value associated with the specified column name as an Optional.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return An Optional containing the value as a Double if present, or empty if not found.
+     */
     public Optional<Double> getDouble(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Double ? Optional.of((Double) value) : Optional.empty();
     }
 
+    /**
+     * Gets the float value associated with the specified column name as an Optional.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return An Optional containing the value as a Float if present, or empty if not found.
+     */
     public Optional<Float> getFloat(String columnName) {
         Object value = data.get(columnName);
         if (value instanceof Double) {
@@ -43,11 +85,24 @@ public record Row(Map<String, Object> data) {
         return value instanceof Float ? Optional.of((Float) value) : Optional.empty();
     }
 
+    /**
+     * Gets the byte array (blob) value associated with the specified column name as an Optional.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return An Optional containing the value as a byte array if present, or empty if not found.
+     */
     public Optional<byte[]> getBlob(String columnName) {
         Object value = data.get(columnName);
         return value instanceof byte[] ? Optional.of((byte[]) value) : Optional.empty();
     }
 
+    /**
+     * Gets the boolean value associated with the specified column name as an Optional.
+     * It also supports Integer values where 0 is false and any non-zero value is true.
+     *
+     * @param columnName The name of the column to retrieve.
+     * @return An Optional containing the value as a Boolean if present, or empty if not found.
+     */
     public Optional<Boolean> getBoolean(String columnName) {
         Object value = data.get(columnName);
         if (value instanceof Integer) {
@@ -56,50 +111,114 @@ public record Row(Map<String, Object> data) {
         return value instanceof Boolean ? Optional.of((Boolean) value) : Optional.empty();
     }
 
+    /**
+     * Checks if the value associated with the specified column name is null.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is null, false otherwise.
+     */
     public boolean isNull(String columnName) {
         return data.get(columnName) == null;
     }
 
+    /**
+     * Checks if the row contains a column with the specified name.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the column exists, false otherwise.
+     */
     public boolean containsColumn(String columnName) {
         return data.containsKey(columnName);
     }
 
     // Type checking methods
+
+    /**
+     * Checks if the value associated with the specified column name is of type String.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is a String, false otherwise.
+     */
     public boolean isString(String columnName) {
         Object value = data.get(columnName);
         return value instanceof String;
     }
 
+    /**
+     * Checks if the value associated with the specified column name is of type Integer.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is an Integer, false otherwise.
+     */
     public boolean isInteger(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Integer;
     }
 
+    /**
+     * Checks if the value associated with the specified column name is of type Long.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is a Long or Integer, false otherwise.
+     */
     public boolean isLong(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Long || value instanceof Integer;
     }
 
+    /**
+     * Checks if the value associated with the specified column name is of type Double.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is a Double, false otherwise.
+     */
     public boolean isDouble(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Double;
     }
 
+    /**
+     * Checks if the value associated with the specified column name is of type Float.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is a Float or Double, false otherwise.
+     */
     public boolean isFloat(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Float || value instanceof Double;
     }
 
+    /**
+     * Checks if the value associated with the specified column name is of type byte array (blob).
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is a byte array, false otherwise.
+     */
     public boolean isBlob(String columnName) {
         Object value = data.get(columnName);
         return value instanceof byte[];
     }
 
+    /**
+     * Checks if the value associated with the specified column name is of type Boolean.
+     * It also supports Integer values where 0 is false and any non-zero value is true.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is a Boolean or Integer (0 or 1), false otherwise.
+     */
     public boolean isBoolean(String columnName) {
         Object value = data.get(columnName);
-        return value instanceof Boolean || (value instanceof Integer && ((Integer) value == 0 || (Integer) value == 1));
+        return value instanceof Boolean
+                || (value instanceof Integer && ((Integer) value == 0 || (Integer) value == 1));
     }
 
+    /**
+     * Checks if the value associated with the specified column name is numeric.
+     * This includes Integer, Long, Double, and Float types.
+     *
+     * @param columnName The name of the column to check.
+     * @return true if the value is a numeric type, false otherwise.
+     */
     public boolean isNumeric(String columnName) {
         Object value = data.get(columnName);
         return value instanceof Number;

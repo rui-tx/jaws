@@ -1,7 +1,6 @@
 package org.ruitx.jaws.utils;
 
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,7 +9,6 @@ import java.nio.file.Paths;
 
 /**
  * Utility class that provides functions for Thymeleaf templates.
- * This replaces the previous command system with Thymeleaf-compatible utility objects.
  */
 public class ThymeleafUtils {
 
@@ -25,12 +23,12 @@ public class ThymeleafUtils {
         if (filePath == null || filePath.isEmpty()) {
             return ApplicationConfig.URL;
         }
-        
+
         // Ensure path starts with /
         if (!filePath.startsWith("/")) {
             filePath = "/" + filePath;
         }
-        
+
         return ApplicationConfig.URL + filePath;
     }
 
@@ -42,13 +40,13 @@ public class ThymeleafUtils {
      * @return the rendered HTML content
      */
     public String renderPartial(String partialPath) {
-        if (partialPath == null || partialPath.isEmpty() || 
-            partialPath.equals("/") || partialPath.equals(".") || partialPath.equals("..")) {
+        if (partialPath == null || partialPath.isEmpty() ||
+                partialPath.equals("/") || partialPath.equals(".") || partialPath.equals("..")) {
             return "";
         }
 
         Path path = Paths.get(ApplicationConfig.WWW_PATH + partialPath);
-        
+
         if (!Files.exists(path) || Files.isDirectory(path)) {
             JawsLogger.warn("Partial template not found: {}", partialPath);
             return "";
@@ -71,15 +69,11 @@ public class ThymeleafUtils {
      * @return the configuration value
      */
     public String getConfig(String configKey) {
-        switch (configKey.toLowerCase()) {
-            case "url":
-                return ApplicationConfig.URL;
-            case "wwwpath":
-                return ApplicationConfig.WWW_PATH;
-            case "databasepath":
-                return ApplicationConfig.DATABASE_PATH;
-            default:
-                return "";
-        }
+        return switch (configKey.toLowerCase()) {
+            case "url" -> ApplicationConfig.URL;
+            case "wwwpath" -> ApplicationConfig.WWW_PATH;
+            case "databasepath" -> ApplicationConfig.DATABASE_PATH;
+            default -> "";
+        };
     }
 } 

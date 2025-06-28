@@ -17,18 +17,14 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
 
 /**
  * Base controller class for all controllers.
  * Contains methods for sending responses to the client.
- * The requestContext contains the request information and provides response capabilities.
  */
 public abstract class Bragi {
     private static final ThreadLocal<Yggdrasill.RequestContext> requestContext = new ThreadLocal<>();
@@ -55,7 +51,7 @@ public abstract class Bragi {
     /**
      * Set the body path for the current thread.
      *
-     * @param bodyPath
+     * @param bodyPath the path to the body HTML file
      */
     private void setBodyPath(String bodyPath) {
         Hermod.setBodyPath(bodyPath);
@@ -116,27 +112,63 @@ public abstract class Bragi {
     }
 
     // Success response methods
-    protected void sendSucessfulResponse(ResponseCode code) {
+
+    /**
+     * Send a successful JSON response with a default message.
+     *
+     * @param code the response code
+     */
+    protected void sendSuccessfulResponse(ResponseCode code) {
         sendJSONResponse(true, code, "Success", null);
     }
 
-    protected void sendSucessfulResponse(ResponseCode code, Object data) {
+    /**
+     * Send a successful JSON response with a custom message.
+     *
+     * @param code the response code
+     * @param data the response data
+     */
+    protected void sendSuccessfulResponse(ResponseCode code, Object data) {
         sendJSONResponse(true, code, "Success", data);
     }
 
-    protected void sendSucessfulResponse(ResponseCode code, String info, Object data) {
+    /**
+     * Send a successful JSON response with a custom message and data.
+     *
+     * @param code the response code
+     * @param info additional information to include in the response
+     * @param data the response data
+     */
+    protected void sendSuccessfulResponse(ResponseCode code, String info, Object data) {
         sendJSONResponse(true, code, info, data);
     }
 
-    protected void sendSucessfulResponse(String code, Object data) {
+    /**
+     * Send a successful JSON response with a custom code and data.
+     *
+     * @param code the response code as a string
+     * @param data the response data
+     */
+    protected void sendSuccessfulResponse(String code, Object data) {
         sendJSONResponse(true, ResponseCode.fromCodeAndMessage(code), "Success", data);
     }
 
-    // Error response methods
+    /**
+     * Send a successful JSON response with a custom code and message.
+     *
+     * @param code    the response code
+     * @param message the success message
+     */
     public void sendErrorResponse(ResponseCode code, String message) {
         sendJSONResponse(false, code, message, null);
     }
 
+    /**
+     * Send a JSON error response with a custom code and message.
+     *
+     * @param code    the response code as a string
+     * @param message the error message
+     */
     public void sendErrorResponse(String code, String message) {
         ResponseCode responseCode = ResponseCode.fromCodeAndMessage(code);
         sendJSONResponse(false, responseCode, message, null);
@@ -155,6 +187,11 @@ public abstract class Bragi {
 
     /**
      * Internal method to send JSON response
+     *
+     * @param success indicates if the response is successful
+     * @param code    the response code
+     * @param info    additional information to include in the response
+     * @param data    the data to include in the response, can be null
      */
     private void sendJSONResponse(boolean success, ResponseCode code, String info, Object data) {
         APIResponse<Object> response;
@@ -164,7 +201,7 @@ public abstract class Bragi {
             } else {
                 response = APIResponse.error(code.getCodeAndMessage(), info);
             }
-            
+
             Yggdrasill.RequestContext context = requestContext.get();
             if (context != null) {
                 context.sendJSONResponse(code, encode(response));
@@ -183,8 +220,8 @@ public abstract class Bragi {
     /**
      * Send an HTML response to the client.
      *
-     * @param code
-     * @param content
+     * @param code    the response code
+     * @param content the HTML content to send
      */
     protected void sendHTMLResponse(ResponseCode code, String content) {
         try {
@@ -203,6 +240,12 @@ public abstract class Bragi {
         }
     }
 
+    /**
+     * Send an HTML response to the client with a specific code and content.
+     *
+     * @param code    the response code as a string
+     * @param content the HTML content to send
+     */
     protected void sendHTMLResponse(String code, String content) {
         try {
             ResponseCode responseCode = ResponseCode.valueOf(code);
@@ -224,8 +267,8 @@ public abstract class Bragi {
     /**
      * Get a path parameter from the request.
      *
-     * @param name
-     * @return
+     * @param name the name of the path parameter
+     * @return the value of the path parameter, or null if not found
      */
     protected String getPathParam(String name) {
         Yggdrasill.RequestContext context = requestContext.get();
@@ -235,8 +278,8 @@ public abstract class Bragi {
     /**
      * Get a query parameter from the request.
      *
-     * @param name
-     * @return
+     * @param name the name of the query parameter
+     * @return the value of the query parameter, or null if not found
      */
     protected String getQueryParam(String name) {
         Yggdrasill.RequestContext context = requestContext.get();
@@ -246,8 +289,8 @@ public abstract class Bragi {
     /**
      * Get a body parameter from the request.
      *
-     * @param name
-     * @return
+     * @param name the name of the body parameter
+     * @return the value of the body parameter, or null if not found
      */
     protected String getBodyParam(String name) {
         Yggdrasill.RequestContext context = requestContext.get();
@@ -283,7 +326,7 @@ public abstract class Bragi {
     protected boolean isMultipartRequest() {
         Yggdrasill.RequestContext context = requestContext.get();
         if (context == null) return false;
-        
+
         String contentType = context.getHeader("Content-Type");
         return contentType != null && contentType.contains("multipart/form-data");
     }
@@ -291,7 +334,7 @@ public abstract class Bragi {
     /**
      * Check if the request is an HTMX request.
      *
-     * @return
+     * @return true if the request is an HTMX request, false otherwise
      */
     protected boolean isHTMX() {
         Yggdrasill.RequestContext context = requestContext.get();
@@ -332,7 +375,7 @@ public abstract class Bragi {
     /**
      * Set the request context for the current thread.
      *
-     * @param context
+     * @param context the request context to set
      */
     public void setRequestContext(Yggdrasill.RequestContext context) {
         requestContext.set(context);
@@ -341,6 +384,12 @@ public abstract class Bragi {
         }
     }
 
+    /**
+     * Add a custom header to the response.
+     *
+     * @param name  the name of the header
+     * @param value the value of the header
+     */
     protected void addCustomHeader(String name, String value) {
         Yggdrasill.RequestContext context = requestContext.get();
         if (context != null) {
@@ -368,6 +417,11 @@ public abstract class Bragi {
         }
     }
 
+    /**
+     * Get the headers from the current request context.
+     *
+     * @return a map of header names to values
+     */
     public Map<String, String> getHeaders() {
         Yggdrasill.RequestContext context = requestContext.get();
         return context != null ? context.getHeaders() : new HashMap<>();
@@ -384,8 +438,8 @@ public abstract class Bragi {
         try {
             Yggdrasill.RequestContext context = requestContext.get();
             if (context != null) {
-                return Hermod.assemblePage(baseTemplatePath, partialTemplatePath, 
-                                         context.getRequest(), context.getResponse());
+                return Hermod.assemblePage(baseTemplatePath, partialTemplatePath,
+                        context.getRequest(), context.getResponse());
             } else {
                 throw new IllegalStateException("No request context available");
             }
@@ -553,6 +607,14 @@ public abstract class Bragi {
         return callAPI(endpoint, method, headers, jsonBody, responseType);
     }
 
+    /**
+     * Call an API endpoint with a GET request and parse the response.
+     *
+     * @param endpoint the API endpoint to call.
+     * @param type     the Java type of the response.
+     * @param <T>      the type of the response.
+     * @return the parsed API response.
+     */
     public <T> APIResponse<T> callAPI(String endpoint, JavaType type) {
         return callAPI(endpoint, RequestType.GET, null, null, type);
     }

@@ -27,7 +27,7 @@ public class APIController extends Bragi {
 
     @Route(endpoint = API_ENDPOINT + "ping", responseType = JSON)
     public void ping() {
-        sendSucessfulResponse(OK, apiService.ping());
+        sendSuccessfulResponse(OK, apiService.ping());
     }
 
     @Route(endpoint = API_ENDPOINT + "posts", responseType = JSON)
@@ -40,7 +40,7 @@ public class APIController extends Bragi {
             return;
         }
 
-        sendSucessfulResponse(response.code(), response.data());
+        sendSuccessfulResponse(response.code(), response.data());
     }
 
     @Route(endpoint = API_ENDPOINT + "posts", method = POST, responseType = JSON)
@@ -56,6 +56,6 @@ public class APIController extends Bragi {
             return;
         }
 
-        sendSucessfulResponse(response.code(), response.data());
+        sendSuccessfulResponse(response.code(), response.data());
     }
 }
