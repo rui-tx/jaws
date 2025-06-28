@@ -10,6 +10,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Njord is a singleton class responsible for managing the routing of HTTP requests
+ * to their corresponding controller methods.
+ * <p>
+ * It registers routes based on annotations in controller classes,
+ * retrieves methods based on request paths and types,
+ * and provides access to all registered routes and controller instances.
+ */
 public class Njord {
     private static final Njord INSTANCE = new Njord();
     private final Map<String, Map<RequestType, Method>> routes = new HashMap<>();
@@ -17,11 +25,22 @@ public class Njord {
 
     private Njord() {
     }
-    
+
+    /**
+     * Returns the singleton instance of Njord.
+     *
+     * @return the Njord instance
+     */
     public static Njord getInstance() {
         return INSTANCE;
     }
 
+    /**
+     * Registers a controller and its annotated methods as routes.
+     * The controller's methods must be annotated with @Route to be registered.
+     *
+     * @param controller the controller instance containing route methods
+     */
     public void registerRoutes(Object controller) {
         String controllerName = controller.getClass().getSimpleName();
         controllers.put(controllerName, controller);
@@ -34,8 +53,8 @@ public class Njord {
                 routes
                         .computeIfAbsent(route.endpoint(), k -> new HashMap<>())
                         .put(route.method(), method);
-                
-                JawsLogger.info("Registered route: {} {} -> {}.{}", 
+
+                JawsLogger.info("Registered route: {} {} -> {}.{}",
                         route.method(), route.endpoint(), controllerName, method.getName());
             }
         }

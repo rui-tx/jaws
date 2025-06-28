@@ -13,7 +13,6 @@ import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.utils.JawsLogger;
-import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -23,12 +22,12 @@ import java.net.SocketTimeoutException;
 public class ExceptionAspect {
 
     // Pointcut to match any method in controllers
-    @Pointcut("execution(* org.ruitx.www.controllers..*(..))")
+    @Pointcut("execution(* org.ruitx.www.controller..*(..))")
     public void controllerMethods() {
     }
 
-    // Pointcut to match any method in JettyServer.RequestContext
-    @Pointcut("execution(* org.ruitx.jaws.components.JettyServer.RequestContext.*(..))")
+    // Pointcut to match any method in Yggdrasill.RequestContext
+    @Pointcut("execution(* org.ruitx.jaws.components.Yggdrasill.RequestContext.*(..))")
     public void requestContextMethods() {
     }
 

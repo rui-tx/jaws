@@ -5,8 +5,12 @@ import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.sql.DriverManager;
 import java.util.Properties;
+
+/**
+ * ApplicationConfig is a utility class that provides configuration settings for the JAWS application.
+ * It loads configuration values from environment variables and a properties file, falling back to default values when necessary.
+ */
 
 public class ApplicationConfig {
     // Default constants
@@ -21,11 +25,11 @@ public class ApplicationConfig {
     public static final String DEFAULT_DATABASE_SCHEMA_PATH = "src/main/resources/sql/create_schema_v1.sql";
 
     // Freyr
-    public static final int DEFAULT_WORKER_THREADS =  Runtime.getRuntime().availableProcessors();
+    public static final int DEFAULT_WORKER_THREADS = Runtime.getRuntime().availableProcessors();
     public static final int DEFAULT_QUEUE_CAPACITY = 10000;
     public static final long DEFAULT_CLEANUP_INTERVAL_MS = 300000; // 5 minutes
 
-    // JawsLogger 
+    // JawsLogger
     public static final String DEFAULT_DB_LEVEL = "INFO";
     public static final int DEFAULT_BATCH_SIZE = 1000;
     public static final long DEFAULT_FLUSH_INTERVAL_MS = 5000;
@@ -83,22 +87,22 @@ public class ApplicationConfig {
         JWT_SECRET = getJWTSecretValue();
         HERMOD_DEVELOPMENT_MODE = getHermodDevelopmentModeValue();
         HERMOD_TEMPLATE_CACHE_TTL = getHermodTemplateCacheTtlValue();
-        
+
         // Initialize Freyr configuration
         WORKER_THREADS = getWorkerThreadsValue();
         QUEUE_CAPACITY = getQueueCapacityValue();
         CLEANUP_INTERVAL_MS = getCleanupIntervalMsValue();
-        
+
         // Initialize JawsLogger configuration
         DB_LEVEL = getDbLevelValue();
         BATCH_SIZE = getBatchSizeValue();
         FLUSH_INTERVAL_MS = getFlushIntervalMsValue();
         BUFFER_CAPACITY = getBufferCapacityValue();
-        
+
         // Initialize RateLimiter configuration
         RATE_LIMIT_MAX_REQUESTS = getRateLimitMaxRequestsValue();
         RATE_LIMIT_WINDOW_MS = getRateLimitWindowMsValue();
-        
+
         JawsLogger.info("JAWS Configuration");
         JawsLogger.info("--------------------------------");
         JawsLogger.info("URL: " + URL);

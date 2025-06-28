@@ -14,8 +14,6 @@ import java.util.List;
  * <p>
  * This class relies on the ObjectMapper instance provided by the APIHandler class to construct and manage type definitions.
  * It is designed to be a utility class, offering static constants for frequently used type specifications.
- * <p>
- * The class is non-instantiable as it is intended solely for defining reusable type constants.
  */
 public class TypeDefinition {
 

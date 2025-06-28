@@ -5,7 +5,6 @@ import org.ruitx.jaws.interfaces.SqlFunction;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
-import org.ruitx.jaws.types.SortDirection;
 import org.ruitx.jaws.utils.JawsUtils;
 import org.sqlite.SQLiteDataSource;
 import org.tinylog.Logger;
@@ -24,8 +23,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 
+/**
+ * Mimir is a database management component for Jaws framework.
+ * It provides methods to initialize, manage transactions, execute SQL queries,
+ * and handle pagination.
+ * <p>
+ * Mimir uses SQLite as the underlying database engine and supports schema loading
+ * from a specified file path.
+ */
 public class Mimir {
-    // Instance variables instead of static - each Mimir has its own database connection
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
     private DataSource dataSource;
@@ -34,8 +40,7 @@ public class Mimir {
     private boolean shouldCreateDefaultUser;
 
     /**
-     * Default constructor - maintains existing behavior for backward compatibility.
-     * Uses the default database path and schema from ApplicationConfig.
+     * Default constructor -  Uses the default database path and schema from ApplicationConfig.
      */
     public Mimir() {
         this(DATABASE_PATH, DATABASE_SCHEMA_PATH, true);
@@ -43,8 +48,7 @@ public class Mimir {
 
     /**
      * Constructor for custom database without schema loading.
-     * Useful for logs database or other specialized databases.
-     * 
+     *
      * @param databasePath Path to the database file
      */
     public Mimir(String databasePath) {
@@ -53,9 +57,9 @@ public class Mimir {
 
     /**
      * Constructor for custom database with optional schema.
-     * 
+     *
      * @param databasePath Path to the database file
-     * @param schemaPath Path to the schema file (null to skip schema loading)
+     * @param schemaPath   Path to the schema file (null to skip schema loading)
      */
     public Mimir(String databasePath, String schemaPath) {
         this(databasePath, schemaPath, false);
@@ -63,9 +67,9 @@ public class Mimir {
 
     /**
      * Full constructor with all options.
-     * 
-     * @param databasePath Path to the database file
-     * @param schemaPath Path to the schema file (null to skip schema loading)  
+     *
+     * @param databasePath            Path to the database file
+     * @param schemaPath              Path to the schema file (null to skip schema loading)
      * @param shouldCreateDefaultUser Whether to create the default admin user
      */
     public Mimir(String databasePath, String schemaPath, boolean shouldCreateDefaultUser) {
@@ -93,21 +97,24 @@ public class Mimir {
         }
 
         createDatabaseFile();
-        
+
         // If schema is specified and database was created empty, load the schema
         if (schemaPath != null && isDatabaseEmpty()) {
             loadSchema();
         }
-        
+
         Logger.trace("Database is ready: {}", db.getAbsolutePath());
     }
 
+    /**
+     * Create the database file if it does not exist.
+     * This method is called during initialization to ensure the database file is present.
+     */
     private void createDatabaseFile() {
         if (db.exists()) return;
         try {
             if (db.createNewFile()) {
                 Logger.info("Database created: " + db.getAbsolutePath());
-                // Schema loading will be handled by initializeDatabase method
             } else {
                 throw new IOException("Could not create database file.");
             }
@@ -119,7 +126,7 @@ public class Mimir {
 
     /**
      * Check if the database is empty (no tables).
-     * 
+     *
      * @return true if database has no tables, false otherwise
      */
     private boolean isDatabaseEmpty() {
@@ -144,6 +151,10 @@ public class Mimir {
         }
     }
 
+    /**
+     * Load the schema from the specified path into the database.
+     * This method reads the schema file and executes its SQL statements.
+     */
     private void loadSchema() {
         try (Connection conn = getConnection()) {
             String sql = Files.readString(Path.of(schemaPath));
@@ -159,6 +170,10 @@ public class Mimir {
         }
     }
 
+    /**
+     * Create a default admin user if the database is initialized with schema.
+     * This method is called after loading the schema to ensure the admin user exists.
+     */
     private void createDefaultAdminUser() {
         Optional<String> password = JawsUtils.newPassword();
         String email = "admin@jaws.local";
@@ -166,9 +181,9 @@ public class Mimir {
         String lastName = "Doe";
         String hashedPassword =
                 BCrypt.withDefaults().hashToString(12, password.orElse("Lee7Pa$$w00rd").toCharArray());
-        
+
         // Insert the admin user
-        int adminUserId = executeSql("INSERT INTO USER (user, password_hash, email, first_name, last_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        executeSql("INSERT INTO USER (user, password_hash, email, first_name, last_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 "admin",
                 hashedPassword,
                 email,
@@ -176,12 +191,12 @@ public class Mimir {
                 lastName,
                 Date.from(Instant.now())
         );
-        
+
         // Assign admin role to the newly created admin user
         // Get the admin role ID and user ID, then create the assignment
         Row adminUser = getRow("SELECT id FROM USER WHERE user = 'admin'");
         Row adminRole = getRow("SELECT id FROM ROLE WHERE name = 'admin'");
-        
+
         if (adminUser != null && adminRole != null) {
             executeSql("INSERT INTO USER_ROLE (user_id, role_id, assigned_at) VALUES (?, ?, ?)",
                     adminUser.getInt("id").orElse(0),
@@ -192,7 +207,7 @@ public class Mimir {
         } else {
             Logger.warn("Failed to assign admin role to default admin user - role or user not found");
         }
-        
+
         Logger.info("A new admin user has been created with username 'admin' and password '"
                 + (password.orElse("Lee7Pa$$w00rd")) + "'");
         Logger.info("Please save this in a safe place, it will not be shown again.");
@@ -338,8 +353,8 @@ public class Mimir {
                 if (expectedParams != params.length) {
                     Logger.warn("Parameter count mismatch! SQL: {} expects {} params, but got {}", sql, expectedParams, params.length);
                 }
-                // Uncomment for verbose SQL logging in development
-                // Logger.info("Executing SQL: {}\nParams: {}", sql, Arrays.toString(params));
+
+                Logger.trace("Executing SQL: {}\nParams: {}", sql, Arrays.toString(params));
 
                 stmt = conn.prepareStatement(sql);
                 for (int i = 0; i < params.length; i++) {
@@ -356,7 +371,7 @@ public class Mimir {
             }
         } catch (SQLException e) {
             Logger.error("Error executing prepared update: {}\nSQL: {}\nParams: {}", e.getMessage(), sql, java.util.Arrays.toString(params));
-            e.printStackTrace();
+            Logger.error("Stack trace: {}", e.getStackTrace());
             throw new RuntimeException("Database update failed", e);
         } finally {
             // Only close if not a transaction connection
@@ -390,7 +405,7 @@ public class Mimir {
             try {
                 stmt = conn.createStatement();
                 boolean result = stmt.execute(sql);
-                Logger.info("SQL executed: {}, result: {}", sql, result);
+                Logger.trace("SQL executed: {}, result: {}", sql, result);
                 return result;
             } finally {
                 if (stmt != null) try {
@@ -617,14 +632,28 @@ public class Mimir {
         return result.stream().map(Row::new).toList();
     }
 
-    // Private helper method to execute statements (only used internally).
+    /**
+     * Execute multiple SQL statements from a single string.
+     * This method splits the string by semicolons and executes each statement.
+     *
+     * @param conn Connection to the database
+     * @param sql  SQL statements separated by semicolons
+     * @throws SQLException If an error occurs while executing the statements
+     */
     private void executeSqlStatements(Connection conn, String sql) throws SQLException {
         for (String statement : sql.split(";")) {
             executeStatement(conn, statement.trim());
         }
     }
 
-    // Private helper method to execute a single statement (only used internally).
+    /**
+     * Execute a single SQL statement.
+     * This method is used internally to execute each statement from a batch.
+     *
+     * @param conn      Connection to the database
+     * @param statement The SQL statement to execute
+     * @throws SQLException If an error occurs while executing the statement
+     */
     private void executeStatement(Connection conn, String statement) throws SQLException {
         if (!statement.isEmpty()) {
             try (Statement stmt = conn.createStatement()) {
@@ -664,17 +693,17 @@ public class Mimir {
     public <T> Page<T> getPage(String sql, PageRequest pageRequest, java.util.function.Function<Row, T> mapper, Object... params) {
         // Get total count first
         long totalElements = getCountFromQuery(sql, params);
-        
+
         if (totalElements == 0) {
             return Page.empty(pageRequest);
         }
-        
+
         String paginatedSql = buildPaginatedSql(sql, pageRequest);
         List<Row> rows = getRows(paginatedSql, params);
         List<T> content = rows.stream()
-            .map(mapper)
-            .toList();
-        
+                .map(mapper)
+                .toList();
+
         return new Page<>(content, pageRequest, totalElements);
     }
 
@@ -692,32 +721,32 @@ public class Mimir {
 
     /**
      * Helper method to build paginated SQL with LIMIT, OFFSET and optional ORDER BY.
-     * 
+     *
      * @param baseSql     The base SQL query
      * @param pageRequest Pagination parameters
      * @return SQL with pagination clauses added
      */
     private String buildPaginatedSql(String baseSql, PageRequest pageRequest) {
         StringBuilder sql = new StringBuilder(baseSql.trim());
-        
+
         // Add ORDER BY if specified and not already present
         if (pageRequest.hasSorting() && !containsOrderBy(baseSql)) {
             sql.append(" ORDER BY ")
-               .append(sanitizeColumnName(pageRequest.sortBy().get()))
-               .append(" ")
-               .append(pageRequest.getEffectiveDirection().getSqlKeyword());
+                    .append(sanitizeColumnName(pageRequest.sortBy().get()))
+                    .append(" ")
+                    .append(pageRequest.getEffectiveDirection().getSqlKeyword());
         }
-        
+
         // Add LIMIT and OFFSET
         sql.append(" LIMIT ").append(pageRequest.size())
-           .append(" OFFSET ").append(pageRequest.getOffset());
-        
+                .append(" OFFSET ").append(pageRequest.getOffset());
+
         return sql.toString();
     }
 
     /**
      * Convert a SELECT query to a COUNT query for pagination.
-     * 
+     *
      * @param sql    Original SELECT query
      * @param params Query parameters
      * @return Total count
@@ -732,36 +761,36 @@ public class Mimir {
      * Convert a SELECT statement to a COUNT statement.
      * Handles simple SELECT queries - for complex queries, consider providing
      * a custom count query.
-     * 
+     *
      * @param sql Original SQL query
      * @return COUNT query
      */
     private String convertToCountQuery(String sql) {
         String upperSql = sql.toUpperCase().trim();
-        
+
         // Find SELECT and FROM positions
         int selectPos = upperSql.indexOf("SELECT");
         int fromPos = upperSql.indexOf("FROM");
-        
+
         if (selectPos == -1 || fromPos == -1) {
             throw new IllegalArgumentException("Invalid SQL: Cannot convert to COUNT query - " + sql);
         }
-        
+
         // Extract everything from FROM onwards (excluding ORDER BY)
         String fromClause = sql.substring(fromPos);
-        
+
         // Remove ORDER BY clause if present (case insensitive)
         int orderByPos = fromClause.toUpperCase().lastIndexOf("ORDER BY");
         if (orderByPos != -1) {
             fromClause = fromClause.substring(0, orderByPos).trim();
         }
-        
+
         return "SELECT COUNT(*) as count " + fromClause;
     }
 
     /**
      * Check if SQL already contains ORDER BY clause.
-     * 
+     *
      * @param sql SQL query to check
      * @return true if ORDER BY is present
      */
@@ -772,7 +801,7 @@ public class Mimir {
     /**
      * Basic SQL column name sanitization to prevent injection.
      * Only allows alphanumeric characters, underscores, and dots.
-     * 
+     *
      * @param columnName Column name to sanitize
      * @return Sanitized column name
      * @throws IllegalArgumentException if column name is invalid
@@ -781,18 +810,22 @@ public class Mimir {
         if (columnName == null || columnName.trim().isEmpty()) {
             throw new IllegalArgumentException("Column name cannot be null or empty");
         }
-        
+
         String sanitized = columnName.trim();
-        
+
         // Allow alphanumeric, underscore, and dot (for table.column notation)
         if (!sanitized.matches("^[a-zA-Z_][a-zA-Z0-9_.]*$")) {
-            throw new IllegalArgumentException("Invalid column name: " + columnName + 
-                ". Only alphanumeric characters, underscores, and dots are allowed.");
+            throw new IllegalArgumentException("Invalid column name: " + columnName +
+                    ". Only alphanumeric characters, underscores, and dots are allowed.");
         }
-        
+
         return sanitized;
     }
 
+    /**
+     * Delete the test database file.
+     * This method is useful for cleaning up after tests or when the database is no longer needed.
+     */
     public void deleteDatabase() {
         if (db.exists()) {
             boolean deleted = db.delete();
@@ -822,7 +855,7 @@ public class Mimir {
                 txConn.close();
                 transactionConnection.remove();
             }
-            
+
             // SQLiteDataSource doesn't need explicit cleanup, but reset state
             initialized.set(false);
             Logger.debug("Mimir instance cleanup completed for: {}", db.getAbsolutePath());
@@ -833,7 +866,7 @@ public class Mimir {
 
     /**
      * Get the database file path for this Mimir instance.
-     * 
+     *
      * @return The database file path
      */
     public String getDatabasePath() {
@@ -842,7 +875,7 @@ public class Mimir {
 
     /**
      * Check if this Mimir instance is initialized.
-     * 
+     *
      * @return true if initialized, false otherwise
      */
     public boolean isInitialized() {

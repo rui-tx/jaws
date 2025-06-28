@@ -26,7 +26,6 @@ import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
  * RequestValidationMiddleware handles request body validation for all routes.
  * This middleware validates Content-Type headers, parses JSON request bodies,
  * performs deserialization and Jakarta Bean Validation before requests reach controllers.
-
  */
 public class RequestValidationMiddleware implements Middleware {
 
@@ -41,7 +40,7 @@ public class RequestValidationMiddleware implements Middleware {
         try {
             String endPoint = context.getRequest().getRequestURI();
             RequestType requestType = RequestType.fromString(context.getRequest().getMethod());
-            
+
             // Skip validation for certain endpoints
             // if (endPoint.equals("/") || endPoint.equals("/api/v1/ping") || endPoint.startsWith("/api/admin")) {
             //     return chain.next();
@@ -50,7 +49,7 @@ public class RequestValidationMiddleware implements Middleware {
             String contentType = context.getHeader(CONTENT_TYPE.getHeaderName());
             String httpMethod = context.getRequest().getMethod().toUpperCase();
             boolean expectsRequestBody = httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH");
-            
+
             if (expectsRequestBody && contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
                 try {
                     APIResponse<String> response = APIResponse.error(
@@ -66,20 +65,19 @@ public class RequestValidationMiddleware implements Middleware {
 
             // Find the route method to determine if validation is needed
             Method routeMethod = findRouteMethod(endPoint, requestType);
-            
+
             if (routeMethod != null) {
                 // Get method parameters to determine if we need to validate request body
                 Class<?>[] parameterTypes = routeMethod.getParameterTypes();
-                
+
                 if (parameterTypes.length > 0) {
                     // Perform request validation and body parsing
                     ValidationResult validationResult = validateAndParseRequestBody(context, parameterTypes[0]);
-                    
+
                     if (!validationResult.success) {
-                        // Validation failed, error response already sent
                         return false;
                     }
-                    
+
                     // Store the validated object in context for the controller to use
                     if (validationResult.validatedObject != null) {
                         context.setValidatedRequestBody(validationResult.validatedObject);
@@ -87,9 +85,8 @@ public class RequestValidationMiddleware implements Middleware {
                 }
             }
 
-            // Continue to next middleware/route processing
             return chain.next();
-            
+
         } catch (Exception e) {
             JawsLogger.error("Error in RequestValidationMiddleware: {}", e.getMessage(), e);
             return chain.next(); // Continue on error to avoid breaking the chain
@@ -102,18 +99,18 @@ public class RequestValidationMiddleware implements Middleware {
     private ValidationResult validateAndParseRequestBody(Yggdrasill.RequestContext context, Class<?> targetType) {
         String contentType = context.getHeader(CONTENT_TYPE.getHeaderName());
         String requestBodyTrimmed = context.getRequestBody() != null ? context.getRequestBody().trim() : "";
-        
+
         // Determine if this request expects a body
         String httpMethod = context.getRequest().getMethod().toUpperCase();
         boolean expectsRequestBody = httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH");
         boolean isMultipartRequest = contentType != null && contentType.contains("multipart/form-data");
-        
+
         // Skip validation for multipart requests - they're handled differently in the route method
         if (isMultipartRequest) {
             JawsLogger.debug("RequestValidationMiddleware: Skipping validation for multipart request");
             return ValidationResult.success(null);
         }
-        
+
         if (expectsRequestBody) {
             // Check for missing Content-Type header or wrong Content-Type
             if (contentType == null) {
@@ -124,7 +121,7 @@ public class RequestValidationMiddleware implements Middleware {
                 sendErrorResponse(context, response);
                 return ValidationResult.failure();
             }
-            
+
             // Check for wrong Content-Type (form-encoded instead of JSON)
             if (contentType.contains("application/x-www-form-urlencoded")) {
                 APIResponse<String> response = APIResponse.error(
@@ -134,7 +131,7 @@ public class RequestValidationMiddleware implements Middleware {
                 sendErrorResponse(context, response);
                 return ValidationResult.failure();
             }
-            
+
             // Check for other invalid content types
             if (!contentType.contains("application/json")) {
                 APIResponse<String> response = APIResponse.error(
@@ -144,7 +141,7 @@ public class RequestValidationMiddleware implements Middleware {
                 sendErrorResponse(context, response);
                 return ValidationResult.failure();
             }
-            
+
             // Check for empty request body
             if (requestBodyTrimmed.isEmpty()) {
                 APIResponse<String> response = APIResponse.error(
@@ -163,14 +160,14 @@ public class RequestValidationMiddleware implements Middleware {
 
                 // Deserialize the object
                 Object deserializedObject = mapper.readValue(requestBodyTrimmed, targetType);
-                
+
                 // Validate the deserialized object using Jakarta Bean Validation
                 APIResponse<String> validationError = JawsValidation.validate(deserializedObject);
                 if (validationError != null) {
                     sendErrorResponse(context, validationError);
                     return ValidationResult.failure();
                 }
-                
+
                 // Custom validation for DTOs that implement Validatable
                 if (deserializedObject instanceof Validatable validatable) {
                     Optional<String> customValidationError = validatable.isValid();
@@ -183,9 +180,9 @@ public class RequestValidationMiddleware implements Middleware {
                         return ValidationResult.failure();
                     }
                 }
-                
+
                 return ValidationResult.success(deserializedObject);
-                
+
             } catch (JsonParseException e) {
                 APIResponse<String> response = APIResponse.error(
                         ResponseCode.BAD_REQUEST.getCodeAndMessage(),
@@ -193,7 +190,7 @@ public class RequestValidationMiddleware implements Middleware {
                 );
                 sendErrorResponse(context, response);
                 return ValidationResult.failure();
-                
+
             } catch (JsonMappingException e) {
                 // Handle unknown fields or mapping issues
                 String originalMessage = e.getOriginalMessage();
@@ -214,7 +211,7 @@ public class RequestValidationMiddleware implements Middleware {
                     sendErrorResponse(context, response);
                     return ValidationResult.failure();
                 }
-                
+
             } catch (Exception e) {
                 APIResponse<String> response = APIResponse.error(
                         ResponseCode.BAD_REQUEST.getCodeAndMessage(),
@@ -232,7 +229,7 @@ public class RequestValidationMiddleware implements Middleware {
             sendErrorResponse(context, response);
             return ValidationResult.failure();
         }
-        
+
         // No request body needed or provided
         return ValidationResult.success(null);
     }
@@ -243,7 +240,7 @@ public class RequestValidationMiddleware implements Middleware {
      */
     private Method findRouteMethod(String endPoint, RequestType requestType) {
         JawsLogger.debug("RequestValidationMiddleware: Finding route method for endpoint: {} and request type: {}", endPoint, requestType);
-        
+
         // First check for direct route match
         Method routeMethod = Njord.getInstance().getRoute(endPoint, requestType);
         if (routeMethod != null) {
@@ -272,7 +269,7 @@ public class RequestValidationMiddleware implements Middleware {
      */
     private boolean matchesRoutePattern(String pattern, String path) {
         JawsLogger.debug("RequestValidationMiddleware: Matching route pattern: {} for path: {}", pattern, path);
-        
+
         // Handle exact matches
         if (pattern.equals(path)) {
             JawsLogger.debug("RequestValidationMiddleware: Exact match found");
@@ -282,7 +279,7 @@ public class RequestValidationMiddleware implements Middleware {
         // Handle dynamic parameters like /users/:id
         String[] patternParts = pattern.split("/");
         String[] pathParts = path.split("/");
-        
+
         if (patternParts.length != pathParts.length) {
             JawsLogger.debug("RequestValidationMiddleware: Length mismatch: pattern length: {}, path length: {}", patternParts.length, pathParts.length);
             return false;
@@ -291,13 +288,13 @@ public class RequestValidationMiddleware implements Middleware {
         for (int i = 0; i < patternParts.length; i++) {
             String patternPart = patternParts[i];
             String pathPart = pathParts[i];
-            
+
             // Skip dynamic parts (parameters starting with :)
             if (patternPart.startsWith(":")) {
                 JawsLogger.debug("RequestValidationMiddleware: Dynamic part found: {}", patternPart);
                 continue;
             }
-            
+
             // Must match exactly for non-dynamic parts
             if (!patternPart.equals(pathPart)) {
                 JawsLogger.debug("RequestValidationMiddleware: Mismatch found: pattern part: {}, path part: {}", patternPart, pathPart);

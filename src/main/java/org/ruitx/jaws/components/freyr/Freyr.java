@@ -18,18 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.ruitx.jaws.configs.ApplicationConfig.*;
 
 /**
- * Freyr
- * <p>
  * Freyr is the main entry point for the job queue system.
  * It is responsible for submitting jobs, processing them, and managing their status.
- * <p>
- * It uses a priority queue to process jobs in the order of their priority.
  */
 public class Freyr implements Runnable {
 
     private static final int DEFAULT_WORKER_THREADS = WORKER_THREADS;
     private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
-    //private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes
     private static final Object instanceLock = new Object();
     private static Freyr instance;
     private final Mimir mimir = new Mimir();

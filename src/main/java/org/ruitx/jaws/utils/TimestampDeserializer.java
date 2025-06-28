@@ -3,9 +3,16 @@ package org.ruitx.jaws.utils;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+
 import java.io.IOException;
 import java.time.Instant;
 
+/**
+ * TimestampDeserializer - Custom deserializer for handling both epoch seconds and ISO 8601 date strings.
+ * <p>
+ * This deserializer attempts to parse a timestamp from either a numeric string (epoch seconds)
+ * or an ISO 8601 formatted date string. If both parsing attempts fail, it throws an IOException.
+ */
 public class TimestampDeserializer extends JsonDeserializer<Long> {
     @Override
     public Long deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {

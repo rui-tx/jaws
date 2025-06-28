@@ -17,7 +17,12 @@ public class Norns implements Runnable {
     private Norns() {
         this.tasks = new ConcurrentHashMap<>();
     }
-    
+
+    /**
+     * Returns the singleton instance of Norns.
+     *
+     * @return the Norns instance
+     */
     public static synchronized Norns getInstance() {
         if (instance == null) {
             instance = new Norns();
@@ -25,12 +30,25 @@ public class Norns implements Runnable {
         return instance;
     }
 
+    /**
+     * Registers a task with a name, runnable, interval, and time unit.
+     *
+     * @param name     the name of the task
+     * @param task     the runnable task to execute
+     * @param interval the interval at which to run the task
+     * @param unit     the time unit for the interval
+     */
     public void registerTask(String name, Runnable task, long interval, TimeUnit unit) {
         long intervalMillis = unit.toMillis(interval);
         tasks.put(name, new CronTask(task, intervalMillis));
         JawsLogger.info("Registered task with Norns: {} with interval: {} {}", name, interval, unit);
     }
 
+    /**
+     * Unregisters a task by its name.
+     *
+     * @param name the name of the task to unregister
+     */
     public void unregisterTask(String name) {
         tasks.remove(name);
         JawsLogger.info("Unregistered task from Norns: {}", name);
@@ -64,6 +82,9 @@ public class Norns implements Runnable {
         JawsLogger.info("Norns have ceased their weaving");
     }
 
+    /**
+     * Stops the Norns service.
+     */
     public void stop() {
         running = false;
     }
