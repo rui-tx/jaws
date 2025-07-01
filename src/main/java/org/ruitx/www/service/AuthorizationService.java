@@ -1,6 +1,7 @@
 package org.ruitx.www.service;
 
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.interfaces.Cacheable;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.JawsLogger;
@@ -39,12 +40,12 @@ public class AuthorizationService {
         try {
             List<Row> rows = db.getRows(
                     """
-                    SELECT r.name 
-                    FROM USER_ROLE ur 
-                    JOIN ROLE r ON ur.role_id = r.id 
-                    WHERE ur.user_id = ?
-                    ORDER BY r.name
-                    """,
+                            SELECT r.name 
+                            FROM USER_ROLE ur 
+                            JOIN ROLE r ON ur.role_id = r.id 
+                            WHERE ur.user_id = ?
+                            ORDER BY r.name
+                            """,
                     userId
             );
 
@@ -73,11 +74,11 @@ public class AuthorizationService {
         try {
             Row row = db.getRow(
                     """
-                    SELECT COUNT(*) as count 
-                    FROM USER_ROLE ur 
-                    JOIN ROLE r ON ur.role_id = r.id 
-                    WHERE ur.user_id = ? AND r.name = ?
-                    """,
+                            SELECT COUNT(*) as count 
+                            FROM USER_ROLE ur 
+                            JOIN ROLE r ON ur.role_id = r.id 
+                            WHERE ur.user_id = ? AND r.name = ?
+                            """,
                     userId, roleName.trim()
             );
 
@@ -192,11 +193,11 @@ public class AuthorizationService {
         try {
             int result = db.executeSql(
                     """
-                    DELETE FROM USER_ROLE 
-                    WHERE user_id = ? AND role_id = (
-                        SELECT id FROM ROLE WHERE name = ?
-                    )
-                    """,
+                            DELETE FROM USER_ROLE 
+                            WHERE user_id = ? AND role_id = (
+                                SELECT id FROM ROLE WHERE name = ?
+                            )
+                            """,
                     userId, roleName.trim()
             );
 
@@ -318,7 +319,7 @@ public class AuthorizationService {
                     "SELECT id FROM USER_ROLE WHERE user_id = ? AND role_id = ?",
                     userId, roleId
             );
-            
+
             if (!existing.isEmpty()) {
                 return APIResponse.error("409 CONFLICT", "User already has this role");
             }
@@ -367,6 +368,7 @@ public class AuthorizationService {
      *
      * @return list of all user role assignments
      */
+    @Cacheable(tables = {"USER_ROLE"}, ttl = 60000)
     public List<UserRole> getAllUserRoles() {
         try {
             List<Row> rows = db.getRows("SELECT * FROM USER_ROLE ORDER BY assigned_at DESC");
@@ -421,8 +423,8 @@ public class AuthorizationService {
             // Check if role is assigned to any users
             int userCount = getUserCountForRole(roleId);
             if (userCount > 0) {
-                return APIResponse.error("409 CONFLICT", 
-                    "Cannot delete role '" + role.get().name() + "' because it is assigned to " + userCount + " user(s)");
+                return APIResponse.error("409 CONFLICT",
+                        "Cannot delete role '" + role.get().name() + "' because it is assigned to " + userCount + " user(s)");
             }
 
             // Delete the role

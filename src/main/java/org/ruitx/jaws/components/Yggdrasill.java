@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -107,7 +108,11 @@ public class Yggdrasill {
             // Set up dynamic route handling
             setupDynamicRouteHandling(context);
 
-            server.setHandler(context);
+            // Wrap everything in Jetty's GzipHandler for automatic compression
+            GzipHandler gzipHandler = new GzipHandler();
+            gzipHandler.setHandler(context);
+
+            server.setHandler(gzipHandler);
             server.start();
 
             JawsLogger.info("Yggdrasill started on port {} with resources path: {}", port, resourcesPath);
@@ -227,6 +232,8 @@ public class Yggdrasill {
      * multipart files, and response handling.
      */
     public static class RequestContext {
+        private final String traceId = UUID.randomUUID().toString();
+        private final long startTime = System.currentTimeMillis();
         private final HttpServletRequest request;
         private final HttpServletResponse response;
         private final String resourcesPath;
@@ -457,6 +464,14 @@ public class Yggdrasill {
         }
 
         // Getter methods
+        public String getTraceId() {
+            return traceId;
+        }
+
+        public long getStartTime() {
+            return startTime;
+        }
+
         public String getCurrentToken() {
             return currentToken;
         }
@@ -691,6 +706,17 @@ public class Yggdrasill {
 
                 // Process the request
                 processRequest(context);
+
+                JawsLogger.info(
+                        "{} {} {} {} {} {} ms",
+                        context.getTraceId(),
+                        context.getRequest().getMethod(),
+                        context.getRequest().getQueryString() != null
+                                ? context.getRequest().getRequestURI() + "?" + context.getRequest().getQueryString()
+                                : context.getRequest().getRequestURI(),
+                        context.getClientIpAddress(),
+                        context.getResponse().getStatus(),
+                        System.currentTimeMillis() - context.startTime);
 
             } catch (Exception e) {
                 JawsLogger.error("Error processing request: {}", e.getMessage(), e);

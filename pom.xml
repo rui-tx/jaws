@@ -37,7 +37,7 @@
             <artifactId>jetty-util</artifactId>
             <version>${jetty.version}</version>
         </dependency>
-        
+
         <!-- Existing AspectJ Dependencies -->
         <dependency>
             <groupId>org.aspectj</groupId>
@@ -152,6 +152,12 @@
             <artifactId>jazzer</artifactId>
             <version>0.24.0</version>
         </dependency>
+        <!-- Caffeine Cache -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>3.1.8</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -229,7 +235,8 @@
                         </goals>
                         <configuration>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>org.ruitx.Jaws</mainClass>
                                 </transformer>
                             </transformers>

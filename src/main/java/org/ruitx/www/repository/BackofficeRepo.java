@@ -1,6 +1,7 @@
 package org.ruitx.www.repository;
 
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.interfaces.Cacheable;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
@@ -11,13 +12,12 @@ import org.ruitx.www.model.auth.UserRole;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * BackofficeRepo - Database operations for backoffice management
- * 
+ * <p>
  * Consolidates all database queries and operations specific to the backoffice interface.
  * This includes job management, log retrieval, role management, and user listing operations.
  */
@@ -68,13 +68,13 @@ public class BackofficeRepo {
      */
     public int updateJobForReprocessing(String jobId) {
         return db.executeSql("""
-            UPDATE JOBS SET 
-                status = 'PENDING', 
-                retry_count = retry_count + 1, 
-                started_at = NULL, 
-                completed_at = NULL 
-            WHERE id = ?
-            """, jobId);
+                UPDATE JOBS SET 
+                    status = 'PENDING', 
+                    retry_count = retry_count + 1, 
+                    started_at = NULL, 
+                    completed_at = NULL 
+                WHERE id = ?
+                """, jobId);
     }
 
     /**
@@ -130,6 +130,7 @@ public class BackofficeRepo {
     /**
      * Get paginated roles
      */
+    @Cacheable(tables = {"ROLE"}, ttl = 60000) // Cache roles for 1 minute
     public Page<Row> getRolesPage(PageRequest pageRequest) {
         return db.getPage("SELECT * FROM ROLE", pageRequest);
     }
@@ -140,8 +141,8 @@ public class BackofficeRepo {
     public int createRole(String name, String description) {
         long timestamp = System.currentTimeMillis();
         return db.executeSql(
-            "INSERT INTO ROLE (name, description, created_at, updated_at) VALUES (?, ?, ?, ?)",
-            name, description, timestamp, timestamp
+                "INSERT INTO ROLE (name, description, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                name, description, timestamp, timestamp
         );
     }
 
@@ -160,14 +161,14 @@ public class BackofficeRepo {
         if (row == null) {
             return Optional.empty();
         }
-        
+
         return Optional.of(Role.builder()
-            .id(row.getInt("id").orElse(0))
-            .name(row.getString("name").orElse(""))
-            .description(row.getString("description").orElse(null))
-            .createdAt(row.getLong("created_at").orElse(null))
-            .updatedAt(row.getLong("updated_at").orElse(null))
-            .build());
+                .id(row.getInt("id").orElse(0))
+                .name(row.getString("name").orElse(""))
+                .description(row.getString("description").orElse(null))
+                .createdAt(row.getLong("created_at").orElse(null))
+                .updatedAt(row.getLong("updated_at").orElse(null))
+                .build());
     }
 
     /**
@@ -176,14 +177,14 @@ public class BackofficeRepo {
     public List<Role> getAllRoles() {
         List<Row> rows = db.getRows("SELECT * FROM ROLE ORDER BY name");
         return rows.stream()
-            .map(row -> Role.builder()
-                .id(row.getInt("id").orElse(0))
-                .name(row.getString("name").orElse(""))
-                .description(row.getString("description").orElse(null))
-                .createdAt(row.getLong("created_at").orElse(null))
-                .updatedAt(row.getLong("updated_at").orElse(null))
-                .build())
-            .collect(Collectors.toList());
+                .map(row -> Role.builder()
+                        .id(row.getInt("id").orElse(0))
+                        .name(row.getString("name").orElse(""))
+                        .description(row.getString("description").orElse(null))
+                        .createdAt(row.getLong("created_at").orElse(null))
+                        .updatedAt(row.getLong("updated_at").orElse(null))
+                        .build())
+                .collect(Collectors.toList());
     }
 
     /**
@@ -192,8 +193,8 @@ public class BackofficeRepo {
     public int assignUserRole(Integer userId, Integer roleId, Integer assignedBy) {
         long timestamp = System.currentTimeMillis();
         return db.executeSql(
-            "INSERT INTO USER_ROLE (user_id, role_id, assigned_by, assigned_at) VALUES (?, ?, ?, ?)",
-            userId, roleId, assignedBy, timestamp
+                "INSERT INTO USER_ROLE (user_id, role_id, assigned_by, assigned_at) VALUES (?, ?, ?, ?)",
+                userId, roleId, assignedBy, timestamp
         );
     }
 
@@ -209,23 +210,23 @@ public class BackofficeRepo {
      */
     public List<UserRole> getAllUserRoles() {
         String sql = """
-            SELECT ur.*, u.user as username, r.name as role_name 
-            FROM USER_ROLE ur 
-            JOIN USER u ON ur.user_id = u.id 
-            JOIN ROLE r ON ur.role_id = r.id 
-            ORDER BY ur.assigned_at DESC
-            """;
-        
+                SELECT ur.*, u.user as username, r.name as role_name 
+                FROM USER_ROLE ur 
+                JOIN USER u ON ur.user_id = u.id 
+                JOIN ROLE r ON ur.role_id = r.id 
+                ORDER BY ur.assigned_at DESC
+                """;
+
         List<Row> rows = db.getRows(sql);
         return rows.stream()
-            .map(row -> UserRole.builder()
-                .id(row.getInt("id").orElse(0))
-                .userId(row.getInt("user_id").orElse(0))
-                .roleId(row.getInt("role_id").orElse(0))
-                .assignedBy(row.getInt("assigned_by").orElse(null))
-                .assignedAt(row.getLong("assigned_at").orElse(null))
-                .build())
-            .collect(Collectors.toList());
+                .map(row -> UserRole.builder()
+                        .id(row.getInt("id").orElse(0))
+                        .userId(row.getInt("user_id").orElse(0))
+                        .roleId(row.getInt("role_id").orElse(0))
+                        .assignedBy(row.getInt("assigned_by").orElse(null))
+                        .assignedAt(row.getLong("assigned_at").orElse(null))
+                        .build())
+                .collect(Collectors.toList());
     }
 
     /**
@@ -252,28 +253,28 @@ public class BackofficeRepo {
      */
     public List<User> transformRowsToUsers(List<Row> rows) {
         return rows.stream()
-            .map(row -> User.builder()
-                .id(row.getInt("id").orElse(0))
-                .user(row.getString("user").orElse(""))
-                .passwordHash(row.getString("password_hash").orElse(""))
-                .email(row.getString("email").orElse(null))
-                .firstName(row.getString("first_name").orElse(null))
-                .lastName(row.getString("last_name").orElse(null))
-                .birthdate(row.getLong("birthdate").orElse(null))
-                .gender(row.getString("gender").orElse(null))
-                .phoneNumber(row.getString("phone_number").orElse(null))
-                .profilePicture(row.getString("profile_picture").orElse(null))
-                .bio(row.getString("bio").orElse(null))
-                .location(row.getString("location").orElse(null))
-                .website(row.getString("website").orElse(null))
-                .lastLogin(row.getLong("last_login").orElse(null))
-                .isActive(row.getInt("is_active").orElse(1))
-                .failedLoginAttempts(row.getInt("failed_login_attempts").orElse(0))
-                .lockoutUntil(row.getLong("lockout_until").orElse(null))
-                .createdAt(row.getLong("created_at").orElse(0L))
-                .updatedAt(row.getLong("updated_at").orElse(null))
-                .build())
-            .collect(Collectors.toList());
+                .map(row -> User.builder()
+                        .id(row.getInt("id").orElse(0))
+                        .user(row.getString("user").orElse(""))
+                        .passwordHash(row.getString("password_hash").orElse(""))
+                        .email(row.getString("email").orElse(null))
+                        .firstName(row.getString("first_name").orElse(null))
+                        .lastName(row.getString("last_name").orElse(null))
+                        .birthdate(row.getLong("birthdate").orElse(null))
+                        .gender(row.getString("gender").orElse(null))
+                        .phoneNumber(row.getString("phone_number").orElse(null))
+                        .profilePicture(row.getString("profile_picture").orElse(null))
+                        .bio(row.getString("bio").orElse(null))
+                        .location(row.getString("location").orElse(null))
+                        .website(row.getString("website").orElse(null))
+                        .lastLogin(row.getLong("last_login").orElse(null))
+                        .isActive(row.getInt("is_active").orElse(1))
+                        .failedLoginAttempts(row.getInt("failed_login_attempts").orElse(0))
+                        .lockoutUntil(row.getLong("lockout_until").orElse(null))
+                        .createdAt(row.getLong("created_at").orElse(0L))
+                        .updatedAt(row.getLong("updated_at").orElse(null))
+                        .build())
+                .collect(Collectors.toList());
     }
 
     // =============================================
