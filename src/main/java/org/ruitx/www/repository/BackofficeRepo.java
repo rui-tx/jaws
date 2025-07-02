@@ -130,7 +130,7 @@ public class BackofficeRepo {
     /**
      * Get paginated roles
      */
-    @Cacheable(tables = {"ROLE"}, ttl = 60000) // Cache roles for 1 minute
+    @Cacheable(tables = {"ROLE"})
     public Page<Row> getRolesPage(PageRequest pageRequest) {
         return db.getPage("SELECT * FROM ROLE", pageRequest);
     }
@@ -356,4 +356,4 @@ public class BackofficeRepo {
 
         return new PageRequest(page, size, sortBy, direction);
     }
-} 
+}

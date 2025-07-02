@@ -24,9 +24,11 @@ public class CacheableAspect {
             Mimir.enableCacheForCurrentThread();
             Set<String> tbls = Set.of(cacheable.tables());
             Mimir.setCurrentTables(tbls);
+            Mimir.setCurrentTtl(cacheable.ttl());
             return pjp.proceed();
         } finally {
             Mimir.clearCurrentTables();
+            Mimir.clearCurrentTtl();
             // Restore previous state to avoid leaking across nested calls
             if (!previous) {
                 Mimir.disableCacheForCurrentThread();
