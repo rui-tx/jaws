@@ -20,26 +20,17 @@ public class LoggingMiddleware implements Middleware {
     public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
         try {
             JawsLogger.debug("LoggingMiddleware: Handling request");
-            long startTime = System.currentTimeMillis();
+            String traceId = context.getTraceId();
             String method = context.getRequest().getMethod();
             String uri = context.getRequest().getRequestURI();
             String queryString = context.getRequest().getQueryString();
             String fullUrl = queryString != null ? uri + "?" + queryString : uri;
             String clientIp = context.getClientIpAddress();
-            
-            JawsLogger.info("HTTP {} {} from {}", method, fullUrl, clientIp);
-            
-            // Continue with the chain
-            boolean result = chain.next();
-            
-            long duration = System.currentTimeMillis() - startTime;
-            int statusCode = context.getResponse().getStatus();
-            
-            JawsLogger.info("HTTP {} {} completed in {}ms with status {}", 
-                method, fullUrl, duration, statusCode);
-            
-            return result;
-            
+
+            JawsLogger.info("{} {} {} {}", traceId, method, fullUrl, clientIp);
+
+            return chain.next();
+
         } catch (Exception e) {
             JawsLogger.error("Error in LoggingMiddleware: {}", e.getMessage(), e);
             return chain.next(); // Continue on error

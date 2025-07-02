@@ -1,0 +1,29 @@
+services:
+  jaws:
+    build:
+      context: .
+      args:
+        MAVEN_ARGS: "-DskipTests"
+
+    ports:
+      - "15000:15000"
+
+    environment:
+      - PORT=15000
+      - URL=http://localhost:15000
+      - WWWPATH=/app/www/
+      - DBPATH=/data/db.db
+      - DBSCHEMAPATH=/app/src/main/resources/sql/create_schema_v1.sql
+      - DB_LEVEL=INFO
+      - RATE_LIMIT_MAX_REQUESTS=100000
+
+    volumes:
+      # Persist the SQLite file outside the container
+      - db_data:/data
+
+      # Optional: expose static assets & SQL schema for live editing
+      - ./src/main/resources/sql:/app/src/main/resources/sql
+      - ./src/main/resources/www:/app/www
+
+volumes:
+  db_data:

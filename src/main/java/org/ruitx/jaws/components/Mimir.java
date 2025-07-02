@@ -1,6 +1,13 @@
 package org.ruitx.jaws.components;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.delete.Delete;
+import net.sf.jsqlparser.statement.insert.Insert;
+import net.sf.jsqlparser.statement.update.Update;
+import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.interfaces.SqlFunction;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
@@ -18,6 +25,7 @@ import java.sql.*;
 import java.sql.Date;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
@@ -32,6 +40,48 @@ import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
  * from a specified file path.
  */
 public class Mimir {
+    // Per-key custom TTL store (nanoseconds)
+    private static final ConcurrentHashMap<SqlCacheKey, Long> keyToTtl = new ConcurrentHashMap<>();
+
+    // Lazy-initialised cache and flag to avoid static-initialisation cycles
+    private static volatile Cache<SqlCacheKey, Object> queryCache;
+    private static volatile ThreadLocal<Boolean> allowCacheFlag;
+
+    /**
+     * Ensure the cache (and its supporting ThreadLocal flag) are initialised exactly once.
+     * Called lazily from all public access points that touch caching logic.
+     */
+    private static synchronized void ensureCache() {
+        if (queryCache == null) {
+            allowCacheFlag = ThreadLocal.withInitial(() -> false);
+            queryCache = Caffeine.newBuilder()
+                    .maximumSize(ApplicationConfig.MIMIR_CACHE_MAX_SIZE)
+                    .expireAfter(new com.github.benmanes.caffeine.cache.Expiry<SqlCacheKey, Object>() {
+                        @Override
+                        public long expireAfterCreate(SqlCacheKey key, Object value, long currentTime) {
+                            return keyToTtl.getOrDefault(key, Long.MAX_VALUE);
+                        }
+
+                        @Override
+                        public long expireAfterUpdate(SqlCacheKey key, Object value, long currentTime, long currentDuration) {
+                            return keyToTtl.getOrDefault(key, currentDuration);
+                        }
+
+                        @Override
+                        public long expireAfterRead(SqlCacheKey key, Object value, long currentTime, long currentDuration) {
+                            return currentDuration;
+                        }
+                    })
+                    .build();
+        }
+    }
+
+    // Reverse index: table -> cache keys
+    private static final java.util.concurrent.ConcurrentHashMap<String, Set<SqlCacheKey>> tableToKeys = new ConcurrentHashMap<>();
+    // ThreadLocal for tables set provided by @Cacheable
+    private static final ThreadLocal<Set<String>> currentTables = new ThreadLocal<>();
+    // Add ThreadLocal for TTL after currentTables:
+    private static final ThreadLocal<Long> currentTtlMs = new ThreadLocal<>();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
     private DataSource dataSource;
@@ -77,6 +127,37 @@ public class Mimir {
         this.schemaPath = schemaPath;
         this.shouldCreateDefaultUser = shouldCreateDefaultUser;
         initializeDataSource();
+    }
+
+    public static void enableCacheForCurrentThread() {
+        ensureCache();
+        allowCacheFlag.set(true);
+    }
+
+    public static void disableCacheForCurrentThread() {
+        ensureCache();
+        allowCacheFlag.set(false);
+    }
+
+    public static boolean isCacheAllowedForCurrentThread() {
+        ensureCache();
+        return allowCacheFlag.get();
+    }
+
+    public static void setCurrentTables(Set<String> tables) {
+        currentTables.set(tables);
+    }
+
+    public static void clearCurrentTables() {
+        currentTables.remove();
+    }
+
+    public static void setCurrentTtl(long ttlMs) {
+        currentTtlMs.set(ttlMs);
+    }
+
+    public static void clearCurrentTtl() {
+        currentTtlMs.remove();
     }
 
     private synchronized void initializeDataSource() {
@@ -261,6 +342,7 @@ public class Mimir {
         }
         try {
             conn.commit();
+            invalidateCache();
         } finally {
             conn.close();
             transactionConnection.remove();
@@ -279,6 +361,7 @@ public class Mimir {
         }
         try {
             conn.rollback();
+            invalidateCache();
         } finally {
             conn.close();
             transactionConnection.remove();
@@ -361,7 +444,9 @@ public class Mimir {
                     stmt.setObject(i + 1, params[i]);
                 }
 
-                return stmt.executeUpdate();
+                int affected = stmt.executeUpdate();
+                invalidateTables(extractTablesFromWrite(sql));
+                return affected;
             } finally {
                 if (stmt != null) try {
                     stmt.close();
@@ -370,7 +455,7 @@ public class Mimir {
                 }
             }
         } catch (SQLException e) {
-            Logger.error("Error executing prepared update: {}\nSQL: {}\nParams: {}", e.getMessage(), sql, java.util.Arrays.toString(params));
+            Logger.error("Error executing prepared update: {}\nSQL: {}\nParams: {}", e.getMessage(), sql, Arrays.toString(params));
             Logger.error("Stack trace: {}", e.getStackTrace());
             throw new RuntimeException("Database update failed", e);
         } finally {
@@ -405,6 +490,7 @@ public class Mimir {
             try {
                 stmt = conn.createStatement();
                 boolean result = stmt.execute(sql);
+                invalidateTables(extractTablesFromWrite(sql));
                 Logger.trace("SQL executed: {}, result: {}", sql, result);
                 return result;
             } finally {
@@ -438,6 +524,26 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
+        // Determine if cache should be bypassed
+        ensureCache();
+        boolean skipCache = !ApplicationConfig.MIMIR_CACHE_ENABLED
+                || transactionConnection.get() != null
+                || !isCacheAllowedForCurrentThread();
+        if (skipCache) {
+            Logger.trace("Mimir cache BYPASS for SQL: {}", sql);
+        }
+        SqlCacheKey cacheKey = null;
+        if (!skipCache) {
+            cacheKey = new SqlCacheKey(sql);
+            @SuppressWarnings("unchecked")
+            T cached = (T) queryCache.getIfPresent(cacheKey);
+            if (cached != null) {
+                Logger.debug("Mimir cache HIT for SQL: {}", sql);
+                return cached;
+            }
+            Logger.debug("Mimir cache MISS for SQL: {}", sql);
+        }
+
         Connection conn = null;
         boolean isTransactionConnection = false;
 
@@ -452,7 +558,24 @@ public class Mimir {
             try {
                 stmt = conn.createStatement();
                 rs = stmt.executeQuery(sql);
-                return action.apply(rs);
+                T result = action.apply(rs);
+                if (!skipCache) {
+                    long ttlMs = Optional.ofNullable(currentTtlMs.get()).orElse(-1L);
+                    if (ttlMs > 0) {
+                        keyToTtl.put(cacheKey, java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(ttlMs));
+                    }
+                    queryCache.put(cacheKey, result);
+                    // Register key under current tables for selective invalidation
+                    java.util.Set<String> tbls = currentTables.get();
+                    if (tbls != null && !tbls.isEmpty()) {
+                        for (String tbl : tbls) {
+                            tableToKeys.computeIfAbsent(tbl.toUpperCase(), k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                                    .add(cacheKey);
+                        }
+                    }
+                    Logger.debug("Mimir cache PUT for SQL: {} (ttlMs={})", sql, ttlMs);
+                }
+                return result;
             } finally {
                 // Close resources in reverse order
                 if (rs != null) try {
@@ -491,6 +614,25 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action, Object... params) {
+        ensureCache();
+        boolean skipCache = !ApplicationConfig.MIMIR_CACHE_ENABLED
+                || transactionConnection.get() != null
+                || !isCacheAllowedForCurrentThread();
+
+        if (skipCache) {
+            Logger.trace("Mimir cache BYPASS for SQL: {}", sql);
+        }
+        SqlCacheKey cacheKey = null;
+        if (!skipCache) {
+            cacheKey = new SqlCacheKey(sql, params);
+            @SuppressWarnings("unchecked")
+            T cached = (T) queryCache.getIfPresent(cacheKey);
+            if (cached != null) {
+                Logger.debug("Mimir cache HIT for SQL: {}", sql);
+                return cached;
+            }
+            Logger.debug("Mimir cache MISS for SQL: {}", sql);
+        }
         Connection conn = null;
         boolean isTransactionConnection = false;
 
@@ -505,7 +647,24 @@ public class Mimir {
                 }
 
                 try (ResultSet rs = stmt.executeQuery()) {
-                    return action.apply(rs);
+                    T result = action.apply(rs);
+                    if (!skipCache) {
+                        long ttlMs = Optional.ofNullable(currentTtlMs.get()).orElse(-1L);
+                        if (ttlMs > 0) {
+                            keyToTtl.put(cacheKey, java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(ttlMs));
+                        }
+                        queryCache.put(cacheKey, result);
+                        // Register key under current tables for selective invalidation
+                        java.util.Set<String> tbls = currentTables.get();
+                        if (tbls != null && !tbls.isEmpty()) {
+                            for (String tbl : tbls) {
+                                tableToKeys.computeIfAbsent(tbl.toUpperCase(), k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                                        .add(cacheKey);
+                            }
+                        }
+                        Logger.debug("Mimir cache PUT for SQL: {} (ttlMs={})", sql, ttlMs);
+                    }
+                    return result;
                 }
             }
         } catch (SQLException e) {
@@ -522,6 +681,10 @@ public class Mimir {
             }
         }
     }
+
+    // ===================================================================
+    // PAGINATION METHODS
+    // ===================================================================
 
     /**
      * Execute an INSERT statement and return the inserted row(s).
@@ -545,6 +708,7 @@ public class Mimir {
                 }
 
                 int affectedRows = stmt.executeUpdate();
+                invalidateTables(extractTablesFromWrite(sql));
 
                 if (affectedRows == 0) {
                     return List.of();
@@ -606,7 +770,6 @@ public class Mimir {
         return Optional.of(sql.substring(tableNameStart, tableNameEnd));
     }
 
-
     /**
      * Converts the ResultSet into a list of Row objects.
      *
@@ -661,10 +824,6 @@ public class Mimir {
             }
         }
     }
-
-    // ===================================================================
-    // PAGINATION METHODS
-    // ===================================================================
 
     /**
      * Execute a paginated query and return a Page of Row objects.
@@ -880,5 +1039,111 @@ public class Mimir {
      */
     public boolean isInitialized() {
         return initialized.get();
+    }
+
+    /**
+     * Invalidate all cache entries. Called after write operations.
+     */
+    private void invalidateCache() {
+        ensureCache();
+        if (queryCache.estimatedSize() > 0) {
+            queryCache.invalidateAll();
+            Logger.debug("Mimir cache INVALIDATED (all)");
+        }
+    }
+
+    private void invalidateTables(Set<String> tables) {
+        ensureCache();
+        if (tables == null || tables.isEmpty()) {
+            invalidateCache();
+            return;
+        }
+        for (String table : tables) {
+            Set<SqlCacheKey> keys = tableToKeys.remove(table.toUpperCase());
+            if (keys != null) {
+                queryCache.invalidateAll(keys);
+            }
+        }
+        Logger.debug("Mimir cache INVALIDATED for tables: {}", tables);
+    }
+
+    private Set<String> extractTablesFromWrite(String sql) {
+        // 1) Try JSqlParser for correctness
+        try {
+            String cleaned = preprocessForParser(sql);
+            net.sf.jsqlparser.statement.Statement stmt = CCJSqlParserUtil.parse(cleaned);
+            if (stmt instanceof Insert insert) {
+                return Set.of(insert.getTable().getName());
+            }
+            if (stmt instanceof Update update) {
+                return Set.of(update.getTable().getName());
+            }
+            if (stmt instanceof Delete deleteStmt) {
+                return Set.of(deleteStmt.getTable().getName());
+            }
+        } catch (Exception ex) {
+            Logger.debug("extractTablesFromWrite: JSqlParser failed – falling back. Err={}", ex.getMessage());
+            // fall through to heuristic below
+        }
+
+        // 2) Heuristic fallback (previous behaviour)
+        try {
+            String upper = sql.toUpperCase();
+            String table = null;
+            if (upper.startsWith("INSERT INTO")) {
+                table = upper.split("\\s+")[2];
+            } else if (upper.startsWith("UPDATE")) {
+                table = upper.split("\\s+")[1];
+            } else if (upper.startsWith("DELETE FROM")) {
+                table = upper.split("\\s+")[2];
+            }
+            if (table != null) {
+                table = table.replace("`", "").replace("\"", "");
+                return Set.of(table);
+            }
+        } catch (Exception ignore) {
+            // ignore
+        }
+        return Set.of();
+    }
+
+    /**
+     * Pre-process SQL text to increase the chance JSqlParser can parse it.
+     * – Normalises INSERT OR REPLACE / IGNORE → INSERT INTO
+     * – Strips trailing LIMIT/OFFSET clauses on UPDATE/DELETE which the parser
+     * doesn't understand.
+     */
+    private String preprocessForParser(String sql) {
+        String s = sql.trim();
+        // normalise INSERT OR …
+        s = s.replaceFirst("(?i)INSERT\\s+OR\\s+(REPLACE|IGNORE)", "INSERT INTO");
+        // strip LIMIT / OFFSET at end
+        s = s.replaceAll("(?i)\\s+LIMIT\\s+\\d+(\\s+OFFSET\\s+\\d+)?\\s*$", "");
+        return s;
+    }
+
+    /**
+     * Key used for caching query results in Caffeine.
+     */
+    private static class SqlCacheKey {
+        private final String sql;
+        private final List<Object> params;
+
+        SqlCacheKey(String sql, Object... params) {
+            this.sql = sql == null ? "" : sql.trim();
+            this.params = params == null ? List.of() : List.of(params.clone());
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof SqlCacheKey other)) return false;
+            return sql.equals(other.sql) && params.equals(other.params);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(sql, params);
+        }
     }
 }

@@ -21,10 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-import static org.ruitx.jaws.strings.RequestType.GET;
-import static org.ruitx.jaws.strings.RequestType.POST;
-import static org.ruitx.jaws.strings.RequestType.PATCH;
-import static org.ruitx.jaws.strings.RequestType.DELETE;
+import static org.ruitx.jaws.strings.RequestType.*;
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class BackofficeController extends Bragi {
@@ -117,22 +114,22 @@ public class BackofficeController extends Bragi {
         String userId = getPathParam("id");
         String currentUserId = Tyr.getUserIdFromJWT(getCurrentToken());
         User currentUser = authRepo.getUserById(Long.parseLong(currentUserId)).get();
-        
+
         // Security check: Users can only view their own profile unless they're admin
         boolean isAdmin = authorizationService.hasRole(currentUser.id(), "admin");
         boolean isOwnProfile = userId.equals(currentUserId);
-        
+
         if (!isOwnProfile && !isAdmin) {
-            JawsLogger.warn("BackofficeController: User {} attempted to access profile {} without permission", 
-                currentUserId, userId);
+            JawsLogger.warn("BackofficeController: User {} attempted to access profile {} without permission",
+                    currentUserId, userId);
             sendHTMLResponse(FORBIDDEN, "Access denied: You can only view your own profile");
             return;
         }
-        
+
         User user = authRepo.getUserById(Long.parseLong(userId)).get();
 
         Map<String, String> context = getBaseContext(currentUser);
-        
+
         // Add user-specific profile data
         context.put("userId", userId);
         context.put("username", user.user());
@@ -164,18 +161,18 @@ public class BackofficeController extends Bragi {
         String userId = getPathParam("id");
         String currentUserId = Tyr.getUserIdFromJWT(getCurrentToken());
         User currentUser = authRepo.getUserById(Long.parseLong(currentUserId)).get();
-        
+
         // Security check: Users can only update their own profile unless they're admin
         boolean isAdmin = authorizationService.hasRole(currentUser.id(), "admin");
         boolean isOwnProfile = userId.equals(currentUserId);
-        
+
         if (!isOwnProfile && !isAdmin) {
-            JawsLogger.warn("BackofficeController: User {} attempted to update profile {} without permission", 
-                currentUserId, userId);
+            JawsLogger.warn("BackofficeController: User {} attempted to update profile {} without permission",
+                    currentUserId, userId);
             sendHTMLResponse(FORBIDDEN, "Access denied: You can only update your own profile");
             return;
         }
-        
+
         APIResponse<String> response = authService
                 .updateUser(Integer.parseInt(userId), request);
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
@@ -222,7 +219,7 @@ public class BackofficeController extends Bragi {
 
         Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "logs");
-        
+
         // Add log-specific data
         context.put("logId", logId);
         context.put("logLevel", logRow.getString("level").orElse("UNKNOWN"));
@@ -233,7 +230,7 @@ public class BackofficeController extends Bragi {
         context.put("logThread", logRow.getString("thread").orElse(""));
         context.put("logTimestamp", logRow.getLong("timestamp").map(ts -> JawsUtils.formatUnixTimestamp(ts, "yyyy-MM-dd HH:mm:ss")).orElse(""));
         context.put("logException", logRow.getString("exception").orElse(""));
-        
+
         setContext(context);
 
         JawsLogger.info("BackofficeController: Rendering log details page for log ID: {}", logId);
@@ -256,7 +253,7 @@ public class BackofficeController extends Bragi {
 
         Map<String, String> context = getBaseContext(user);
         context.put("currentPage", "jobs");
-        
+
         // Add job-specific data
         context.put("jobId", jobId);
         context.put("jobType", jobRow.getString("type").orElse("Unknown"));
@@ -273,7 +270,7 @@ public class BackofficeController extends Bragi {
         context.put("jobCreatedAt", jobRow.getLong("created_at").map(ts -> JawsUtils.formatUnixTimestamp(ts)).orElse(""));
         context.put("jobStartedAt", jobRow.getLong("started_at").map(ts -> JawsUtils.formatUnixTimestamp(ts)).orElse(""));
         context.put("jobCompletedAt", jobRow.getLong("completed_at").map(ts -> JawsUtils.formatUnixTimestamp(ts)).orElse(""));
-        
+
         setContext(context);
         sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, JOB_DETAILS_PAGE));
     }
@@ -303,19 +300,19 @@ public class BackofficeController extends Bragi {
     public void deleteJobHTMX() {
         try {
             String jobId = getPathParam("id");
-            
+
             // Delete job from database
             String deleteSql = "DELETE FROM JOBS WHERE id = ?";
             new org.ruitx.jaws.components.Mimir().executeSql(deleteSql, jobId);
-            
-            sendHTMLResponse(OK, 
-                "<tr class=\"bg-red-50\">" +
-                "<td colspan=\"6\" class=\"px-6 py-4\">" +
-                "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">" +
-                "<strong>Deleted!</strong> Job has been permanently deleted." +
-                "</div>" +
-                "</td>" +
-                "</tr>");
+
+            sendHTMLResponse(OK,
+                    "<tr class=\"bg-red-50\">" +
+                            "<td colspan=\"6\" class=\"px-6 py-4\">" +
+                            "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">" +
+                            "<strong>Deleted!</strong> Job has been permanently deleted." +
+                            "</div>" +
+                            "</td>" +
+                            "</tr>");
         } catch (Exception e) {
             log.error("Failed to delete job: {}", e.getMessage(), e);
             sendHTMLResponse(INTERNAL_SERVER_ERROR, "Error deleting job");
@@ -331,7 +328,7 @@ public class BackofficeController extends Bragi {
         }
 
         String html = backofficeService.generateUsersTableHTML(
-            getRequestContext()
+                getRequestContext()
         );
         sendHTMLResponse(OK, html);
     }
@@ -381,16 +378,16 @@ public class BackofficeController extends Bragi {
 
     @AccessControl(login = true, role = "admin")
     @Route(endpoint = "/backoffice/assign-role", method = POST)
-    public void assignRole(RoleAssignRequest request) {        
+    public void assignRole(RoleAssignRequest request) {
         // Get current user ID for audit trail
         Integer assignedBy = Integer.parseInt(Tyr.getUserIdFromJWT(getCurrentToken()));
-        
+
         APIResponse<String> response = authorizationService.assignRole(
-            request.userId(), 
-            request.roleId(), 
-            assignedBy
+                request.userId(),
+                request.roleId(),
+                assignedBy
         );
-                
+
         sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), response.info());
     }
 
@@ -398,10 +395,10 @@ public class BackofficeController extends Bragi {
     @Route(endpoint = "/htmx/backoffice/roles", method = GET)
     public void listRolesHTMX() {
         String html = backofficeService.generateRolesTableHTML(
-            getQueryParam("page"),
-            getQueryParam("size"),
-            getQueryParam("sort"),
-            getQueryParam("direction")
+                getQueryParam("page"),
+                getQueryParam("size"),
+                getQueryParam("sort"),
+                getQueryParam("direction")
         );
         sendHTMLResponse(OK, html);
     }
@@ -433,13 +430,13 @@ public class BackofficeController extends Bragi {
         try {
             Integer roleId = Integer.parseInt(getPathParam("id"));
             APIResponse<String> response = authorizationService.deleteRole(roleId);
-            
+
             if (response.code().equals("200 OK")) {
                 // Return updated roles table
                 listRolesHTMX();
             } else {
-                sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), 
-                    "<div class=\"text-red-600\">" + response.info() + "</div>");
+                sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()),
+                        "<div class=\"text-red-600\">" + response.info() + "</div>");
             }
         } catch (NumberFormatException e) {
             sendHTMLResponse(BAD_REQUEST, "<div class=\"text-red-600\">Invalid role ID</div>");
@@ -452,13 +449,13 @@ public class BackofficeController extends Bragi {
         try {
             Integer userRoleId = Integer.parseInt(getPathParam("id"));
             APIResponse<String> response = authorizationService.removeUserRole(userRoleId);
-            
+
             if (response.code().equals("200 OK")) {
                 // Return updated user-roles table
                 listUserRolesHTMX();
             } else {
-                sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()), 
-                    "<div class=\"text-red-600\">" + response.info() + "</div>");
+                sendHTMLResponse(ResponseCode.fromCodeAndMessage(response.code()),
+                        "<div class=\"text-red-600\">" + response.info() + "</div>");
             }
         } catch (NumberFormatException e) {
             sendHTMLResponse(BAD_REQUEST, "<div class=\"text-red-600\">Invalid user role ID</div>");
@@ -468,8 +465,11 @@ public class BackofficeController extends Bragi {
     // =============================================
     // DTOs for Role Management
     // =============================================
-    
-    public record RoleCreateRequest(String name, String description) {}
-    public record RoleAssignRequest(Integer userId, Integer roleId) {}
+
+    public record RoleCreateRequest(String name, String description) {
+    }
+
+    public record RoleAssignRequest(Integer userId, Integer roleId) {
+    }
 
 }

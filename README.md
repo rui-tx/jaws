@@ -18,10 +18,10 @@ Among other features, these are the main ones
 - **HTML Parsing**: HTML can be enhanced with dynamic values
 - **Database System**: A (very) basic ORM using SQLite
 - **JWT**: Generate access and refresh tokens with ease
-- **Robust HTTP Server**: Built on Eclipse Jetty 
+- **Robust HTTP Server**: Built on Eclipse Jetty
 - **Middleware System**: Extensible middleware for cross-cutting concerns
 - **Async**: A job system for async processing
-
+- **Query-level Caching**: Automatic per-statement caching powered by Caffeine
 
 ## Setup
 
@@ -89,7 +89,8 @@ After starting JAWS, you can access the server using a web browser or an HTTP cl
 curl http://localhost:8080
 ```
 
-> Note: You can test the online version of **JAWS** at the link in the about section. The login for the backoffice is **admin** - **admin1234!**
+> Note: You can test the online version of **JAWS** at the link in the about section. The login for the backoffice is *
+*admin** - **admin1234!**
 
 ## About JAWS
 
@@ -100,7 +101,8 @@ JAWS is built with a modular system. Every module is responsible for one aspect 
 - `Freyr`: Asynchronous job queue system with priority queuing and retry mechanisms
 - `Heimdall`: A file watcher that monitors changes in the specified directory
 - `Hermod`: HTML parser that handles template processing and page assembly
-- `Yggdrassil`: The unified HTTP server with integrated request handling, middleware support, and direct controller routing
+- `Yggdrassil`: The unified HTTP server with integrated request handling, middleware support, and direct controller
+  routing
 - `Mimir`: Database interface for SQLite. Acts as a mini basic ORM
 - `Njord`: Dynamic router that routes requests to controllers
 - `Norns`: Scheduler for tasks, like a cron job
@@ -113,11 +115,13 @@ JAWS is built with a modular system. Every module is responsible for one aspect 
 JAWS uses a typical server request/response logic, like this:
 
 **Sync request**
+
 ```
 [HTTP Request] → [Yggdrassil (Jetty)] → [Middleware Chain] → [Route Discovery] → [Controller Execution] → [Response]
 ```
 
 **Async request**
+
 ```
 [HTTP Request] → [Yggdrassil (Jetty)] → [Middleware Chain] → [Route Discovery] → [Controller] → [Job Submission to Freyr] → [Immediate Response with Job ID]
                                                                                                           *   
@@ -138,6 +142,7 @@ Bifrost is a middleware system for handling cross-cutting concerns:
 - **AuthMiddleware**: JWT authentication for protected routes
 
 Example middleware:
+
 ```java
 public class AuthMiddleware implements Middleware {
     @Override
@@ -153,7 +158,8 @@ public class AuthMiddleware implements Middleware {
 
 ### Bragi
 
-All controllers can and should extend this class. It provides convenient methods for accessing request data and sending responses. The class automatically adapts to work with the current request context.
+All controllers can and should extend this class. It provides convenient methods for accessing request data and sending
+responses. The class automatically adapts to work with the current request context.
 
 **Example**
 
@@ -177,15 +183,19 @@ public void testGetExternalAPI() {
 
 ### Freyr
 
-```Freyr``` is an asynchronous job queue system that provides powerful background job processing capabilities. It supports both parallel and sequential job execution, priority-based processing, automatic retry mechanisms with exponential backoff and job monitoring and statistics.
+```Freyr``` is an asynchronous job queue system that provides powerful background job processing capabilities. It
+supports both parallel and sequential job execution, priority-based processing, automatic retry mechanisms with
+exponential backoff and job monitoring and statistics.
 
 **Key Features:**
+
 - **Dual Queue System**: Separate parallel and sequential job processing queues
 - **Priority-Based Processing**: Jobs are processed based on their priority levels
 - **Retry Management**: Automatic retry with exponential backoff and dead letter queue
 - **Persistent Job Storage**: Jobs are persisted to SQLite database for reliability
 
 **Job Types:**
+
 - **Parallel Jobs**: Execute concurrently using multiple worker threads
 - **Sequential Jobs**: Execute one at a time in FIFO order for tasks requiring strict ordering
 
@@ -258,7 +268,9 @@ public void getJobStatus() {
 }
 ```
 
-The job system automatically handles persistence, retry logic and provides monitoring capabilities. Failed jobs are automatically retried with exponential backoff, and permanently failed jobs are moved to a dead letter queue for manual inspection.
+The job system automatically handles persistence, retry logic and provides monitoring capabilities. Failed jobs are
+automatically retried with exponential backoff, and permanently failed jobs are moved to a dead letter queue for manual
+inspection.
 
 ### Heimdall
 
@@ -267,11 +279,14 @@ changes
 
 ### Hermod
 
-```Hermod``` is responsible for HTML template processing and page assembly using **Thymeleaf**. It provides powerful template processing capabilities with proper servlet context integration, URL resolution, template inheritance, and enhanced performance through caching.
+```Hermod``` is responsible for HTML template processing and page assembly using **Thymeleaf**. It provides powerful
+template processing capabilities with proper servlet context integration, URL resolution, template inheritance, and
+enhanced performance through caching.
 
 **Key Features:**
+
 - **Thymeleaf Integration**: Full Thymeleaf template engine support
-- **WebContext Support**: Proper servlet context for web applications  
+- **WebContext Support**: Proper servlet context for web applications
 - **Template Caching**: Configurable caching with TTL for development and production modes
 - **Fragment Inclusion**: Support for Thymeleaf fragments and template inheritance
 - **URL Building**: Robust URL resolution with `@{/path}` syntax
@@ -368,8 +383,21 @@ public APIResponse<List<User>> listUsers() {
 }
 ```
 
-The ```User``` is the data model for the table ```USER```, and it's responsible for implementing the map from Row to
-itself. Creating the tables is made with a SQL schema file
+The ```User``` class is the data model for the table ```USER```, and it's responsible for mapping a `Row` to itself.
+Creating the tables is done via the SQL schema file.
+
+#### Query Caching
+
+Mimir now includes a transparent read-result cache:
+
+* Annotate any read-method with `@Cacheable(tables = {"TABLE_NAME"}, ttl = 60000)` to enable caching for that call.
+* Results are stored in a Caffeine cache keyed by the SQL string and its parameters.
+* `ttl` (milliseconds) is optional; omit or set to `-1` to use the global default.
+
+When an `INSERT`, `UPDATE` or `DELETE` is executed, Mimir extracts the target
+table (using **JSqlParser** with a heuristic fallback) and only invalidates
+cache entries that read from that table. If the table cannot be determined
+we simply leave the cache as-is and rely on TTL expiration.
 
 ### Njord
 
@@ -540,9 +568,11 @@ This module is just a simple builder that constructs all the response headers. N
 
 ### Yggdrasill
 
-This module is the heart of JAWS. `Yggdrasill` is responsible for handling HTTP requests, processing them through middleware chains, discovering routes, and executing controller methods.
+This module is the heart of JAWS. `Yggdrasill` is responsible for handling HTTP requests, processing them through
+middleware chains, discovering routes, and executing controller methods.
 
 Key features:
+
 - **Jetty-based**: Built on the proven Eclipse Jetty server for reliability and performance
 - **Integrated request handling**: Direct processing without bridge layers
 - **Middleware support**: Extensible middleware chain for cross-cutting concerns
@@ -551,21 +581,24 @@ Key features:
 - **Thread management**: Handles concurrent connections with proper resource management
 - **Exception handling**: Comprehensive error handling and response management
 
-The `RequestContext` contains all the relevant information about the request, including headers, body, JWT tokens, path parameters, and query parameters. Controllers access this through the `Bragi` base class methods.
+The `RequestContext` contains all the relevant information about the request, including headers, body, JWT tokens, path
+parameters, and query parameters. Controllers access this through the `Bragi` base class methods.
 
 **Example request flow:**
 
 ```java
 // Yggdrasill processes request through middleware chain
-LoggingMiddleware -> CorsMiddleware -> AuthMiddleware -> Route Discovery -> Controller
+LoggingMiddleware ->CorsMiddleware ->AuthMiddleware ->
+Route Discovery ->Controller
 
 // Controller handles business logic
 @Route(endpoint = "/api/users", method = GET)
+
 public void getUsers() {
     // Access request data through Bragi methods
     String token = getCurrentToken();
     Map<String, String> headers = getHeaders();
-    
+
     // Process and respond
     sendSucessfulResponse(OK, userService.getAllUsers());
 }

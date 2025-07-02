@@ -39,6 +39,10 @@ public class ApplicationConfig {
     public static final int DEFAULT_RATE_LIMIT_MAX_REQUESTS = 100;
     public static final int DEFAULT_RATE_LIMIT_WINDOW_MS = 60000;
 
+    // Cache (Mimir)
+    public static final boolean DEFAULT_MIMIR_CACHE_ENABLED = true;
+    public static final int DEFAULT_MIMIR_CACHE_MAX_SIZE = 10000;
+
     // Static fields for configuration
     public static final String URL;
     public static final int PORT;
@@ -65,6 +69,10 @@ public class ApplicationConfig {
     // RateLimiter
     public static final int RATE_LIMIT_MAX_REQUESTS;
     public static final int RATE_LIMIT_WINDOW_MS;
+
+    // Cache (Mimir)
+    public static final boolean MIMIR_CACHE_ENABLED;
+    public static final int MIMIR_CACHE_MAX_SIZE;
 
     private static final Properties properties = new Properties();
 
@@ -103,6 +111,10 @@ public class ApplicationConfig {
         RATE_LIMIT_MAX_REQUESTS = getRateLimitMaxRequestsValue();
         RATE_LIMIT_WINDOW_MS = getRateLimitWindowMsValue();
 
+        // Initialize Cache (Mimir) configuration
+        MIMIR_CACHE_ENABLED = getMimirCacheEnabledValue();
+        MIMIR_CACHE_MAX_SIZE = getMimirCacheMaxSizeValue();
+
         JawsLogger.info("JAWS Configuration");
         JawsLogger.info("--------------------------------");
         JawsLogger.info("URL: " + URL);
@@ -124,6 +136,8 @@ public class ApplicationConfig {
         JawsLogger.info("BUFFER_CAPACITY: " + BUFFER_CAPACITY);
         JawsLogger.info("RATE_LIMIT_MAX_REQUESTS: " + RATE_LIMIT_MAX_REQUESTS);
         JawsLogger.info("RATE_LIMIT_WINDOW_MS: " + RATE_LIMIT_WINDOW_MS);
+        JawsLogger.info("MIMIR_CACHE_ENABLED: " + MIMIR_CACHE_ENABLED);
+        JawsLogger.info("MIMIR_CACHE_MAX_SIZE: " + MIMIR_CACHE_MAX_SIZE);
         JawsLogger.info("--------------------------------");
     }
 
@@ -392,6 +406,38 @@ public class ApplicationConfig {
         }
 
         return DEFAULT_RATE_LIMIT_WINDOW_MS;
+    }
+
+    private static boolean getMimirCacheEnabledValue() {
+        String envValue = System.getenv("MIMIR_CACHE_ENABLED");
+        if (envValue != null) {
+            return Boolean.parseBoolean(envValue);
+        }
+        String propValue = properties.getProperty("mimir.cache.enabled");
+        if (propValue != null) {
+            return Boolean.parseBoolean(propValue);
+        }
+        return DEFAULT_MIMIR_CACHE_ENABLED;
+    }
+
+    private static int getMimirCacheMaxSizeValue() {
+        String envValue = System.getenv("MIMIR_CACHE_MAX_SIZE");
+        if (envValue != null) {
+            try {
+                return Integer.parseInt(envValue);
+            } catch (NumberFormatException e) {
+                JawsLogger.warn("Invalid MIMIR_CACHE_MAX_SIZE env var: " + envValue);
+            }
+        }
+        String propValue = properties.getProperty("mimir.cache.maxSize");
+        if (propValue != null) {
+            try {
+                return Integer.parseInt(propValue);
+            } catch (NumberFormatException e) {
+                JawsLogger.warn("Invalid mimir.cache.maxSize in properties: " + propValue);
+            }
+        }
+        return DEFAULT_MIMIR_CACHE_MAX_SIZE;
     }
 
     private static String getConfigValue(String envKey, String propKey, String defaultValue) {
