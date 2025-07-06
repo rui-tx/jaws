@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{backoffice/base.html :: fullLayout(~{::pageContent})}">
+
+    <th:block th:fragment="pageContent">
+        <th:block th:replace="~{components/breadcrumb/breadcrumb.html :: breadcrumb(parentText=${currentUser}, parentUrl=null, currentText='Dashboard', actions=null)}" />
+
+        <th:block th:replace="~{components/hero/hero.html :: hero(title='Dashboard', subtitle='Welcome to the Jaws Backoffice', icon='home')}" />
+
+        <!-- Main Content Section -->
+        <section class="px-6 py-6 space-y-6">
+            <div th:if="${canAccessRoles == 'true'}"
+                 th:replace="~{components/stats-card/stats-card.html :: stats-card(title='Job Queue Statistics', endpoint='/htmx/backoffice/job-stats', refreshable=true)}"></div>
+
+            <div th:if="${canAccessRoles == 'true'}"
+                 th:replace="~{components/data-table/data-table.html :: data-table(title='Users', icon='users', endpoint='/htmx/backoffice/users', refreshable=true)}"></div>
+        </section>
+    </th:block>
+</html> 

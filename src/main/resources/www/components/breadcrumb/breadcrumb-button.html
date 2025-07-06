@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!-- Generic breadcrumb action button -->
+    <th:block th:fragment="breadcrumbButton(text, icon, href, onclick)">
+      <!-- Link variant -->
+      <a th:if="${href != null}" th:href="${href}"
+         class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700">
+         <i th:attr="data-feather=${icon}" class="h-5 w-5 mr-1"></i>
+         <span th:text="${text}"></span>
+      </a>
+      <!-- Button variant -->
+      <button th:if="${href == null}" type="button"
+              th:attr="onclick=${onclick}"
+              class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700">
+         <i th:attr="data-feather=${icon}" class="h-5 w-5 mr-1"></i>
+         <span th:text="${text}"></span>
+      </button>
+    </th:block>
+  </body>
+</html> 

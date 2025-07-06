@@ -93,8 +93,8 @@
                         
                         <!-- Date -->
                         <span th:if="${dateFields != null and dateFields.containsKey(field)}"
-                              th:with="date=${new java.util.Date(item[field])}"
-                              th:text="${#dates.format(date, dateFields[field])}">
+                              th:with="raw=${item[field]}, date=${raw == null || #strings.isEmpty(raw) ? null : new java.util.Date(raw)}"
+                              th:text="${date == null ? '' : #dates.format(date, dateFields[field])}">
                             Date
                         </span>
                         

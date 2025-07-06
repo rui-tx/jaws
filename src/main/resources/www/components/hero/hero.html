@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- Reusable gradient hero header -->
+    <div th:fragment="hero(title, subtitle, icon)">
+        <section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+            <div class="px-6 py-8 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold" th:text="${title}">Title</h1>
+                    <p class="mt-2 text-primary-100" th:text="${subtitle}">Subtitle</p>
+                </div>
+                <div class="hidden lg:block">
+                    <i th:if="${icon}" th:attr="data-feather=${icon}" class="h-16 w-16 text-primary-200"></i>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html> 
