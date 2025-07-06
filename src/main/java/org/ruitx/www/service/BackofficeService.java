@@ -743,7 +743,8 @@ public class BackofficeService {
                                     hx-swap="innerHTML transition:true"
                                     hx-target="#roles-table-body"
                                     hx-trigger="click">
-                                    Delete
+                                    <i data-feather="trash-2" class="h-4 w-4"></i>
+                                    <span class="sr-only">Delete</span>
                                 </button>
                             </td>
                         </tr>
@@ -798,7 +799,8 @@ public class BackofficeService {
                                         hx-swap="innerHTML transition:true"
                                         hx-target="#user-roles-table-body"
                                         hx-trigger="click">
-                                        Remove
+                                        <i data-feather="trash-2" class="h-4 w-4"></i>
+                                        <span class="sr-only">Remove</span>
                                     </button>
                                 </td>
                             </tr>
