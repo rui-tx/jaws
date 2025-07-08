@@ -521,4 +521,22 @@ public class BackofficeController extends Bragi {
         sendHTMLResponse(OK, html);
     }
 
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/cache/:idx", method = GET)
+    public void getCacheEntryHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "HTMX only");
+            return;
+        }
+        int idx;
+        try {
+            idx = Integer.parseInt(getPathParam("idx"));
+        } catch (NumberFormatException ex) {
+            sendHTMLResponse(BAD_REQUEST, "Invalid index");
+            return;
+        }
+        String html = backofficeService.generateCacheEntryModalHTML(idx);
+        sendHTMLResponse(OK, html);
+    }
+
 }

@@ -885,9 +885,23 @@ public class BackofficeService {
         try {
             List<Map<String, Object>> snapshot = Mimir.snapshotCache();
             int size = snapshot.size();
-            List<String> keys = snapshot.stream()
-                    .map(entry -> entry.getOrDefault("sql", "").toString())
-                    .toList();
+
+            // Build clickable key list
+            StringBuilder keysHtml = new StringBuilder("<ul class=\"space-y-1\">");
+            for (int i = 0; i < snapshot.size(); i++) {
+                String sql = snapshot.get(i).getOrDefault("sql", "").toString();
+                String display = sql.length() > 120 ? sql.substring(0, 117) + "…" : sql;
+                keysHtml.append("<li>")
+                        .append("<button class=\"text-left w-full text-xs break-all text-blue-600 hover:underline\" ")
+                        .append("hx-get=\"/htmx/backoffice/cache/").append(i).append("\" ")
+                        .append("hx-target=\"body\" hx-swap=\"beforeend\">")
+                        .append(display.replace("<", "&lt;").replace(">", "&gt;"))
+                        .append("</button></li>");
+            }
+            keysHtml.append("</ul>");
+
+            // Now keys list for later insertion
+            String keysListHtml = keysHtml.toString();
 
             // Build stat items for stats-card content template
             List<Map<String, Object>> statItems = List.of(
@@ -911,10 +925,10 @@ public class BackofficeService {
 
             StringBuilder html = new StringBuilder(statsContent);
             html.append("<div class=\"mt-6\">")
-                    .append("<h3 class=\"text-sm font-medium text-gray-700 mb-2\">Keys (" + keys.size() + ")</h3>")
-                    .append("<pre class=\"bg-gray-50 border border-gray-200 rounded p-4 text-xs max-h-64 overflow-y-auto whitespace-pre-wrap\">")
-                    .append(String.join("\n", keys))
-                    .append("</pre>")
+                    .append("<h3 class=\"text-sm font-medium text-gray-700 mb-2\">Keys (" + size + ")</h3>")
+                    .append("<div class=\"bg-gray-50 border border-gray-200 rounded p-4 text-xs max-h-64 overflow-y-auto whitespace-pre-wrap\">")
+                    .append(keysListHtml)
+                    .append("</div>")
                     .append("<div class=\"mt-4\"><button class=\"inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500\" hx-post=\"/htmx/backoffice/cache/flush\" hx-indicator=\"#stats-spinner\" hx-swap=\"outerHTML transition:true\" hx-target=\"closest #stats-card\">Flush Cache</button></div>")
                     .append("</div>");
 
@@ -1008,6 +1022,39 @@ public class BackofficeService {
             log.error("Failed to generate queue metrics HTML: {}", e.getMessage(), e);
             return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading queue metrics</div>";
         }
+    }
+
+    /**
+     * Returns HTML modal with cache entry details.
+     */
+    public String generateCacheEntryModalHTML(int index) {
+        List<Map<String, Object>> snapshot = Mimir.snapshotCache();
+        if (index < 0 || index >= snapshot.size()) {
+            return "<div class=\"fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center\"><div class=\"bg-white p-6 rounded shadow-lg\">Invalid cache index</div></div>";
+        }
+        Map<String, Object> entry = snapshot.get(index);
+        String json;
+        try {
+            json = org.ruitx.jaws.components.Odin.getMapper().writerWithDefaultPrettyPrinter().writeValueAsString(entry.get("value"));
+        } catch (Exception ex) {
+            json = entry.get("value").toString();
+        }
+        String safeSql = entry.get("sql").toString().replace("<", "&lt;").replace(">", "&gt;");
+        String safeParams = entry.get("params").toString().replace("<", "&lt;").replace(">", "&gt;");
+        String safeJson = json.replace("<", "&lt;").replace(">", "&gt;");
+
+        String html = new StringBuilder()
+                .append("<div id=\"cache-modal\" class=\"fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50\">")
+                .append("<div class=\"bg-white max-w-2xl w-full mx-4 rounded-lg shadow-lg p-6\">")
+                .append("<h2 class=\"text-lg font-medium mb-4\">Cache Entry #").append(index).append("</h2>")
+                .append("<pre class=\"text-xs bg-gray-50 border border-gray-200 rounded p-4 overflow-x-auto mb-4\">")
+                .append("SQL: ").append(safeSql).append("\\nParams: ").append(safeParams).append("\\n\\n").append(safeJson)
+                .append("</pre>")
+                .append("<div class=\"text-right\">")
+                .append("<button onclick=\"document.getElementById('cache-modal').remove()\" class=\"inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded\">Close</button>")
+                .append("</div></div></div>")
+                .toString();
+        return html;
     }
 
     /**
