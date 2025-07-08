@@ -161,6 +161,13 @@
                     </div>
                     
                     <div th:if="${canAccessRoles == 'true'}">
+                        <a href="/backoffice/metrics" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'metrics' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                            <i data-feather="activity" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'metrics' ? 'text-primary-500' : ''}"></i>
+                            <span class="sidebar-text">Metrics</span>
+                        </a>
+                    </div>
+
+                    <div th:if="${canAccessRoles == 'true'}">
                         <a href="/backoffice/settings" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'settings' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
                             <i data-feather="settings" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'settings' ? 'text-primary-500' : ''}"></i>
                             <span class="sidebar-text">Settings</span>

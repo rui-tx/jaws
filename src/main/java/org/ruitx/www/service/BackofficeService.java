@@ -1,6 +1,7 @@
 package org.ruitx.www.service;
 
 import org.ruitx.jaws.components.Hermod;
+import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.types.Context;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * BackofficeService - Business logic for backoffice operations
@@ -874,6 +876,138 @@ public class BackofficeService {
                     </td>
                 </tr>
                 """;
+    }
+
+    /**
+     * Generate cache statistics + key list HTML for HTMX response.
+     */
+    public String generateCacheStatsHTML(Yggdrasill.RequestContext requestContext) {
+        try {
+            List<Map<String, Object>> snapshot = Mimir.snapshotCache();
+            int size = snapshot.size();
+            List<String> keys = snapshot.stream()
+                    .map(entry -> entry.getOrDefault("sql", "").toString())
+                    .toList();
+
+            // Build stat items for stats-card content template
+            List<Map<String, Object>> statItems = List.of(
+                    java.util.Map.of(
+                            "title", "Cache Entries",
+                            "value", size,
+                            "color", "purple",
+                            "icon", "layers"
+                    )
+            );
+
+            Context templateContext = Context.builder()
+                    .with("stats", statItems)
+                    .build();
+
+            String statsContent = org.ruitx.jaws.components.Hermod.processTemplate(
+                    "components/stats-card/stats-content.html",
+                    requestContext.getRequest(),
+                    requestContext.getResponse(),
+                    templateContext);
+
+            StringBuilder html = new StringBuilder(statsContent);
+            html.append("<div class=\"mt-6\">")
+                    .append("<h3 class=\"text-sm font-medium text-gray-700 mb-2\">Keys (" + keys.size() + ")</h3>")
+                    .append("<pre class=\"bg-gray-50 border border-gray-200 rounded p-4 text-xs max-h-64 overflow-y-auto whitespace-pre-wrap\">")
+                    .append(String.join("\n", keys))
+                    .append("</pre>")
+                    .append("<div class=\"mt-4\"><button class=\"inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500\" hx-post=\"/htmx/backoffice/cache/flush\" hx-indicator=\"#stats-spinner\" hx-swap=\"outerHTML transition:true\" hx-target=\"closest #stats-card\">Flush Cache</button></div>")
+                    .append("</div>");
+
+            return html.toString();
+        } catch (Exception e) {
+            log.error("Failed to generate cache stats HTML: {}", e.getMessage(), e);
+            return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading cache stats</div>";
+        }
+    }
+
+    // =============================================
+    // METRICS (CACHE / QUEUES)
+    // =============================================
+
+    /**
+     * Flush cache then return updated cache HTML.
+     */
+    public String flushCacheAndGenerateHTML(Yggdrasill.RequestContext requestContext) {
+        return generateCacheStatsHTML(requestContext);
+    }
+
+    /**
+     * Generate queue metrics HTML (stats + pending job lists).
+     */
+    public String generateQueueMetricsHTML(Yggdrasill.RequestContext requestContext) {
+        try {
+            Map<String, Object> stats = jobQueue.getStatistics();
+
+            List<java.util.Map<String, Object>> statItems = List.of(
+                    Map.of(
+                            "title", "Parallel Queue Size",
+                            "value", stats.getOrDefault("parallelQueueSize", 0),
+                            "color", "yellow",
+                            "icon", "zap"
+                    ),
+                    Map.of(
+                            "title", "Sequential Queue Size",
+                            "value", stats.getOrDefault("sequentialQueueSize", 0),
+                            "color", "blue",
+                            "icon", "list"
+                    ),
+                    Map.of(
+                            "title", "Active Workers",
+                            "value", stats.getOrDefault("activeParallelWorkers", 0),
+                            "color", "green",
+                            "icon", "cpu"
+                    )
+            );
+
+            Context templateContext = Context.builder()
+                    .with("stats", statItems)
+                    .build();
+
+            String statsContent = Hermod.processTemplate(
+                    "components/stats-card/stats-content.html",
+                    requestContext.getRequest(),
+                    requestContext.getResponse(),
+                    templateContext);
+
+            // Pending jobs details (simple list)
+            Mimir db = new Mimir();
+            List<Row> parallelJobs = db.getRows("SELECT id, type FROM JOBS WHERE status = 'PENDING' AND execution_mode = 'PARALLEL' LIMIT 20");
+            List<Row> sequentialJobs = db.getRows("SELECT id, type FROM JOBS WHERE status = 'PENDING' AND execution_mode = 'SEQUENTIAL' LIMIT 20");
+
+            Function<List<Row>, String> toList = rows -> {
+                if (rows.isEmpty()) return "<p class=\"text-sm text-gray-500\">(empty)</p>";
+                StringBuilder sb = new StringBuilder("<ul class=\"text-xs space-y-1\">");
+                for (org.ruitx.jaws.types.Row r : rows) {
+                    sb.append("<li class=\"break-all\"><span class=\"font-mono\">")
+                            .append(r.getString("id").orElse("?"))
+                            .append("</span> – ")
+                            .append(r.getString("type").orElse("unknown"))
+                            .append("</li>");
+                }
+                sb.append("</ul>");
+                return sb.toString();
+            };
+
+            StringBuilder html = new StringBuilder(statsContent);
+            html.append("<div class=\"mt-6 grid grid-cols-1 md:grid-cols-2 gap-6\">")
+                    .append("<div><h3 class=\"text-sm font-medium text-gray-700 mb-2\">Parallel Queue</h3>")
+                    .append(toList.apply(parallelJobs))
+                    .append("</div>")
+                    .append("<div><h3 class=\"text-sm font-medium text-gray-700 mb-2\">Sequential Queue</h3>")
+                    .append(toList.apply(sequentialJobs))
+                    .append("</div></div>");
+
+            return html.toString();
+
+        } catch (Exception e) {
+            log.error("Failed to generate queue metrics HTML: {}", e.getMessage(), e);
+            return "<div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded\">Error loading queue metrics</div>";
+        }
     }
 
     /**

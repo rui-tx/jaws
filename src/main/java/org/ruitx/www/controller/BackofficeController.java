@@ -36,6 +36,7 @@ public class BackofficeController extends Bragi {
     private static final String LOGS_PAGE = "backoffice/logs.html";
     private static final String LOG_DETAILS_PAGE = "backoffice/log-details.html";
     private static final String ROLES_PAGE = "backoffice/roles.html";
+    private static final String METRICS_PAGE = "backoffice/metrics.html";
     private static final Logger log = LoggerFactory.getLogger(BackofficeController.class);
 
     private final AuthRepo authRepo;
@@ -469,6 +470,55 @@ public class BackofficeController extends Bragi {
     }
 
     public record RoleAssignRequest(Integer userId, Integer roleId) {
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/backoffice/metrics", method = GET)
+    public void renderMetrics() {
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+
+        Map<String, String> context = getBaseContext(user);
+        context.put("currentPage", "metrics");
+        setContext(context);
+
+        sendHTMLResponse(OK, renderTemplate(METRICS_PAGE));
+    }
+
+    // =============================================
+    // METRICS HTMX ENDPOINTS
+    // =============================================
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/cache", method = GET)
+    public void getCacheStatsHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+        String html = backofficeService.generateCacheStatsHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/cache/flush", method = POST)
+    public void flushCacheHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+        String html = backofficeService.flushCacheAndGenerateHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/queues", method = GET)
+    public void getQueueMetricsHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+        String html = backofficeService.generateQueueMetricsHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
     }
 
 }

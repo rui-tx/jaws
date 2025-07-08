@@ -3,6 +3,7 @@ package org.ruitx.jaws.components;
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
@@ -26,7 +27,9 @@ import java.sql.Date;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
@@ -40,54 +43,24 @@ import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
  * from a specified file path.
  */
 public class Mimir {
-    // Per-key custom TTL store (nanoseconds)
+    // Per-key custom TTL in nanoseconds
     private static final ConcurrentHashMap<SqlCacheKey, Long> keyToTtl = new ConcurrentHashMap<>();
-
-    // Lazy-initialised cache and flag to avoid static-initialisation cycles
+    // Reverse index lookup table -> cache keys
+    private static final ConcurrentHashMap<String, Set<SqlCacheKey>> tableToKeys = new ConcurrentHashMap<>();
+    // Thread-local storage for current tables and TTL
+    private static final ThreadLocal<Set<String>> currentTables = new ThreadLocal<>();
+    private static final ThreadLocal<Long> currentTtlMs = new ThreadLocal<>();
+    // Thread-local storage for transaction modified tables
+    private static final ThreadLocal<Set<String>> txModifiedTables = ThreadLocal.withInitial(HashSet::new);
+    // Cache for SQL queries
     private static volatile Cache<SqlCacheKey, Object> queryCache;
     private static volatile ThreadLocal<Boolean> allowCacheFlag;
-
-    /**
-     * Ensure the cache (and its supporting ThreadLocal flag) are initialised exactly once.
-     * Called lazily from all public access points that touch caching logic.
-     */
-    private static synchronized void ensureCache() {
-        if (queryCache == null) {
-            allowCacheFlag = ThreadLocal.withInitial(() -> false);
-            queryCache = Caffeine.newBuilder()
-                    .maximumSize(ApplicationConfig.MIMIR_CACHE_MAX_SIZE)
-                    .expireAfter(new com.github.benmanes.caffeine.cache.Expiry<SqlCacheKey, Object>() {
-                        @Override
-                        public long expireAfterCreate(SqlCacheKey key, Object value, long currentTime) {
-                            return keyToTtl.getOrDefault(key, Long.MAX_VALUE);
-                        }
-
-                        @Override
-                        public long expireAfterUpdate(SqlCacheKey key, Object value, long currentTime, long currentDuration) {
-                            return keyToTtl.getOrDefault(key, currentDuration);
-                        }
-
-                        @Override
-                        public long expireAfterRead(SqlCacheKey key, Object value, long currentTime, long currentDuration) {
-                            return currentDuration;
-                        }
-                    })
-                    .build();
-        }
-    }
-
-    // Reverse index: table -> cache keys
-    private static final java.util.concurrent.ConcurrentHashMap<String, Set<SqlCacheKey>> tableToKeys = new ConcurrentHashMap<>();
-    // ThreadLocal for tables set provided by @Cacheable
-    private static final ThreadLocal<Set<String>> currentTables = new ThreadLocal<>();
-    // Add ThreadLocal for TTL after currentTables:
-    private static final ThreadLocal<Long> currentTtlMs = new ThreadLocal<>();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
-    private DataSource dataSource;
-    private File db;
     private String schemaPath;
     private boolean shouldCreateDefaultUser;
+    private DataSource dataSource;
+    private File db;
 
     /**
      * Default constructor -  Uses the default database path and schema from ApplicationConfig.
@@ -129,6 +102,35 @@ public class Mimir {
         initializeDataSource();
     }
 
+    /**
+     * Ensure the cache is initialized.
+     * This method is called before any cache operations to ensure the cache is ready.
+     */
+    private static synchronized void ensureCache() {
+        if (queryCache == null) {
+            allowCacheFlag = ThreadLocal.withInitial(() -> false);
+            queryCache = Caffeine.newBuilder()
+                    .maximumSize(ApplicationConfig.MIMIR_CACHE_MAX_SIZE)
+                    .expireAfter(new Expiry<SqlCacheKey, Object>() {
+                        @Override
+                        public long expireAfterCreate(SqlCacheKey key, Object value, long currentTime) {
+                            return keyToTtl.getOrDefault(key, Long.MAX_VALUE);
+                        }
+
+                        @Override
+                        public long expireAfterUpdate(SqlCacheKey key, Object value, long currentTime, long currentDuration) {
+                            return keyToTtl.getOrDefault(key, currentDuration);
+                        }
+
+                        @Override
+                        public long expireAfterRead(SqlCacheKey key, Object value, long currentTime, long currentDuration) {
+                            return currentDuration;
+                        }
+                    })
+                    .build();
+        }
+    }
+
     public static void enableCacheForCurrentThread() {
         ensureCache();
         allowCacheFlag.set(true);
@@ -142,6 +144,29 @@ public class Mimir {
     public static boolean isCacheAllowedForCurrentThread() {
         ensureCache();
         return allowCacheFlag.get();
+    }
+
+    // ========================================
+    // Cache debugging helper
+    // ========================================
+
+    /**
+     * Returns an immutable snapshot of the current SQL query cache. Each entry contains the original SQL,
+     * the bound parameters, the cached value, and the TTL remaining in nanoseconds. Intended strictly for
+     * diagnostics and should be exposed only through secured debug endpoints.
+     */
+    public static List<Map<String, Object>> snapshotCache() {
+        ensureCache();
+        java.util.List<Map<String, Object>> entries = new ArrayList<>();
+        queryCache.asMap().forEach((key, value) -> {
+            java.util.Map<String, Object> entry = new HashMap<>();
+            entry.put("sql", key.sql);
+            entry.put("params", key.params);
+            entry.put("value", value);
+            entry.put("ttlNanos", keyToTtl.getOrDefault(key, Long.MAX_VALUE));
+            entries.add(java.util.Map.copyOf(entry));
+        });
+        return List.copyOf(entries);
     }
 
     public static void setCurrentTables(Set<String> tables) {
@@ -328,6 +353,8 @@ public class Mimir {
         Connection conn = dataSource.getConnection();
         conn.setAutoCommit(false);
         transactionConnection.set(conn);
+        // Track tables touched inside this transaction
+        txModifiedTables.set(new HashSet<>());
     }
 
     /**
@@ -342,10 +369,12 @@ public class Mimir {
         }
         try {
             conn.commit();
-            invalidateCache();
+            // Selective invalidation based on tables actually modified in this transaction
+            invalidateTables(txModifiedTables.get());
         } finally {
             conn.close();
             transactionConnection.remove();
+            txModifiedTables.remove();
         }
     }
 
@@ -361,10 +390,12 @@ public class Mimir {
         }
         try {
             conn.rollback();
-            invalidateCache();
+            // Still invalidate modified tables to avoid serving stale data
+            invalidateTables(txModifiedTables.get());
         } finally {
             conn.close();
             transactionConnection.remove();
+            txModifiedTables.remove();
         }
     }
 
@@ -445,7 +476,14 @@ public class Mimir {
                 }
 
                 int affected = stmt.executeUpdate();
-                invalidateTables(extractTablesFromWrite(sql));
+
+                // Track modified tables if inside a transaction; else invalidate immediately
+                Set<String> modified = extractTablesFromWrite(sql);
+                if (isTransactionConnection) {
+                    txModifiedTables.get().addAll(modified);
+                } else {
+                    invalidateTables(modified);
+                }
                 return affected;
             } finally {
                 if (stmt != null) try {
@@ -490,7 +528,14 @@ public class Mimir {
             try {
                 stmt = conn.createStatement();
                 boolean result = stmt.execute(sql);
-                invalidateTables(extractTablesFromWrite(sql));
+
+                // Track modified tables if inside a transaction; else invalidate immediately
+                Set<String> modified = extractTablesFromWrite(sql);
+                if (isTransactionConnection) {
+                    txModifiedTables.get().addAll(modified);
+                } else {
+                    invalidateTables(modified);
+                }
                 Logger.trace("SQL executed: {}, result: {}", sql, result);
                 return result;
             } finally {
@@ -524,7 +569,6 @@ public class Mimir {
      * @return Transformed result from the query
      */
     public <T> T executeQuery(String sql, SqlFunction<T> action) {
-        // Determine if cache should be bypassed
         ensureCache();
         boolean skipCache = !ApplicationConfig.MIMIR_CACHE_ENABLED
                 || transactionConnection.get() != null
@@ -562,14 +606,14 @@ public class Mimir {
                 if (!skipCache) {
                     long ttlMs = Optional.ofNullable(currentTtlMs.get()).orElse(-1L);
                     if (ttlMs > 0) {
-                        keyToTtl.put(cacheKey, java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(ttlMs));
+                        keyToTtl.put(cacheKey, TimeUnit.MILLISECONDS.toNanos(ttlMs));
                     }
                     queryCache.put(cacheKey, result);
                     // Register key under current tables for selective invalidation
-                    java.util.Set<String> tbls = currentTables.get();
+                    Set<String> tbls = currentTables.get();
                     if (tbls != null && !tbls.isEmpty()) {
                         for (String tbl : tbls) {
-                            tableToKeys.computeIfAbsent(tbl.toUpperCase(), k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                            tableToKeys.computeIfAbsent(tbl.toUpperCase(), k -> ConcurrentHashMap.newKeySet())
                                     .add(cacheKey);
                         }
                     }
@@ -651,14 +695,15 @@ public class Mimir {
                     if (!skipCache) {
                         long ttlMs = Optional.ofNullable(currentTtlMs.get()).orElse(-1L);
                         if (ttlMs > 0) {
-                            keyToTtl.put(cacheKey, java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(ttlMs));
+                            keyToTtl.put(cacheKey, TimeUnit.MILLISECONDS.toNanos(ttlMs));
                         }
                         queryCache.put(cacheKey, result);
+
                         // Register key under current tables for selective invalidation
-                        java.util.Set<String> tbls = currentTables.get();
+                        Set<String> tbls = currentTables.get();
                         if (tbls != null && !tbls.isEmpty()) {
                             for (String tbl : tbls) {
-                                tableToKeys.computeIfAbsent(tbl.toUpperCase(), k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                                tableToKeys.computeIfAbsent(tbl.toUpperCase(), k -> ConcurrentHashMap.newKeySet())
                                         .add(cacheKey);
                             }
                         }
@@ -708,7 +753,12 @@ public class Mimir {
                 }
 
                 int affectedRows = stmt.executeUpdate();
-                invalidateTables(extractTablesFromWrite(sql));
+                java.util.Set<String> modified = extractTablesFromWrite(sql);
+                if (isTransactionConnection) {
+                    txModifiedTables.get().addAll(modified);
+                } else {
+                    invalidateTables(modified);
+                }
 
                 if (affectedRows == 0) {
                     return List.of();
@@ -849,7 +899,7 @@ public class Mimir {
      * @param params      Parameters for the prepared statement
      * @return Page containing mapped objects and pagination metadata
      */
-    public <T> Page<T> getPage(String sql, PageRequest pageRequest, java.util.function.Function<Row, T> mapper, Object... params) {
+    public <T> Page<T> getPage(String sql, PageRequest pageRequest, Function<Row, T> mapper, Object... params) {
         // Get total count first
         long totalElements = getCountFromQuery(sql, params);
 
