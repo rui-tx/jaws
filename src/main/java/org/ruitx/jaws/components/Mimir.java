@@ -169,6 +169,17 @@ public class Mimir {
         return List.copyOf(entries);
     }
 
+    /**
+     * Flushes the entire query cache and associated metadata.  Intended for admin/diagnostic use.
+     */
+    public static void flushCache() {
+        ensureCache();
+        queryCache.invalidateAll();
+        keyToTtl.clear();
+        tableToKeys.clear();
+        Logger.debug("Mimir cache flushed via flushCache() helper");
+    }
+
     public static void setCurrentTables(Set<String> tables) {
         currentTables.set(tables);
     }

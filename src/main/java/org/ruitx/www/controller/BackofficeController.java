@@ -500,7 +500,7 @@ public class BackofficeController extends Bragi {
     }
 
     @AccessControl(login = true, role = "admin")
-    @Route(endpoint = "/htmx/backoffice/cache/flush", method = POST)
+    @Route(endpoint = "/htmx/backoffice/cache/flush", method = GET)
     public void flushCacheHTMX() {
         if (!isHTMX()) {
             sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");

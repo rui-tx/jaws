@@ -929,7 +929,7 @@ public class BackofficeService {
                     .append("<div class=\"bg-gray-50 border border-gray-200 rounded p-4 text-xs max-h-64 overflow-y-auto whitespace-pre-wrap\">")
                     .append(keysListHtml)
                     .append("</div>")
-                    .append("<div class=\"mt-4\"><button class=\"inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500\" hx-post=\"/htmx/backoffice/cache/flush\" hx-indicator=\"#stats-spinner\" hx-swap=\"outerHTML transition:true\" hx-target=\"closest #stats-card\">Flush Cache</button></div>")
+                    .append("<div class=\"mt-4\"><button class=\"inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500\" hx-get=\"/htmx/backoffice/cache/flush\" hx-indicator=\"#stats-spinner\" hx-swap=\"outerHTML transition:true\" hx-target=\"closest #stats-card\">Flush Cache</button></div>")
                     .append("</div>");
 
             return html.toString();
@@ -947,6 +947,7 @@ public class BackofficeService {
      * Flush cache then return updated cache HTML.
      */
     public String flushCacheAndGenerateHTML(Yggdrasill.RequestContext requestContext) {
+        Mimir.flushCache();
         return generateCacheStatsHTML(requestContext);
     }
 
@@ -1047,7 +1048,7 @@ public class BackofficeService {
                 .append("<div id=\"cache-modal\" class=\"fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50\">")
                 .append("<div class=\"bg-white max-w-2xl w-full mx-4 rounded-lg shadow-lg p-6\">")
                 .append("<h2 class=\"text-lg font-medium mb-4\">Cache Entry #").append(index).append("</h2>")
-                .append("<pre class=\"text-xs bg-gray-50 border border-gray-200 rounded p-4 overflow-x-auto mb-4\">")
+                .append("<pre class=\"text-xs bg-gray-50 border border-gray-200 rounded p-4 overflow-auto max-h-96 mb-4\">")
                 .append("SQL: ").append(safeSql).append("\\nParams: ").append(safeParams).append("\\n\\n").append(safeJson)
                 .append("</pre>")
                 .append("<div class=\"text-right\">")
