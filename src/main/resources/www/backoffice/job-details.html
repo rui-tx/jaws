@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{backoffice/base.html :: fullLayout(~{::pageContent})}">
+
+    <th:block th:fragment="pageContent">
+        <!-- Breadcrumb -->
+        <section class="bg-white border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center space-x-2">
+                <nav class="flex" aria-label="Breadcrumb">
+                    <ol class="flex items-center space-x-2">
+                        <li><a href="/backoffice/jobs" class="text-sm font-medium text-primary-600 hover:underline">Jobs</a></li>
+                        <li><span class="text-gray-400">/</span></li>
+                        <li><span class="text-sm text-gray-500">Job #<span th:text="${jobId}">1</span></span></li>
+                    </ol>
+                </nav>
+            </div>
+        </section>
+
+        <!-- Hero -->
+        <section class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+            <div class="px-6 py-8 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Job Details</h1>
+                    <p class="mt-2 text-primary-100">Inspect background job information</p>
+                </div>
+                <div class="hidden lg:block"><i data-feather="briefcase" class="h-16 w-16 text-primary-200"></i></div>
+            </div>
+        </section>
+
+        <!-- Details Card -->
+        <section class="px-6 py-6">
+            <div class="bg-white shadow rounded-lg p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><span class="font-semibold">Type:</span> <span th:text="${jobType}">ExternalApiJob</span></div>
+                    <div><span class="font-semibold">Status:</span> <span th:text="${jobStatus}">RUNNING</span></div>
+                    <div><span class="font-semibold">Priority:</span> <span th:text="${jobPriority}">5</span></div>
+                    <div><span class="font-semibold">Retries:</span> <span th:text="${jobCurrentRetries}"></span>/<span th:text="${jobMaxRetries}"></span></div>
+                    <div><span class="font-semibold">Timeout (ms):</span> <span th:text="${jobTimeoutMs}">30000</span></div>
+                    <div><span class="font-semibold">Execution Mode:</span> <span th:text="${jobExecutionMode}">PARALLEL</span></div>
+                    <div><span class="font-semibold">Client ID:</span> <span th:text="${jobClientId}">CLI-1</span></div>
+                    <div><span class="font-semibold">User ID:</span> <span th:text="${jobUserId}">1</span></div>
+                    <div><span class="font-semibold">Created At:</span> <span th:text="${jobCreatedAt}"></span></div>
+                    <div><span class="font-semibold">Started At:</span> <span th:text="${jobStartedAt}"></span></div>
+                    <div><span class="font-semibold">Completed At:</span> <span th:text="${jobCompletedAt}"></span></div>
+                </div>
+
+                <div>
+                    <span class="font-semibold">Payload:</span>
+                    <pre class="whitespace-pre-wrap bg-gray-50 p-3 rounded border border-gray-200 text-xs" th:text="${jobPayload}">{}</pre>
+                </div>
+
+                <div th:if="${jobErrorMessage} != ''">
+                    <span class="font-semibold text-red-600">Error Message:</span>
+                    <pre class="whitespace-pre-wrap bg-red-50 text-red-700 p-3 rounded border border-red-200 text-xs" th:text="${jobErrorMessage}"></pre>
+                </div>
+
+                <div class="pt-4">
+                    <a href="/backoffice/jobs" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm rounded hover:bg-primary-700"><i data-feather="arrow-left" class="h-4 w-4 mr-2"></i>Back to Jobs</a>
+                </div>
+            </div>
+        </section>
+
+        <script th:inline="javascript">document.addEventListener('htmx:afterSwap',()=>feather.replace());</script>
+    </th:block>
+</html> 

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html class="h-full bg-gray-100" lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="fullLayout(content)">
+<head>
+    <meta charset="utf-8">
+    <meta content="IE=edge" http-equiv="X-UA-Compatible">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link rel="icon" href="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667" type="image/x-icon" />
+    <title th:text="${pageTitle != null ? pageTitle + ' - Jaws Backoffice' : 'Jaws Backoffice'}">Jaws Backoffice</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="/backoffice/js/htmx.min.js"></script>
+
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.gstatic.com" rel="dns-prefetch">
+    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css">
+
+    <!-- Styles -->
+    <style>
+        .font-nunito { font-family: 'Nunito', sans-serif; }
+        
+        /* Sidebar styles */
+        .sidebar-collapsed {
+            width: 4rem !important;
+        }
+        
+        .sidebar-collapsed .sidebar-text {
+            display: none;
+        }
+        
+        .sidebar-collapsed .px-4 {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        
+        .sidebar-collapsed nav a {
+            justify-content: center !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        
+        .sidebar-collapsed nav a svg {
+            margin-right: 0 !important;
+            width: 1.25rem !important;
+            height: 1.25rem !important;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-collapsed nav p {
+            display: none;
+        }
+        
+        .main-content-collapsed {
+            margin-left: 0 !important;
+        }
+        
+        .sidebar-collapsed .mb-8 {
+            margin-bottom: 1rem !important;
+            text-align: center;
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar-collapsed {
+                width: 16rem !important;
+            }
+            
+            .main-content-collapsed {
+                margin-left: 0 !important;
+            }
+            
+            .sidebar-collapsed .sidebar-text {
+                display: inline !important;
+            }
+            
+            .sidebar-collapsed nav a {
+                justify-content: flex-start !important;
+                padding-left: 0.75rem !important;
+                padding-right: 0.5rem !important;
+            }
+            
+            .sidebar-collapsed nav a svg {
+                margin-right: 0.75rem !important;
+            }
+            
+            .sidebar-collapsed nav p {
+                display: block !important;
+            }
+        }
+    </style>
+    
+    <!-- Page-specific styles -->
+    <th:block th:if="${pageStyles != null}" th:utext="${pageStyles}"></th:block>
+</head>
+<body class="font-nunito bg-gray-100 min-h-screen">
+    <div class="flex min-h-screen" th:fragment="layout(content)">
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full transition-transform lg:translate-x-0 lg:static lg:inset-0" id="sidebar">
+            <div class="h-full flex flex-col">
+                <!-- Logo -->
+                <div class="flex items-center justify-center px-4 py-6 border-b border-gray-200">
+                    <div class="flex items-center">
+                        <img src="https://openmoji.org/data/color/svg/1F988.svg" alt="Jaws" class="h-8 w-8 mr-2">
+                        <span class="text-xl font-bold text-gray-900 sidebar-text">Jaws</span>
+                    </div>
+                </div>
+                
+                <!-- Navigation -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <a href="/backoffice" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'dashboard' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                        <i data-feather="home" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'dashboard' ? 'text-primary-500' : ''}"></i>
+                        <span class="sidebar-text">Dashboard</span>
+                    </a>
+                    
+                    <div th:if="${canAccessUserManagement == 'true'}">
+                        <a href="/backoffice/users" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'users' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                            <i data-feather="users" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'users' ? 'text-primary-500' : ''}"></i>
+                            <span class="sidebar-text">Users</span>
+                        </a>
+                    </div>
+                    
+                    <div th:if="${canAccessRoles == 'true'}">
+                        <a href="/backoffice/roles" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'roles' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                            <i data-feather="shield" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'roles' ? 'text-primary-500' : ''}"></i>
+                            <span class="sidebar-text">Roles</span>
+                        </a>
+                    </div>
+                    
+                    <div th:if="${canAccessRoles == 'true'}">
+                        <a href="/backoffice/jobs" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'jobs' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                            <i data-feather="briefcase" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'jobs' ? 'text-primary-500' : ''}"></i>
+                            <span class="sidebar-text">Jobs</span>
+                        </a>
+                    </div>
+                    
+                    <div th:if="${canAccessRoles == 'true'}">
+                        <a href="/backoffice/logs" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'logs' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                            <i data-feather="file-text" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'logs' ? 'text-primary-500' : ''}"></i>
+                            <span class="sidebar-text">Logs</span>
+                        </a>
+                    </div>
+                    
+                    <div th:if="${canAccessRoles == 'true'}">
+                        <a href="/backoffice/metrics" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'metrics' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                            <i data-feather="activity" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'metrics' ? 'text-primary-500' : ''}"></i>
+                            <span class="sidebar-text">Metrics</span>
+                        </a>
+                    </div>
+
+                    <div th:if="${canAccessRoles == 'true'}">
+                        <a href="/backoffice/settings" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 group" th:classappend="${currentPage == 'settings' ? 'bg-primary-50 border-r-2 border-primary-500 text-primary-700' : ''}">
+                            <i data-feather="settings" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" th:classappend="${currentPage == 'settings' ? 'text-primary-500' : ''}"></i>
+                            <span class="sidebar-text">Settings</span>
+                        </a>
+                    </div>
+                </nav>
+                
+                <!-- Footer -->
+                <div class="p-4 border-t border-gray-200">
+                    <div class="flex items-center">
+                        <img th:src="${profilePicture}" th:alt="${currentUser}" class="h-8 w-8 rounded-full">
+                        <div class="ml-3 sidebar-text">
+                            <p class="text-sm font-medium text-gray-900" th:text="${currentUser}">User</p>
+                            <p class="text-xs text-gray-500">Online</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Mobile menu overlay -->
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 lg:hidden hidden" id="sidebar-overlay"></div>
+        
+        <!-- Main content -->
+        <div class="flex-1 flex flex-col lg:ml-64 min-h-0">
+            <!-- Top Navigation -->
+            <nav class="bg-white shadow-sm border-b border-gray-200 px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <button class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100" id="mobile-menu-button">
+                            <span class="sr-only">Open sidebar</span>
+                            <i data-feather="menu" class="h-6 w-6"></i>
+                        </button>
+                        
+                        <button class="hidden lg:block p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100" id="sidebar-toggle-button">
+                            <span class="sr-only">Toggle sidebar</span>
+                            <i data-feather="menu" class="h-6 w-6"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <!-- User Dropdown -->
+                        <div class="relative">
+                            <button type="button" class="flex items-center space-x-3 text-sm rounded-full hover:bg-gray-50 p-2" id="user-menu-button">
+                                <img class="h-8 w-8 rounded-full" th:alt="${currentUser}" th:src="${profilePicture}">
+                                <span class="hidden lg:block text-sm font-medium text-gray-700" th:text="${currentUser}">User Name</span>
+                                <i data-feather="chevron-down" class="h-5 w-5 text-gray-400"></i>
+                            </button>
+                            
+                            <div class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5" id="user-menu">
+                                <a th:href="@{/backoffice/profile/{userId}(userId=${userId})}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i data-feather="user" class="mr-3 h-5 w-5 text-gray-400"></i>
+                                    My Profile
+                                </a>
+                                <a href="/backoffice/settings" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i data-feather="settings" class="mr-3 h-5 w-5 text-gray-400"></i>
+                                    Settings
+                                </a>
+                                <hr class="my-1 border-gray-200">
+                                <a href="#" onclick="logout()" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i data-feather="log-out" class="mr-3 h-5 w-5 text-gray-400"></i>
+                                    Log Out
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- About Link -->
+                        <a class="hidden lg:flex items-center px-3 py-2 text-sm text-gray-500 hover:text-gray-700" href="https://github.com/rui-tx/jaws/blob/main/README.md" title="About">
+                            <i data-feather="help-circle" class="h-5 w-5"></i>
+                            <span class="ml-2">About</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            
+            <!-- Page Content -->
+            <main class="min-h-screen bg-gray-100">
+                <th:block th:replace="${content}"></th:block>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Base JavaScript -->
+    <script>
+        // Initialize Feather Icons
+        feather.replace();
+        
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        });
+        
+        // Close mobile menu when clicking overlay
+        document.getElementById('sidebar-overlay').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        });
+        
+        // Restore sidebar state from localStorage
+        function restoreSidebarState() {
+            const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.flex-1.lg\\:ml-64');
+            
+            if (isCollapsed) {
+                sidebar.classList.add('sidebar-collapsed');
+                mainContent.classList.add('main-content-collapsed');
+                mainContent.classList.remove('lg:ml-64');
+            } else {
+                mainContent.classList.add('lg:ml-64');
+            }
+        }
+        
+        // Save sidebar state to localStorage
+        function saveSidebarState(isCollapsed) {
+            localStorage.setItem('sidebar-collapsed', isCollapsed.toString());
+        }
+        
+        // Desktop sidebar toggle
+        document.getElementById('sidebar-toggle-button').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.flex-1.lg\\:ml-64');
+            
+            sidebar.classList.toggle('sidebar-collapsed');
+            mainContent.classList.toggle('main-content-collapsed');
+            
+            if (mainContent.classList.contains('main-content-collapsed')) {
+                mainContent.classList.remove('lg:ml-64');
+            } else {
+                mainContent.classList.add('lg:ml-64');
+            }
+            
+            // Save state
+            const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+            saveSidebarState(isCollapsed);
+        });
+        
+        // Restore sidebar state on page load
+        restoreSidebarState();
+        
+        // User menu toggle
+        document.getElementById('user-menu-button').addEventListener('click', function() {
+            const userMenu = document.getElementById('user-menu');
+            userMenu.classList.toggle('hidden');
+        });
+        
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenuButton = document.getElementById('user-menu-button');
+            const userMenu = document.getElementById('user-menu');
+            
+            if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+        
+        // Authentication
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+            document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/backoffice/login.html';
+        }
+        
+        // HTMX Authentication
+        document.addEventListener('htmx:configRequest', function(event) {
+            const authToken = localStorage.getItem('auth_token');
+            if (authToken) {
+                event.detail.headers['Authorization'] = 'Bearer ' + authToken;
+            }
+        });
+        
+        document.addEventListener('htmx:responseError', function(event) {
+            if (event.detail.xhr.status === 401) {
+                logout();
+            }
+        });
+    </script>
+    
+    <!-- Page-specific scripts -->
+    <th:block th:if="${pageScripts != null}" th:utext="${pageScripts}"></th:block>
+</body>
+</html> 

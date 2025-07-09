@@ -174,6 +174,7 @@ public class BackofficeRepo {
     /**
      * Get all roles
      */
+    @Cacheable(tables = {"ROLE"})
     public List<Role> getAllRoles() {
         List<Row> rows = db.getRows("SELECT * FROM ROLE ORDER BY name");
         return rows.stream()
@@ -208,6 +209,7 @@ public class BackofficeRepo {
     /**
      * Get all user-role assignments with user and role details
      */
+    @Cacheable(tables = {"USER_ROLE"})
     public List<UserRole> getAllUserRoles() {
         String sql = """
                 SELECT ur.*, u.user as username, r.name as role_name 
@@ -232,6 +234,7 @@ public class BackofficeRepo {
     /**
      * Get user count for a specific role
      */
+    @Cacheable(tables = {"USER_ROLE"})
     public int getUserCountForRole(Integer roleId) {
         Row row = db.getRow("SELECT COUNT(*) as count FROM USER_ROLE WHERE role_id = ?", roleId);
         return row != null ? row.getInt("count").orElse(0) : 0;
@@ -244,6 +247,7 @@ public class BackofficeRepo {
     /**
      * Get paginated users for backoffice management
      */
+    @Cacheable(tables = {"USER"})
     public Page<Row> getUsersPage(PageRequest pageRequest) {
         return db.getPage("SELECT * FROM USER", pageRequest);
     }

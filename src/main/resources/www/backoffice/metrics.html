@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{backoffice/base.html :: fullLayout(~{::pageContent})}">
+
+    <th:block th:fragment="pageContent">
+        <th:block th:replace="~{components/breadcrumb/breadcrumb.html :: breadcrumb(parentText=${currentUser}, parentUrl=null, currentText='Metrics', actions=null)}" />
+
+        <th:block th:replace="~{components/hero/hero.html :: hero(title='System Metrics', subtitle='Cache & Queue insights', icon='activity')}" />
+
+        <!-- Main Content Section -->
+        <section class="px-6 py-6 space-y-6">
+            <div th:replace="~{components/stats-card/stats-card.html :: stats-card(title='Cache Metrics', endpoint='/htmx/backoffice/cache', refreshable=true)}"></div>
+
+            <div th:replace="~{components/stats-card/stats-card.html :: stats-card(title='Queue Metrics', endpoint='/htmx/backoffice/queues', refreshable=true)}"></div>
+        </section>
+    </th:block>
+</html> 

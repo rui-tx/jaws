@@ -26,17 +26,17 @@ import static org.ruitx.jaws.strings.ResponseCode.*;
 
 public class BackofficeController extends Bragi {
 
-    private static final String BASE_HTML_PATH = "backoffice/index.html";
-    private static final String BODY_HTML_PATH = "backoffice/_body.html";
-    private static final String DASHBOARD_PAGE = "backoffice/partials/dashboard.html";
-    private static final String SETTINGS_PAGE = "backoffice/partials/settings.html";
-    private static final String USERS_PAGE = "backoffice/partials/users.html";
-    private static final String USER_PROFILE_PAGE = "backoffice/partials/profile.html";
-    private static final String JOBS_PAGE = "backoffice/partials/jobs.html";
-    private static final String JOB_DETAILS_PAGE = "backoffice/partials/job-details.html";
-    private static final String LOGS_PAGE = "backoffice/partials/logs.html";
-    private static final String LOG_DETAILS_PAGE = "backoffice/partials/log-details.html";
-    private static final String ROLES_PAGE = "backoffice/partials/roles.html";
+    // MPA page paths - each page is now a complete HTML document
+    private static final String DASHBOARD_PAGE = "backoffice/dashboard.html";
+    private static final String SETTINGS_PAGE = "backoffice/settings.html";
+    private static final String USERS_PAGE = "backoffice/users.html";
+    private static final String USER_PROFILE_PAGE = "backoffice/profile.html";
+    private static final String JOBS_PAGE = "backoffice/jobs.html";
+    private static final String JOB_DETAILS_PAGE = "backoffice/job-details.html";
+    private static final String LOGS_PAGE = "backoffice/logs.html";
+    private static final String LOG_DETAILS_PAGE = "backoffice/log-details.html";
+    private static final String ROLES_PAGE = "backoffice/roles.html";
+    private static final String METRICS_PAGE = "backoffice/metrics.html";
     private static final Logger log = LoggerFactory.getLogger(BackofficeController.class);
 
     private final AuthRepo authRepo;
@@ -46,7 +46,7 @@ public class BackofficeController extends Bragi {
     private final BackofficeService backofficeService;
 
     public BackofficeController() {
-        bodyHtmlPath = BODY_HTML_PATH;
+        // No longer need bodyHtmlPath for MPA approach
         this.authRepo = new AuthRepo();
         this.authService = new AuthService();
         this.authorizationService = new AuthorizationService();
@@ -73,7 +73,7 @@ public class BackofficeController extends Bragi {
         context.put("currentPage", "dashboard");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, DASHBOARD_PAGE));
+        sendHTMLResponse(OK, renderTemplate(DASHBOARD_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -85,7 +85,7 @@ public class BackofficeController extends Bragi {
         context.put("currentPage", "settings");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, SETTINGS_PAGE));
+        sendHTMLResponse(OK, renderTemplate(SETTINGS_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -97,7 +97,7 @@ public class BackofficeController extends Bragi {
         context.put("currentPage", "users");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USERS_PAGE));
+        sendHTMLResponse(OK, renderTemplate(USERS_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -152,7 +152,7 @@ public class BackofficeController extends Bragi {
         context.put("currentPage", "profile");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, USER_PROFILE_PAGE));
+        sendHTMLResponse(OK, renderTemplate(USER_PROFILE_PAGE));
     }
 
     @AccessControl(login = true)
@@ -187,7 +187,7 @@ public class BackofficeController extends Bragi {
         context.put("currentPage", "jobs");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, JOBS_PAGE));
+        sendHTMLResponse(OK, renderTemplate(JOBS_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -201,7 +201,7 @@ public class BackofficeController extends Bragi {
 
         JawsLogger.info("BackofficeController: Rendering logs page");
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, LOGS_PAGE));
+        sendHTMLResponse(OK, renderTemplate(LOGS_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -235,7 +235,7 @@ public class BackofficeController extends Bragi {
 
         JawsLogger.info("BackofficeController: Rendering log details page for log ID: {}", logId);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, LOG_DETAILS_PAGE));
+        sendHTMLResponse(OK, renderTemplate(LOG_DETAILS_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -272,7 +272,7 @@ public class BackofficeController extends Bragi {
         context.put("jobCompletedAt", jobRow.getLong("completed_at").map(ts -> JawsUtils.formatUnixTimestamp(ts)).orElse(""));
 
         setContext(context);
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, JOB_DETAILS_PAGE));
+        sendHTMLResponse(OK, renderTemplate(JOB_DETAILS_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -366,7 +366,7 @@ public class BackofficeController extends Bragi {
         context.put("currentPage", "roles");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, ROLES_PAGE));
+        sendHTMLResponse(OK, renderTemplate(ROLES_PAGE));
     }
 
     @AccessControl(login = true, role = "admin")
@@ -470,6 +470,73 @@ public class BackofficeController extends Bragi {
     }
 
     public record RoleAssignRequest(Integer userId, Integer roleId) {
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/backoffice/metrics", method = GET)
+    public void renderMetrics() {
+        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
+
+        Map<String, String> context = getBaseContext(user);
+        context.put("currentPage", "metrics");
+        setContext(context);
+
+        sendHTMLResponse(OK, renderTemplate(METRICS_PAGE));
+    }
+
+    // =============================================
+    // METRICS HTMX ENDPOINTS
+    // =============================================
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/cache", method = GET)
+    public void getCacheStatsHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+        String html = backofficeService.generateCacheStatsHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/cache/flush", method = GET)
+    public void flushCacheHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+        String html = backofficeService.flushCacheAndGenerateHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/queues", method = GET)
+    public void getQueueMetricsHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "This endpoint is only accessible via HTMX");
+            return;
+        }
+        String html = backofficeService.generateQueueMetricsHTML(getRequestContext());
+        sendHTMLResponse(OK, html);
+    }
+
+    @AccessControl(login = true, role = "admin")
+    @Route(endpoint = "/htmx/backoffice/cache/:idx", method = GET)
+    public void getCacheEntryHTMX() {
+        if (!isHTMX()) {
+            sendHTMLResponse(METHOD_NOT_ALLOWED, "HTMX only");
+            return;
+        }
+        int idx;
+        try {
+            idx = Integer.parseInt(getPathParam("idx"));
+        } catch (NumberFormatException ex) {
+            sendHTMLResponse(BAD_REQUEST, "Invalid index");
+            return;
+        }
+        String html = backofficeService.generateCacheEntryModalHTML(idx);
+        sendHTMLResponse(OK, html);
     }
 
 }

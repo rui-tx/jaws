@@ -1,6 +1,7 @@
 package org.ruitx.www.repository;
 
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.interfaces.Cacheable;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.www.model.auth.User;
 import org.ruitx.www.model.auth.UserSession;
@@ -28,25 +29,25 @@ public class AuthRepo {
     }
 
     public Optional<Integer> updateUser(User user) {
-        int result =  db.executeSql(
-            """
-            UPDATE USER SET
-                    password_hash = ?,
-                    email = ?,
-                    first_name = ?,
-                    last_name = ?,
-                    birthdate = ?,
-                    gender = ?,
-                    phone_number = ?,
-                    profile_picture = ?,
-                    bio = ?,
-                    location = ?,
-                    website = ?,
-                    is_active = ?,
-                    lockout_until = ?,
-                    updated_at = ?
-            WHERE id = ?
-            """,
+        int result = db.executeSql(
+                """
+                        UPDATE USER SET
+                                password_hash = ?,
+                                email = ?,
+                                first_name = ?,
+                                last_name = ?,
+                                birthdate = ?,
+                                gender = ?,
+                                phone_number = ?,
+                                profile_picture = ?,
+                                bio = ?,
+                                location = ?,
+                                website = ?,
+                                is_active = ?,
+                                lockout_until = ?,
+                                updated_at = ?
+                        WHERE id = ?
+                        """,
                 user.passwordHash(),
                 user.email(),
                 user.firstName(),
@@ -117,6 +118,7 @@ public class AuthRepo {
         return getUserById(id.longValue());
     }
 
+    @Cacheable(tables = {"USER"})
     public List<User> getAllUsers() {
         List<Row> rows = db.getRows("SELECT * FROM USER ORDER BY created_at DESC");
         return rows.stream()
