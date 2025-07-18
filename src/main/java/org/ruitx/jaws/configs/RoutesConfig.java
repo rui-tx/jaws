@@ -1,6 +1,7 @@
 package org.ruitx.jaws.configs;
 
-import org.ruitx.www.controller.*;
+import org.ruitx.www.controller.APIController;
+import org.ruitx.www.controller.AuthController;
 
 import java.util.List;
 
@@ -15,11 +16,6 @@ public class RoutesConfig {
 
     public static final List<Object> ROUTES = List.of(
             new AuthController(),
-            new PasteitController(),
-            new BackofficeController(),
-            new APIController(),
-            new JobController(),
-            new ImageController(),
-            new AdminController()
+            new APIController()
     );
 }

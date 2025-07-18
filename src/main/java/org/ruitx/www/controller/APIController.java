@@ -11,8 +11,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
+import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
+import static org.ruitx.jaws.strings.ResponseType.HTML;
 import static org.ruitx.jaws.strings.ResponseType.JSON;
 import static org.ruitx.jaws.types.TypeDefinition.LIST_POST;
 
@@ -57,5 +59,15 @@ public class APIController extends Bragi {
         }
 
         sendSuccessfulResponse(response.code(), response.data());
+    }
+
+    @Route(endpoint = "/backoffice", method = GET, responseType = HTML)
+    public void renderBackoffice() {
+
+        Map<String, String> context = new HashMap<>();
+        context.put("currentPage", "dashboard");
+        setContext(context);
+
+        sendHTMLResponse(OK, renderTemplate("backoffice/index.html"));
     }
 }

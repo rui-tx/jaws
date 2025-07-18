@@ -6,8 +6,6 @@ import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.www.service.AuthService;
-import org.ruitx.www.service.ImageService;
-import org.ruitx.www.service.PasteService;
 
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -124,18 +122,6 @@ public final class Odin {
                 () -> new AuthService().cleanOldSessions(),
                 30,
                 TimeUnit.MINUTES
-        );
-        norns.registerTask(
-                "clean-expired-pastes",
-                () -> new PasteService().cleanExpiredPastes(),
-                10,
-                TimeUnit.MINUTES
-        );
-        norns.registerTask(
-                "clean-old-images",
-                () -> new ImageService().cleanOldImages(),
-                1,
-                TimeUnit.HOURS
         );
         return new Thread(norns, "norns");
     }

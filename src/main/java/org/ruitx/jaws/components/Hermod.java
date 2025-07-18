@@ -10,6 +10,7 @@ import org.thymeleaf.context.WebContext;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
 import org.thymeleaf.web.servlet.JakartaServletWebApplication;
+import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
 
 import java.io.File;
 import java.io.IOException;
@@ -68,6 +69,9 @@ public final class Hermod {
         fileResolver.setOrder(1);
 
         engine.addTemplateResolver(fileResolver);
+
+        // Add layout dialect for template inheritance
+        engine.addDialect(new LayoutDialect());
 
         return engine;
     }

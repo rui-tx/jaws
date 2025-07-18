@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html layout:decorate="~{backoffice/layouts/base.html}"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <title>Jaws Backoffice - Dashboard</title>
+</head>
+<body>
+<section layout:fragment="content">
+    <p th:text="${currentPage}"></p>
+</section>
+<footer>
+    <p layout:fragment="footer">Dashboard footer</p>
+</footer>
+</body>
+</html>

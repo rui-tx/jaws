@@ -2,8 +2,6 @@ package org.ruitx.jaws.configs;
 
 import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.utils.JawsLoggerJob;
-import org.ruitx.www.jobs.ExternalApiJob;
-import org.ruitx.www.jobs.ImageResizeJob;
 import org.ruitx.www.jobs.ParallelPingJob;
 import org.ruitx.www.jobs.SequentialPingJob;
 
@@ -24,8 +22,6 @@ public class JobRegistryConfig {
     public static final Map<String, Class<? extends Job>> JOBS = Map.of(
             SequentialPingJob.JOB_TYPE, SequentialPingJob.class,
             ParallelPingJob.JOB_TYPE, ParallelPingJob.class,
-            ExternalApiJob.JOB_TYPE, ExternalApiJob.class,
-            ImageResizeJob.JOB_TYPE, ImageResizeJob.class,
             JawsLoggerJob.JOB_TYPE, JawsLoggerJob.class
     );
 
