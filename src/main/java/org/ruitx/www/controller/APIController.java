@@ -5,6 +5,7 @@ import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.dto.api.Post;
 import org.ruitx.www.service.APIService;
+import org.tinylog.Logger;
 
 import java.util.HashMap;
 import java.util.List;
@@ -67,7 +68,8 @@ public class APIController extends Bragi {
         Map<String, String> context = new HashMap<>();
         context.put("currentPage", "dashboard");
         setContext(context);
+        Logger.info("test backoffice rendering");
 
-        sendHTMLResponse(OK, renderTemplate("backoffice/index.html"));
+        sendHTMLResponse(OK, renderTemplate("backoffice/main.html"));
     }
 }

@@ -17,3 +17,5 @@ alwaysApply: true
 - In doubt ask, dont assume: Never assume something that you are not 100% certain that is what the user want. In doubt ask.
 
 - Investigate, then plan: Never start coding the problem without investigating and making a plan. ALWAYS do this and only start coding when the user approves.
+
+- Imports should always be on the top of the file, unless there is a name conflict.

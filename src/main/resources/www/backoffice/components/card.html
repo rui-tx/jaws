@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- Simple card with title, description, content, footer -->
+    <div th:fragment="simple-card(title, description, content, footer)">
+        <div class="card">
+            <header th:if="${title != null}">
+                <h2 th:text="${title}">Card Title</h2>
+                <p th:if="${description != null}" th:text="${description}">Card Description</p>
+            </header>
+            <section th:if="${content != null}">
+                <div th:utext="${content}">Card Content</div>
+            </section>
+            <footer th:if="${footer != null}">
+                <div th:utext="${footer}">Card Footer</div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Stats card with icon, label, value, color -->
+    <div th:fragment="stats-card(icon, label, value, color)">
+        <div class="card">
+            <section>
+                <div class="flex items-center gap-2">
+                    <div th:utext="${icon}" th:class="${'text-' + color + '-500'}">
+                        <!-- Icon will be inserted here -->
+                    </div>
+                    <div>
+                        <p class="text-sm text-muted-foreground" th:text="${label}">Label</p>
+                        <p class="text-2xl font-bold" th:text="${value}">Value</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Card with refresh button -->
+    <div th:fragment="refreshable-card(title, description, content, footer, refresh-url)">
+        <div class="card">
+            <header th:if="${title != null}">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 th:text="${title}">Card Title</h2>
+                        <p th:if="${description != null}" th:text="${description}">Card Description</p>
+                    </div>
+                    <button th:href="${refresh-url}"
+                            hx-get="${refresh-url}"
+                            hx-target="closest .card"
+                            hx-swap="outerHTML"
+                            th:class="${refresh-url != null ? 'btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent' : 'btn btn-ghost btn-sm p-2 rounded-md opacity-50 cursor-not-allowed'}"
+                            title="Refresh"
+                            th:disabled="${refresh-url == null}">
+                        <i class="icon icon-arrow-path w-4 h-4"></i>
+                    </button>
+                </div>
+            </header>
+            <section th:if="${content != null}">
+                <div th:utext="${content}">Card Content</div>
+            </section>
+            <footer th:if="${footer != null}">
+                <div th:utext="${footer}">Card Footer</div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html> 

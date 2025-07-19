@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html layout:decorate="~{backoffice/layouts/base.html}"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+<section layout:fragment="content">
+    <div class="space-y-6">
+        <!-- Welcome Section -->
+        <div th:replace="~{backoffice/components/card.html :: simple-card(
+            'Welcome to Jaws Backoffice',
+            'This is your dashboard. Use the sidebar to navigate between different sections.',
+            null,
+            null
+        )}"></div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Users Stats Card -->
+            <div th:replace="~{backoffice/components/card.html :: stats-card(
+                null,
+                'Total Users',
+                '1,234',
+                'blue'
+            )}">
+                <div id="users-icon">
+                    <i class="icon icon-users w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- Sessions Stats Card ~{::#sessions-icon}-->
+            <div th:replace="~{backoffice/components/card.html :: stats-card(
+                null,
+                'Active Sessions',
+                '567',
+                'green'
+            )}">
+                <div id="sessions-icon">
+                    <i class="icon icon-document-text w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- API Calls Stats Card -->
+            <div th:replace="~{backoffice/components/card.html :: stats-card(
+                null,
+                'API Calls',
+                '89,123',
+                'orange'
+            )}">
+                <div id="api-icon">
+                    <i class="icon icon-plus w-6 h-6"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div th:replace="~{backoffice/components/card.html :: refreshable-card(
+            'Recent Activity',
+            null,
+            ~{::#activity-content},
+            null,
+            '/backoffice/api/activity'
+        )}">
+            <div id="activity-content">
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium">New user registered</p>
+                            <p class="text-xs text-muted-foreground">2 minutes ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium">API endpoint called</p>
+                            <p class="text-xs text-muted-foreground">5 minutes ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent">
+                        <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium">System backup completed</p>
+                            <p class="text-xs text-muted-foreground">1 hour ago</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

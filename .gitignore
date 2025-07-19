@@ -42,3 +42,5 @@ build/
 ### Database files ###
 *.db
 src/main/resources/db.db
+/src/main/resources/www/backoffice/node_modules/
+/src/main/resources/www/backoffice/package-lock.json

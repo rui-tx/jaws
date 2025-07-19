@@ -1,18 +1,98 @@
 <!DOCTYPE html>
-<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Layout page</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title layout:title-pattern="$CONTENT_TITLE - Jaws Backoffice">Jaws Backoffice</title>
+    <link th:href="@{/backoffice/styles.css}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/sidebar.min.js" defer></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+    <script th:src="@{/backoffice/scripts/base.js}" defer></script>
 </head>
-<body>
-<header>
-    <h1>Jaws Backoffice</h1>
-</header>
-<section layout:fragment="content">
-    <p>Page content goes here</p>
-</section>
-<footer>
-    <p>Footer</p>
-    <p layout:fragment="footer">Custom footer here</p>
-</footer>
+<body class="min-h-screen bg-background">
+    <!-- Sidebar -->
+    <aside class="sidebar" data-side="left" aria-hidden="false">
+        <nav aria-label="Sidebar navigation">
+            <header class="p-4 border-b">
+                <h1 class="text-xl font-bold">Jaws</h1>
+            </header>
+            
+            <section class="scrollbar">
+                <div role="group" aria-labelledby="group-label-main">
+                    <h3 id="group-label-main" class="sr-only">Main Navigation</h3>
+                    
+                    <ul>
+                        <li>
+                            <a href="/backoffice" class="flex items-center gap-3 px-4 py-3 hover:bg-accent">
+                                <i class="icon icon-home w-5 h-5"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        
+                        <li>
+                            <a href="/backoffice/users" class="flex items-center gap-3 px-4 py-3 hover:bg-accent">
+                                <i class="icon icon-users w-5 h-5"></i>
+                                <span>Users</span>
+                            </a>
+                        </li>
+                        
+                        <li>
+                            <a href="/backoffice/logs" class="flex items-center gap-3 px-4 py-3 hover:bg-accent">
+                                <i class="icon icon-document-text w-5 h-5"></i>
+                                <span>Logs</span>
+                            </a>
+                        </li>
+                        
+                        <li>
+                            <a href="/backoffice/settings" class="flex items-center gap-3 px-4 py-3 hover:bg-accent">
+                                <i class="icon icon-cog-6-tooth w-5 h-5"></i>
+                                <span>Settings</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1">
+        <!-- Top Bar -->
+        <header class="flex items-center justify-between p-4 border-b bg-background">
+            <div class="flex items-center gap-4">
+                <button type="button" 
+                        onclick="document.dispatchEvent(new CustomEvent('basecoat:sidebar'))"
+                        class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]">
+                    <i class="icon icon-bars-3 w-5 h-5"></i>
+                </button>
+                <h2 class="text-lg font-semibold">Dashboard</h2>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]">
+                    <i class="icon icon-bell w-5 h-5"></i>
+                </button>
+                <button class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]" onclick="document.dispatchEvent(new CustomEvent('basecoat:theme'))" id="theme-toggle">
+                    <div id="sun-icon">
+                        <i class="icon icon-sun w-5 h-5"></i>
+                    </div>
+                    <div id="moon-icon" class="hidden">
+                        <i class="icon icon-moon w-5 h-5"></i>
+                    </div>
+                </button>
+                <button class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]">
+                    <i class="icon icon-ellipsis-vertical w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="p-4 md:p-6">
+            <section layout:fragment="content">
+                <p>Page content goes here</p>
+            </section>
+        </div>
+    </main>
 </body>
 </html>
