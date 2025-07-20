@@ -2,6 +2,7 @@ package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.dto.api.Post;
 import org.ruitx.www.service.APIService;
@@ -18,6 +19,8 @@ import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.strings.ResponseType.HTML;
 import static org.ruitx.jaws.strings.ResponseType.JSON;
 import static org.ruitx.jaws.types.TypeDefinition.LIST_POST;
+import org.ruitx.jaws.components.Hermod;
+import org.ruitx.jaws.types.Context;
 
 public class APIController extends Bragi {
 
@@ -68,8 +71,40 @@ public class APIController extends Bragi {
         Map<String, String> context = new HashMap<>();
         context.put("currentPage", "dashboard");
         setContext(context);
-        Logger.info("test backoffice rendering");
 
         sendHTMLResponse(OK, renderTemplate("backoffice/main.html"));
+    }
+
+    @Route(endpoint = "/backoffice/api/user-count", method = GET, responseType = HTML)
+    public void getUserCount() {
+        try {
+            Thread.sleep(2000); // Simulate delay for skeleton loading
+            int userCount = 1234; 
+
+            Map<String, Object> statsData = Map.of(
+                "icon", "icon-users",
+                "label", "Total Users",
+                "value", userCount
+            );
+
+            Context templateContext = Context.builder()
+                .with("statsData", statsData)
+                .build();
+
+            String html = Hermod.processTemplate(
+                "backoffice/components/card/stats-card-view.html", 
+                getRequestContext().getRequest(), 
+                getRequestContext().getResponse(), 
+                templateContext
+            );
+
+            sendHTMLResponse(OK, html);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            sendErrorResponse(ResponseCode.INTERNAL_SERVER_ERROR, "Request interrupted");
+        } catch (Exception e) {
+            Logger.error("Error getting user count: {}", e.getMessage());
+            sendErrorResponse(ResponseCode.INTERNAL_SERVER_ERROR, "Failed to get user count");
+        }
     }
 }

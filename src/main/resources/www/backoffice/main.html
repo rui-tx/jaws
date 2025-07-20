@@ -9,7 +9,7 @@
 <section layout:fragment="content">
     <div class="space-y-6">
         <!-- Welcome Section -->
-        <div th:replace="~{backoffice/components/card.html :: simple-card(
+        <div th:replace="~{backoffice/components/card/card.html :: simple-card(
             'Welcome to Jaws Backoffice',
             'This is your dashboard. Use the sidebar to navigate between different sections.',
             null,
@@ -18,20 +18,18 @@
 
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Users Stats Card -->
-            <div th:replace="~{backoffice/components/card.html :: stats-card(
-                null,
-                'Total Users',
-                '1,234',
-                'blue'
-            )}">
-                <div id="users-icon">
-                    <i class="icon icon-users w-6 h-6"></i>
-                </div>
+            <!-- Users Stats Card with HTMX loading -->
+            <div class="card" 
+                 hx-get="/backoffice/api/user-count"
+                 hx-trigger="load"
+                 hx-target="this"
+                 hx-swap="outerHTML">
+                <!-- Skeleton state while loading -->
+                <div th:replace="~{backoffice/components/card/card.html :: skeleton-card}"></div>
             </div>
 
-            <!-- Sessions Stats Card ~{::#sessions-icon}-->
-            <div th:replace="~{backoffice/components/card.html :: stats-card(
+            <!-- Sessions Stats Card -->
+            <div th:replace="~{backoffice/components/card/card.html :: stats-card(
                 null,
                 'Active Sessions',
                 '567',
@@ -43,7 +41,7 @@
             </div>
 
             <!-- API Calls Stats Card -->
-            <div th:replace="~{backoffice/components/card.html :: stats-card(
+            <div th:replace="~{backoffice/components/card/card.html :: stats-card(
                 null,
                 'API Calls',
                 '89,123',
@@ -56,7 +54,7 @@
         </div>
 
         <!-- Recent Activity -->
-        <div th:replace="~{backoffice/components/card.html :: refreshable-card(
+        <div th:replace="~{backoffice/components/card/card.html :: refreshable-card(
             'Recent Activity',
             null,
             ~{::#activity-content},
