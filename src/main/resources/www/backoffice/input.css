@@ -130,3 +130,27 @@
 .icon.text-red-600 { --icon-color: #dc2626; }
 .icon.text-purple-500 { --icon-color: #8b5cf6; }
 .icon.text-purple-600 { --icon-color: #7c3aed; }
+
+/* HTMX Loading Indicator */
+.htmx-indicator {
+  opacity: 0;
+  transition: opacity 200ms ease-in;
+}
+
+.htmx-request .htmx-indicator {
+  opacity: 1;
+}
+
+.htmx-request.htmx-indicator {
+  opacity: 1;
+}
+
+/* Disable button and hide regular icon during loading */
+.htmx-request button {
+  pointer-events: none;
+  opacity: 1;
+}
+
+.htmx-request #refresh-icon {
+  opacity: 0;
+}

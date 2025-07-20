@@ -37,39 +37,13 @@
             </div>
         </div>
 
-        <!-- Recent Activity -->
-        <div th:replace="~{backoffice/components/card/card.html :: refreshable-card(
-            'Recent Activity',
-            null,
-            ~{::#activity-content},
-            null,
-            '/backoffice/api/activity'
-        )}">
-            <div id="activity-content">
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent">
-                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium">New user registered</p>
-                            <p class="text-xs text-muted-foreground">2 minutes ago</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent">
-                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium">API endpoint called</p>
-                            <p class="text-xs text-muted-foreground">5 minutes ago</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent">
-                        <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium">System backup completed</p>
-                            <p class="text-xs text-muted-foreground">1 hour ago</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <!-- System Logs -->
+        <div hx-get="/backoffice/htmx/logs"
+             hx-swap="outerHTML transition:true"
+             hx-target="this"
+             hx-trigger="load">
+            <!-- Skeleton state while loading -->
+            <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
         </div>
     </div>
 </section>

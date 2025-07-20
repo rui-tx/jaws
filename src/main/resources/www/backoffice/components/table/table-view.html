@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:replace="~{backoffice/components/table/table.html :: table-logs(
+        ${data.headers},
+        ${data.rows},
+        ${data.caption},
+        ${data.actions}
+    )}"></div>
+</body>
+</html> 

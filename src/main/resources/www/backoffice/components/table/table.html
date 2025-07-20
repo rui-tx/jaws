@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- Basic table with headers, rows, and optional caption -->
+    <div th:fragment="table-basic(headers, rows, caption, actions)">
+        <div class="overflow-x-auto">
+            <table class="table">
+                <caption th:if="${caption != null}" th:text="${caption}">Table Caption</caption>
+                <thead>
+                    <tr>
+                        <th th:each="header : ${headers}" th:text="${header}">Header</th>
+                        <th th:if="${actions != null and !actions.empty}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${rows}">
+                        <td th:each="header : ${headers}" th:text="${row.get(header)}">Cell</td>
+                        <td th:if="${actions != null and !actions.empty}" class="flex gap-2">
+                            <button th:each="action : ${actions}" 
+                                    th:class="${'btn-sm ' + (action == 'delete' ? 'btn-destructive' : 'btn-ghost')}"
+                                    th:title="${action}"
+                                    th:data-action="${action}"
+                                    th:data-row-id="${row.get('id')}">
+                                <i th:class="${'icon ' + (action == 'view' ? 'icon-eye' : action == 'delete' ? 'icon-trash' : action == 'edit' ? 'icon-pencil' : action == 'add' ? 'icon-plus' : 'icon-arrow-path') + ' w-4 h-4'}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Log-specific table with formatted columns -->
+    <div th:fragment="table-logs(headers, rows, caption, actions)">
+        <div class="card">
+            <header th:if="${caption != null}">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 th:text="${caption}">Recent System Logs</h2>
+                    </div>
+                    <button hx-get="/backoffice/htmx/logs"
+                            hx-target="closest .card"
+                            hx-swap="outerHTML"
+                            hx-indicator="#refresh-indicator"
+                            class="btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent"
+                            title="Refresh Logs">
+                            <i class="icon icon-arrow-path w-4 h-4" id="refresh-icon"></i>
+                            <i id="refresh-indicator" class="htmx-indicator icon icon-arrow-path w-4 h-4 animate-spin" hidden></i>
+                    </button>
+                </div>
+            </header>
+            <section>
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th th:each="header : ${headers}" th:text="${header}">Header</th>
+                                <th th:if="${actions != null and !actions.empty}">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="row : ${rows}">
+                                <!-- Timestamp column -->
+                                <td th:if="${headers.contains('Timestamp')}" th:text="${row.get('timestamp')}" class="font-mono text-sm">2024-01-15 10:30:45</td>
+                                
+                                <!-- Level column with color coding -->
+                                <td th:if="${headers.contains('Level')}">
+                                    <span th:text="${row.get('level')}" 
+                                          th:class="${'px-2 py-1 rounded-full text-xs font-medium ' + 
+                                          (row.get('level') == 'ERROR' ? 'bg-red-100 text-red-800' : 
+                                           row.get('level') == 'WARN' ? 'bg-yellow-100 text-yellow-800' : 
+                                           row.get('level') == 'INFO' ? 'bg-blue-100 text-blue-800' : 
+                                           'bg-gray-100 text-gray-800')}">INFO</span>
+                                </td>
+                                
+                                <!-- Message column with truncation -->
+                                <td th:if="${headers.contains('Message')}" class="max-w-xs">
+                                    <div th:text="${row.get('message')}" class="truncate" th:title="${row.get('message')}">Log message</div>
+                                </td>
+                                
+                                <!-- Source column -->
+                                <td th:if="${headers.contains('Source')}" th:text="${row.get('source')}" class="text-sm text-muted-foreground">Service</td>
+                                
+                                <!-- Actions column -->
+                                <td th:if="${actions != null and !actions.empty}" class="flex gap-2">
+                                    <button th:each="action : ${actions}" 
+                                            th:class="${'btn-sm ' + (action == 'delete' ? 'btn-destructive' : 'btn-ghost')}"
+                                            th:title="${action}"
+                                            th:data-action="${action}"
+                                            th:data-row-id="${row.get('id')}">
+                                        <i th:class="${'icon ' + (action == 'view' ? 'icon-eye' : action == 'delete' ? 'icon-trash' : action == 'edit' ? 'icon-pencil' : action == 'add' ? 'icon-plus' : 'icon-arrow-path') + ' w-4 h-4'}"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- Table with checkbox selection -->
+    <div th:fragment="table-with-checkbox(headers, rows, caption, selectable, actions)">
+        <div class="overflow-x-auto">
+            <table class="table">
+                <caption th:if="${caption != null}" th:text="${caption}">Table Caption</caption>
+                <thead>
+                    <tr>
+                        <th th:if="${selectable}">
+                            <input type="checkbox" class="form-checkbox" id="select-all" />
+                        </th>
+                        <th th:each="header : ${headers}" th:text="${header}">Header</th>
+                        <th th:if="${actions != null and !actions.empty}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${rows}">
+                        <td th:if="${selectable}">
+                            <input type="checkbox" class="form-checkbox" th:name="selected-rows" th:value="${row.get('id')}" />
+                        </td>
+                        <td th:each="header : ${headers}" th:text="${row.get(header)}">Cell</td>
+                        <td th:if="${actions != null and !actions.empty}" class="flex gap-2">
+                            <button th:each="action : ${actions}" 
+                                    th:class="${'btn-sm ' + (action == 'delete' ? 'btn-destructive' : 'btn-ghost')}"
+                                    th:title="${action}"
+                                    th:data-action="${action}"
+                                    th:data-row-id="${row.get('id')}">
+                                <i th:class="${'icon ' + (action == 'view' ? 'icon-eye' : action == 'delete' ? 'icon-trash' : action == 'edit' ? 'icon-pencil' : action == 'add' ? 'icon-plus' : 'icon-arrow-path') + ' w-4 h-4'}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Table skeleton for loading state -->
+    <div th:fragment="table-skeleton">
+        <div class="card">
+            <header>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2>Recent System Logs</h2>
+                    </div>
+                    <div class="bg-accent animate-pulse rounded-md h-8 w-8"></div>
+                </div>
+            </header>
+            <section>
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Level</th>
+                                <th>Message</th>
+                                <th>Source</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="i : ${#numbers.sequence(1, 5)}">
+                                <td><div class="bg-accent animate-pulse rounded-md h-4 w-[120px]"></div></td>
+                                <td><div class="bg-accent animate-pulse rounded-md h-6 w-[60px]"></div></td>
+                                <td><div class="bg-accent animate-pulse rounded-md h-4 w-[200px]"></div></td>
+                                <td><div class="bg-accent animate-pulse rounded-md h-4 w-[100px]"></div></td>
+                                <td>
+                                    <div class="flex gap-2">
+                                        <div class="bg-accent animate-pulse rounded-md h-8 w-8"></div>
+                                        <div class="bg-accent animate-pulse rounded-md h-8 w-8"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html> 

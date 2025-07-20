@@ -72,6 +72,25 @@ public class BackofficeController extends Bragi {
 
     }
 
+    /**
+     * HTMX endpoint to fetch the log table data.
+     * Accessible via GET request to /backoffice/htmx/logs.
+     */
+    @Route(endpoint = HTMX_ENDPOINT + "/logs", method = GET, responseType = HTML)
+    public void getLogTable() {
+        if (!getRequestContext().isHTMX()) {
+            sendFail(BAD_REQUEST, "This endpoint is only accessible via HTMX.");
+        }
+
+        sendHTML(
+                OK,
+                render("backoffice/components/table/table-view.html",
+                        backofficeService.getLogTableData()));
+
+    }
+
+
+
     // endregion
 
 }
