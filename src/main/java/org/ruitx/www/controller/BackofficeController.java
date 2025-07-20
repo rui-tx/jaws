@@ -107,7 +107,6 @@ public class BackofficeController extends Bragi {
             Logger.warn("Invalid size number: {}", get("size", QUERY));
         }
 
-        // Create PageRequest and get paginated data
         PageRequest pageRequest = new PageRequest(page, size);
 
         sendHTML(

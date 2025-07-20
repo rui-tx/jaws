@@ -6,7 +6,6 @@ import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.www.repository.BackofficeRepo;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 public class BackofficeService {
@@ -59,27 +58,6 @@ public class BackofficeService {
                 "icon", "icon-users",
                 "label", "Total Users",
                 "value", backofficeRepo.getAllUserSessions().size()
-        );
-
-        return Context.builder()
-                .with("data", data)
-                .build();
-    }
-
-    /**
-     * Retrieves the log table data.
-     *
-     * @param amount The amount to retrieve.
-     * @return Context containing log table data.
-     */
-    public Context getLogTableData(int amount) {
-        List<Map<String, String>> logRows = backofficeRepo.getTopLogs(amount);
-
-        Map<String, Object> data = Map.of(
-                "headers", Arrays.asList("Timestamp", "Level", "Message", "Source"),
-                "rows", logRows,
-                "caption", "Recent System Logs",
-                "actions", Arrays.asList("view")
         );
 
         return Context.builder()
