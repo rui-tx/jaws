@@ -103,47 +103,180 @@
                 </table>
             </div>
         </section>
-        <footer>
+    </div>
+</div>
 
+<!-- Log-specific table with dynamic pagination controls -->
+<div th:fragment="table-logs-with-pagination(headers, rows, caption, actions, pagination)">
+    <div class="card">
+        <header th:if="${caption != null}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 th:text="${caption}">Recent System Logs</h2>
+                    <p class="text-sm text-muted-foreground">
+                        Showing <span th:text="${pagination.currentPage + 1}">1</span> of
+                        <span th:text="${pagination.totalPages}">1</span> pages
+                        (<span th:text="${pagination.totalElements}">0</span> total entries)
+                    </p>
+                </div>
+                <button class="btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent"
+                        hx-indicator="#refresh-indicator"
+                        hx-swap="outerHTML"
+                        hx-target="closest .card"
+                        th:hx-get="'/backoffice/htmx/logs?page=' + ${pagination.currentPage} + '&size=' + ${pagination.pageSize}"
+                        title="Refresh Logs">
+                    <i class="icon icon-arrow-path w-4 h-4" id="refresh-icon"></i>
+                    <i class="htmx-indicator icon icon-arrow-path w-4 h-4 animate-spin" hidden
+                       id="refresh-indicator"></i>
+                </button>
+            </div>
+        </header>
+        <section>
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th th:each="header : ${headers}" th:text="${header}">Header</th>
+                        <th th:if="${actions != null and !actions.empty}">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${rows}">
+                        <!-- Timestamp column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Timestamp')}"
+                            th:text="${row.get('timestamp')}">2024-01-15 10:30:45
+                        </td>
+
+                        <!-- Level column with color coding -->
+                        <td th:if="${headers.contains('Level')}">
+                                    <span th:class="${'px-2 py-1 rounded-full text-xs font-medium ' +
+                                          (row.get('level') == 'ERROR' ? 'bg-red-100 text-red-800' :
+                                           row.get('level') == 'WARN' ? 'bg-yellow-100 text-yellow-800' :
+                                           row.get('level') == 'INFO' ? 'bg-blue-100 text-blue-800' :
+                                           'bg-gray-100 text-gray-800')}"
+                                          th:text="${row.get('level')}">INFO</span>
+                        </td>
+
+                        <!-- Message column with truncation -->
+                        <td class="max-w-xs" th:if="${headers.contains('Message')}">
+                            <div class="truncate" th:text="${row.get('message')}" th:title="${row.get('message')}">Log
+                                message
+                            </div>
+                        </td>
+
+                        <!-- Source column -->
+                        <td class="text-sm text-muted-foreground" th:if="${headers.contains('Source')}"
+                            th:text="${row.get('source')}">Service
+                        </td>
+
+                        <!-- Actions column -->
+                        <td class="flex gap-2" th:if="${actions != null and !actions.empty}">
+                            <button th:class="${'btn-sm ' + (action == 'delete' ? 'btn-destructive' : 'btn-ghost')}"
+                                    th:data-action="${action}"
+                                    th:data-row-id="${row.get('id')}"
+                                    th:each="action : ${actions}"
+                                    th:title="${action}">
+                                <i th:class="${'icon ' + (action == 'view' ? 'icon-eye' : action == 'delete' ? 'icon-trash' : action == 'edit' ? 'icon-pencil' : action == 'add' ? 'icon-plus' : 'icon-arrow-path') + ' w-4 h-4'}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <footer th:if="${pagination.totalPages > 1}">
             <nav aria-label="pagination" class="mx-auto flex w-full justify-center" role="navigation">
                 <ul class="flex flex-row items-center gap-1">
-                    <li>
-                        <button class="btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent"
-                                hx-get="/backoffice/htmx/logs?amount=5"
+                    <!-- First page button -->
+                    <li th:if="${pagination.currentPage > 0}">
+                        <button class="btn btn-sm p-2 rounded-md hover:bg-accent"
                                 hx-indicator="#refresh-indicator"
                                 hx-swap="outerHTML"
                                 hx-target="closest .card"
-                                title="Next">
+                                th:hx-get="'/backoffice/htmx/logs?page=0&size=' + ${pagination.pageSize}"
+                                title="First page">
+                            <i class="icon icon-arrow-left w-4 h-4"></i>
+                            <i class="icon icon-arrow-left w-4 h-4 -ml-2"></i>
+                        </button>
+                    </li>
+                    <li th:unless="${pagination.currentPage > 0}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
+                            <i class="icon icon-arrow-left w-4 h-4"></i>
+                            <i class="icon icon-arrow-left w-4 h-4 -ml-2"></i>
+                        </button>
+                    </li>
+
+                    <!-- Previous button -->
+                    <li th:if="${pagination.hasPrevious}">
+                        <button class="btn btn-sm p-2 rounded-md hover:bg-accent"
+                                hx-indicator="#refresh-indicator"
+                                hx-swap="outerHTML"
+                                hx-target="closest .card"
+                                th:hx-get="'/backoffice/htmx/logs?page=' + ${pagination.currentPage - 1} + '&size=' + ${pagination.pageSize}"
+                                title="Previous">
+                            Previous
+                            <i class="icon icon-arrow-left w-4 h-4"></i>
+                        </button>
+                    </li>
+                    <li th:unless="${pagination.hasPrevious}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
                             Previous
                         </button>
                     </li>
-                    <li>
-                        <a class="btn-icon-ghost" href="#">1</a>
-                    </li>
-                    <li>
-                        <a class="btn-icon-outline" href="#">2</a>
-                    </li>
-                    <li>
-                        <a class="btn-icon-ghost" href="#">3</a>
-                    </li>
-                    <li>
-                        <div class="size-9 flex items-center justify-center">
-                            ...
-                        </div>
-                    </li>
-                    <li>
-                        <button class="btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent"
-                                hx-get="/backoffice/htmx/logs?amount=5"
+
+                    <!-- Page numbers -->
+                    <!-- <li th:each="pageNum : ${#numbers.sequence(0, pagination.totalPages - 1)}">
+                        <a hx-swap="outerHTML"
+                           hx-target="closest .card"
+                           th:class="'btn-icon-ghost'"
+                           th:href="'/backoffice/htmx/logs-paginated?page=' + ${pageNum} + '&size=' + ${pagination.pageSize}"
+                           th:hx-get="'/backoffice/htmx/logs-paginated?page=' + ${pageNum} + '&size=' + ${pagination.pageSize}"
+                           th:if="${pageNum != pagination.currentPage}"
+                           th:text="${pageNum + 1}">1</a>
+                        <a th:class="'btn-icon-outline'"
+                           th:if="${pageNum == pagination.currentPage}"
+                           th:text="${pageNum + 1}">1</a>
+                    </li> -->
+
+                    <!-- Next button -->
+                    <li th:if="${pagination.hasNext}">
+                        <button class="btn  btn-sm p-2 rounded-md hover:bg-accent"
                                 hx-indicator="#refresh-indicator"
                                 hx-swap="outerHTML"
                                 hx-target="closest .card"
+                                th:hx-get="'/backoffice/htmx/logs?page=' + ${pagination.currentPage + 1} + '&size=' + ${pagination.pageSize}"
                                 title="Next">
                             Next
+                            <i class="icon icon-arrow-right w-4 h-4"></i>
+                        </button>
+
+                    </li>
+                    <li th:unless="${pagination.hasNext}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
+                            Next
+                        </button>
+                    </li>
+
+                    <!-- Last page button -->
+                    <li th:if="${pagination.currentPage < pagination.totalPages - 1}">
+                        <button class="btn btn-sm p-2 rounded-md hover:bg-accent"
+                                hx-indicator="#refresh-indicator"
+                                hx-swap="outerHTML"
+                                hx-target="closest .card"
+                                th:hx-get="'/backoffice/htmx/logs?page=' + ${pagination.totalPages - 1} + '&size=' + ${pagination.pageSize}"
+                                title="Last page">
+                            <i class="icon icon-arrow-right w-4 h-4"></i>
+                            <i class="icon icon-arrow-right w-4 h-4 -ml-2"></i>
+                        </button>
+                    </li>
+                    <li th:unless="${pagination.currentPage < pagination.totalPages - 1}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
+                            <i class="icon icon-arrow-right w-4 h-4"></i>
+                            <i class="icon icon-arrow-right w-4 h-4 -ml-2"></i>
                         </button>
                     </li>
                 </ul>
             </nav>
-
         </footer>
     </div>
 </div>

@@ -79,7 +79,7 @@ public class BackofficeService {
                 "headers", Arrays.asList("Timestamp", "Level", "Message", "Source"),
                 "rows", logRows,
                 "caption", "Recent System Logs",
-                "actions", Arrays.asList("view", "delete", "refresh")
+                "actions", Arrays.asList("view")
         );
 
         return Context.builder()
@@ -99,7 +99,7 @@ public class BackofficeService {
                 "headers", Arrays.asList("Timestamp", "Level", "Message", "Source"),
                 "rows", logPage.getContent(),
                 "caption", "Recent System Logs",
-                "actions", Arrays.asList("view", "delete", "refresh"),
+                "actions", Arrays.asList("view"),
                 "pagination", Map.of(
                         "currentPage", logPage.getCurrentPage(),
                         "totalPages", logPage.getTotalPages(),

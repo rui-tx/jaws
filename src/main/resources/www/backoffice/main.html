@@ -11,7 +11,7 @@
         <!-- Welcome Section -->
         <div th:replace="~{backoffice/components/card/card.html :: simple-card(
             'Welcome to Jaws Backoffice',
-            'This is your. Use the sidebar to navigate between different sections.',
+            'This is the dashboard. Use the sidebar to navigate between different sections.',
             null,
             null
         )}"></div>
@@ -38,7 +38,7 @@
         </div>
 
         <!-- System Logs -->
-        <div hx-get="/backoffice/htmx/logs?amount=10"
+        <div hx-get="/backoffice/htmx/logs?page=0&size=10"
              hx-swap="outerHTML transition:true"
              hx-target="this"
              hx-trigger="load">

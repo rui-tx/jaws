@@ -2,6 +2,7 @@ package org.ruitx.www.controller;
 
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.www.service.BackofficeService;
 import org.tinylog.Logger;
 
@@ -75,27 +76,44 @@ public class BackofficeController extends Bragi {
     }
 
     /**
-     * HTMX endpoint to fetch the log table data.
-     * Accessible via GET request to /backoffice/htmx/logs.
+     * HTMX endpoint to fetch paginated log table data.
+     * Accessible via GET request to /backoffice/htmx/logs-paginated.
      */
     @Route(endpoint = HTMX_ENDPOINT + "/logs", method = GET, responseType = HTML)
-    public void getLogTable() {
+    public void getPaginatedLogTable() {
         if (!getRequestContext().isHTMX()) {
             sendFail(BAD_REQUEST, "This endpoint is only accessible via HTMX.");
         }
 
-        int amount = 5;
+        // Parse pagination parameters with defaults
+        int page = 0;
+        int size = 10;
+
         try {
-            String pageParam = get("amount", QUERY);
-            amount = Integer.parseInt(pageParam);
+            String pageParam = get("page", QUERY);
+            if (pageParam != null) {
+                page = Integer.parseInt(pageParam);
+            }
         } catch (NumberFormatException e) {
-            Logger.warn("Invalid amount number: {}", get("amount", QUERY));
+            Logger.warn("Invalid page number: {}", get("page", QUERY));
         }
+
+        try {
+            String sizeParam = get("size", QUERY);
+            if (sizeParam != null) {
+                size = Integer.parseInt(sizeParam);
+            }
+        } catch (NumberFormatException e) {
+            Logger.warn("Invalid size number: {}", get("size", QUERY));
+        }
+
+        // Create PageRequest and get paginated data
+        PageRequest pageRequest = new PageRequest(page, size);
 
         sendHTML(
                 OK,
                 render("backoffice/components/table/table-view.html",
-                        backofficeService.getLogTableData(amount)));
+                        backofficeService.getPaginatedLogTableData(pageRequest)));
 
     }
 

@@ -8,11 +8,7 @@ import org.ruitx.jaws.types.Row;
 import org.ruitx.www.model.auth.User;
 import org.ruitx.www.model.auth.UserSession;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class BackofficeRepo {
 
@@ -97,13 +93,11 @@ public class BackofficeRepo {
      */
     public Page<Map<String, String>> getPaginatedLogs(PageRequest pageRequest) {
         try {
-          
+
             String baseSql = "SELECT id, timestamp, level, message, logger as source FROM LOG_ENTRIES";
-            
-            // Use Mimir's built-in pagination support
             Page<Row> rowPage = logsDb.getPage(
-                baseSql + " ORDER BY timestamp DESC",
-                pageRequest
+                    baseSql + " ORDER BY timestamp DESC",
+                    pageRequest
             );
 
             // Transform Row objects to Map<String, String>
