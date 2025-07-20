@@ -279,7 +279,7 @@ public class AuthMiddleware implements Middleware {
                     }
                     
                     JawsLogger.debug("AuthMiddleware: Processing custom 401 template: {}", templateName);
-                    return Hermod.processTemplate(
+                    return Hermod.render(
                         templateName,
                         context.getQueryParams(),
                         context.getBodyParams(),

@@ -10,6 +10,8 @@ import org.ruitx.jaws.exceptions.SendRespondException;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.types.Context;
+import org.ruitx.jaws.types.ParamType;
 import org.ruitx.jaws.utils.JawsLogger;
 
 import java.io.IOException;
@@ -111,99 +113,24 @@ public abstract class Bragi {
         return context != null ? context.getCurrentToken() : null;
     }
 
-    // Success response methods
-
     /**
-     * Send a successful JSON response with a default message.
-     *
-     * @param code the response code
-     */
-    protected void sendSuccessfulResponse(ResponseCode code) {
-        sendJSONResponse(true, code, "Success", null);
-    }
-
-    /**
-     * Send a successful JSON response with a custom message.
-     *
-     * @param code the response code
-     * @param data the response data
-     */
-    protected void sendSuccessfulResponse(ResponseCode code, Object data) {
-        sendJSONResponse(true, code, "Success", data);
-    }
-
-    /**
-     * Send a successful JSON response with a custom message and data.
-     *
-     * @param code the response code
-     * @param info additional information to include in the response
-     * @param data the response data
-     */
-    protected void sendSuccessfulResponse(ResponseCode code, String info, Object data) {
-        sendJSONResponse(true, code, info, data);
-    }
-
-    /**
-     * Send a successful JSON response with a custom code and data.
-     *
-     * @param code the response code as a string
-     * @param data the response data
-     */
-    protected void sendSuccessfulResponse(String code, Object data) {
-        sendJSONResponse(true, ResponseCode.fromCodeAndMessage(code), "Success", data);
-    }
-
-    /**
-     * Send a successful JSON response with a custom code and message.
-     *
-     * @param code    the response code
-     * @param message the success message
-     */
-    public void sendErrorResponse(ResponseCode code, String message) {
-        sendJSONResponse(false, code, message, null);
-    }
-
-    /**
-     * Send a JSON error response with a custom code and message.
-     *
-     * @param code    the response code as a string
-     * @param message the error message
-     */
-    public void sendErrorResponse(String code, String message) {
-        ResponseCode responseCode = ResponseCode.fromCodeAndMessage(code);
-        sendJSONResponse(false, responseCode, message, null);
-    }
-
-    /**
-     * Send a JSON error response with data
-     *
-     * @param code    Error code
-     * @param message Error message
-     * @param data    Response data (can be null)
-     */
-    protected void sendErrorResponse(ResponseCode code, String message, Object data) {
-        sendJSONResponse(false, code, message, data);
-    }
-
-    /**
-     * Internal method to send JSON response
+     * Send a JSON response to the client.
      *
      * @param success indicates if the response is successful
      * @param code    the response code
-     * @param info    additional information to include in the response
-     * @param data    the data to include in the response, can be null
+     * @param message the response message
+     * @param data    the response data
      */
-    private void sendJSONResponse(boolean success, ResponseCode code, String info, Object data) {
-        APIResponse<Object> response;
+    protected void sendJSONResponse(boolean success, ResponseCode code, String message, Object data) {
         try {
-            if (success) {
-                response = APIResponse.success(code.getCodeAndMessage(), info, data);
-            } else {
-                response = APIResponse.error(code.getCodeAndMessage(), info);
-            }
-
             Yggdrasill.RequestContext context = requestContext.get();
             if (context != null) {
+                APIResponse<Object> response;
+                if (success) {
+                    response = APIResponse.success(code, message, data);
+                } else {
+                    response = APIResponse.error(code, message);
+                }
                 context.sendJSONResponse(code, encode(response));
             } else {
                 throw new IllegalStateException("No request context available");
@@ -264,37 +191,142 @@ public abstract class Bragi {
         }
     }
 
+    // ===== NEW RESPONSE METHODS =====
+
     /**
-     * Get a path parameter from the request.
+     * Send a success response with data.
      *
-     * @param name the name of the path parameter
-     * @return the value of the path parameter, or null if not found
+     * @param data the response data
      */
-    protected String getPathParam(String name) {
-        Yggdrasill.RequestContext context = requestContext.get();
-        return context != null ? context.getPathParams().get(name) : null;
+    protected void sendSuccess(Object data) {
+        sendJSONResponse(true, ResponseCode.OK, "Success", data);
     }
 
     /**
-     * Get a query parameter from the request.
+     * Send a success response with custom code and data.
      *
-     * @param name the name of the query parameter
-     * @return the value of the query parameter, or null if not found
+     * @param code the response code
+     * @param data the response data
      */
-    protected String getQueryParam(String name) {
-        Yggdrasill.RequestContext context = requestContext.get();
-        return context != null && context.getQueryParams() != null ? context.getQueryParams().get(name) : null;
+    protected void sendSuccess(ResponseCode code, Object data) {
+        sendJSONResponse(true, code, "Success", data);
     }
 
     /**
-     * Get a body parameter from the request.
+     * Send a success response with custom code, message, and data.
      *
-     * @param name the name of the body parameter
-     * @return the value of the body parameter, or null if not found
+     * @param code    the response code
+     * @param message the success message
+     * @param data    the response data
      */
-    protected String getBodyParam(String name) {
+    protected void sendSuccess(ResponseCode code, String message, Object data) {
+        sendJSONResponse(true, code, message, data);
+    }
+
+    /**
+     * Send a success response with string code and data.
+     *
+     * @param code the response code as a string
+     * @param data the response data
+     */
+    protected void sendSuccess(String code, Object data) {
+        ResponseCode responseCode = ResponseCode.fromCodeAndMessage(code);
+        sendJSONResponse(true, responseCode, "Success", data);
+    }
+
+    /**
+     * Send an error response with code and message.
+     *
+     * @param code    the response code
+     * @param message the error message
+     */
+    public void sendFail(ResponseCode code, String message) {
+        sendJSONResponse(false, code, message, null);
+    }
+
+    /**
+     * Send an error response with string code and message.
+     *
+     * @param code    the response code as a string
+     * @param message the error message
+     */
+    public void sendFail(String code, String message) {
+        ResponseCode responseCode = ResponseCode.fromCodeAndMessage(code);
+        sendJSONResponse(false, responseCode, message, null);
+    }
+
+    /**
+     * Send an HTML response with code and content.
+     *
+     * @param code    the response code
+     * @param content the HTML content to send
+     */
+    protected void sendHTML(ResponseCode code, String content) {
+        try {
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                context.sendHTMLResponse(code, content);
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
+        } catch (Exception e) {
+            JawsLogger.error("Failed to send HTML response: {}", e.getMessage());
+            throw new SendRespondException("Failed to send HTML response", e);
+        } finally {
+            // Clean up template variables
+            Hermod.clearTemplateVariables();
+        }
+    }
+
+    /**
+     * Send an HTML response with default OK status.
+     *
+     * @param content the HTML content to send
+     */
+    protected void sendHTML(String content) {
+        sendHTML(ResponseCode.OK, content);
+    }
+
+    // ===== NEW PARAMETER METHODS =====
+
+    /**
+     * Get a parameter from the request (prioritizes: path > query > body).
+     *
+     * @param name the parameter name
+     * @return the parameter value or null if not found
+     */
+    protected String get(String name) {
         Yggdrasill.RequestContext context = requestContext.get();
-        return context != null && context.getBodyParams() != null ? context.getBodyParams().get(name) : null;
+        if (context == null) return null;
+
+        // Check path parameters first
+        String value = context.getPathParams().get(name);
+        if (value != null) return value;
+
+        // Check query parameters
+        value = context.getQueryParams().get(name);
+        if (value != null) return value;
+
+        // Check body parameters
+        return context.getBodyParams().get(name);
+    }
+
+    /**
+     * Get a parameter from a specific source.
+     *
+     * @param name the parameter name
+     * @param type the parameter type
+     * @return the parameter value or null if not found
+     */
+    protected String get(String name, ParamType type) {
+        Yggdrasill.RequestContext context = requestContext.get();
+        if (context == null) return null;
+
+        return switch (type) {
+            case PATH -> context.getPathParams().get(name);
+            case QUERY -> context.getQueryParams().get(name);
+            case BODY -> context.getBodyParams().get(name);
+        };
     }
 
     /**
@@ -303,7 +335,7 @@ public abstract class Bragi {
      * @param name the name of the file input field
      * @return the Part object representing the uploaded file, or null if not found
      */
-    protected Part getMultipartFile(String name) {
+    protected Part file(String name) {
         Yggdrasill.RequestContext context = requestContext.get();
         return context != null && context.getMultipartFiles() != null ? context.getMultipartFiles().get(name) : null;
     }
@@ -313,7 +345,7 @@ public abstract class Bragi {
      *
      * @return a map of field names to Part objects
      */
-    protected Map<String, Part> getMultipartFiles() {
+    protected Map<String, Part> files() {
         Yggdrasill.RequestContext context = requestContext.get();
         return context != null && context.getMultipartFiles() != null ? context.getMultipartFiles() : new HashMap<>();
     }
@@ -398,22 +430,24 @@ public abstract class Bragi {
     }
 
     /**
-     * Render a template with parameters replaced.
+     * Process a template with the given context.
      *
-     * @param templatePath The path to the template file
-     * @return The rendered template with parameters replaced
+     * @param templatePath    The path to the template file
+     * @param templateContext The context to use for processing the template
+     * @return The processed template as a String
      */
-    protected String renderTemplate(String templatePath) {
-        try {
-            Yggdrasill.RequestContext context = requestContext.get();
-            if (context != null) {
-                return Hermod.renderTemplate(templatePath, context.getRequest(), context.getResponse());
-            } else {
-                throw new IllegalStateException("No request context available");
-            }
-        } catch (IOException e) {
-            JawsLogger.error("Failed to render template: {}", e.getMessage());
-            throw new SendRespondException("Failed to render template", e);
+    protected String processTemplate(String templatePath, Context templateContext) throws IOException {
+        Yggdrasill.RequestContext context = requestContext.get();
+        if (context != null) {
+            return Hermod.render(
+                    templatePath,
+                    context.getQueryParams(),
+                    context.getBodyParams(),
+                    context.getRequest(),
+                    context.getResponse(),
+                    templateContext);
+        } else {
+            throw new IllegalStateException("No request context available");
         }
     }
 
@@ -428,24 +462,71 @@ public abstract class Bragi {
     }
 
     /**
-     * Assemble a full page by combining a base template with a partial template.
+     * Render a template without context.
      *
-     * @param baseTemplatePath    The path to the base template file
-     * @param partialTemplatePath The path to the partial template file
-     * @return The assembled page
+     * @param templatePath The path to the template file
+     * @return The rendered template
      */
-    protected String assemblePage(String baseTemplatePath, String partialTemplatePath) {
+    protected String render(String templatePath) {
         try {
             Yggdrasill.RequestContext context = requestContext.get();
             if (context != null) {
-                return Hermod.assemblePage(baseTemplatePath, partialTemplatePath,
+                return Hermod.render(templatePath, context.getRequest(), context.getResponse());
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
+        } catch (IOException e) {
+            JawsLogger.error("Failed to render template: {}", e.getMessage());
+            throw new SendRespondException("Failed to render template", e);
+        }
+    }
+
+    /**
+     * Render a template with context.
+     *
+     * @param templatePath The path to the template file
+     * @param context      The context to use for rendering
+     * @return The rendered template
+     */
+    protected String render(String templatePath, Context context) {
+        try {
+            Yggdrasill.RequestContext requestContext = this.requestContext.get();
+            if (requestContext != null) {
+                return Hermod.render(
+                        templatePath,
+                        requestContext.getQueryParams(),
+                        requestContext.getBodyParams(),
+                        requestContext.getRequest(),
+                        requestContext.getResponse(),
+                        context);
+            } else {
+                throw new IllegalStateException("No request context available");
+            }
+        } catch (IOException e) {
+            JawsLogger.error("Failed to render template: {}", e.getMessage());
+            throw new SendRespondException("Failed to render template", e);
+        }
+    }
+
+    /**
+     * Compose a page by combining base and partial templates.
+     *
+     * @param baseTemplate    The path to the base template
+     * @param partialTemplate The path to the partial template
+     * @return The composed page
+     */
+    protected String compose(String baseTemplate, String partialTemplate) {
+        try {
+            Yggdrasill.RequestContext context = requestContext.get();
+            if (context != null) {
+                return Hermod.composePage(baseTemplate, partialTemplate,
                         context.getRequest(), context.getResponse());
             } else {
                 throw new IllegalStateException("No request context available");
             }
         } catch (IOException e) {
-            JawsLogger.error("Failed to assemble page: {}", e.getMessage());
-            throw new SendRespondException("Failed to assemble page", e);
+            JawsLogger.error("Failed to compose page: {}", e.getMessage());
+            throw new SendRespondException("Failed to compose page", e);
         }
     }
 
@@ -471,17 +552,162 @@ public abstract class Bragi {
     }
 
     /**
-     * Call an API endpoint and parse the response.
+     * Call an API endpoint with an object body and parse the response.
      *
-     * @param endpoint     the API endpoint to call.
-     * @param method       the HTTP method (GET, POST, PUT, etc.)
-     * @param body         the request body for POST/PUT requests (can be null for GET)
-     * @param responseType the Java type of the response.
-     * @param headers      the HTTP headers to include in the request (can be null)
-     * @param <T>          the type of the response.
-     * @return the parsed API response.
+     * @param endpoint      the API endpoint to call
+     * @param method        the HTTP method
+     * @param body          the request body object
+     * @param responseClass the Class of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
      */
-    public <T> APIResponse<T> callAPI(String endpoint, RequestType method, Map<String, String> headers, String body, JavaType responseType) {
+    public <T> APIResponse<T> call(String endpoint, RequestType method, Object body, Class<T> responseClass) {
+        String jsonBody = body != null ? encode(body) : null;
+        return callInternal(endpoint, method, null, jsonBody, responseClass);
+    }
+
+    /**
+     * Call an API endpoint with headers and an object body and parse the response.
+     *
+     * @param endpoint      the API endpoint to call
+     * @param method        the HTTP method
+     * @param headers       the HTTP headers to include in the request
+     * @param body          the request body object
+     * @param responseClass the Class of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
+     */
+    public <T> APIResponse<T> call(String endpoint, RequestType method, Map<String, String> headers, Object body, Class<T> responseClass) {
+        String jsonBody = body != null ? encode(body) : null;
+        return callInternal(endpoint, method, headers, jsonBody, responseClass);
+    }
+
+    /**
+     * Call an API endpoint with a GET request and parse the response.
+     *
+     * @param endpoint      the API endpoint to call
+     * @param responseClass the Class of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
+     */
+    public <T> APIResponse<T> call(String endpoint, Class<T> responseClass) {
+        return call(endpoint, RequestType.GET, null, responseClass);
+    }
+
+    /**
+     * Call an API endpoint with a GET request and parse the response using JavaType.
+     *
+     * @param endpoint     the API endpoint to call
+     * @param responseType the JavaType of the response
+     * @param <T>          the type of the response
+     * @return the parsed API response
+     */
+    public <T> APIResponse<T> call(String endpoint, JavaType responseType) {
+        return call(endpoint, RequestType.GET, null, responseType);
+    }
+
+    /**
+     * Call an API endpoint with an object body and parse the response using JavaType.
+     *
+     * @param endpoint      the API endpoint to call
+     * @param method        the HTTP method
+     * @param body          the request body object
+     * @param responseType  the JavaType of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
+     */
+    public <T> APIResponse<T> call(String endpoint, RequestType method, Object body, JavaType responseType) {
+        String jsonBody = body != null ? encode(body) : null;
+        return callInternal(endpoint, method, null, jsonBody, responseType);
+    }
+
+    /**
+     * Call an API endpoint with headers and an object body and parse the response using JavaType.
+     *
+     * @param endpoint      the API endpoint to call
+     * @param method        the HTTP method
+     * @param headers       the HTTP headers to include in the request
+     * @param body          the request body object
+     * @param responseType  the JavaType of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
+     */
+    public <T> APIResponse<T> call(String endpoint, RequestType method, Map<String, String> headers, Object body, JavaType responseType) {
+        String jsonBody = body != null ? encode(body) : null;
+        return callInternal(endpoint, method, headers, jsonBody, responseType);
+    }
+
+    /**
+     * Internal method to make HTTP calls and parse responses.
+     *
+     * @param endpoint      the API endpoint to call
+     * @param method        the HTTP method
+     * @param headers       the HTTP headers to include in the request
+     * @param body          the request body
+     * @param responseClass the Class of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
+     */
+    private <T> APIResponse<T> callInternal(String endpoint, RequestType method, Map<String, String> headers, String body, Class<T> responseClass) {
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint)).header("accept", "*/*");
+
+        Map<String, String> allHeaders = headers != null ? new HashMap<>(headers) : new HashMap<>();
+        for (Map.Entry<String, String> header : allHeaders.entrySet()) {
+            requestBuilder.header(header.getKey(), header.getValue());
+        }
+
+        switch (method) {
+            case POST, PUT, PATCH -> requestBuilder
+                    .method(method.toString(), HttpRequest.BodyPublishers.ofString(body != null ? body : ""))
+                    .header(CONTENT_TYPE.getHeaderName(), "application/json");
+            case DELETE -> requestBuilder.DELETE();
+            default -> requestBuilder.GET();
+        }
+
+        HttpRequest request = requestBuilder.build();
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200 && response.statusCode() != 201) {
+                JawsLogger.error("API request failed with status code: {}", response.statusCode());
+                return APIResponse.error(
+                        response.statusCode() + "",
+                        "Server returned error status: " + response.statusCode()
+                );
+            }
+
+            String contentType = response.headers().firstValue(CONTENT_TYPE.getHeaderName()).orElse("");
+            if (!contentType.contains("application/json")) {
+                JawsLogger.error("Unexpected content type: {}", contentType);
+                JawsLogger.error("Response body: {}", response.body());
+                return APIResponse.error(
+                        response.statusCode() + "",
+                        "Server returned non-JSON response"
+                );
+            }
+            return parseResponse(response.body(), responseClass);
+
+        } catch (IOException | InterruptedException e) {
+            JawsLogger.error("HTTP request failed: {}", e.getMessage());
+            return APIResponse.error(
+                    ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+                    "Failed to fetch data from API"
+            );
+        }
+    }
+
+    /**
+     * Internal method to make HTTP calls and parse responses using JavaType.
+     *
+     * @param endpoint      the API endpoint to call
+     * @param method        the HTTP method
+     * @param headers       the HTTP headers to include in the request
+     * @param body          the request body
+     * @param responseType  the JavaType of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
+     */
+    private <T> APIResponse<T> callInternal(String endpoint, RequestType method, Map<String, String> headers, String body, JavaType responseType) {
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint)).header("accept", "*/*");
 
@@ -530,106 +756,38 @@ public abstract class Bragi {
     }
 
     /**
-     * Call an API endpoint and parse the response using a Class type.
-     *
-     * @param endpoint      the API endpoint to call.
-     * @param method        the HTTP method (GET, POST, PUT, etc.)
-     * @param body          the request body for POST/PUT requests (can be null for GET)
-     * @param responseClass the Class of the response.
-     * @param headers       the HTTP headers to include in the request (can be null)
-     * @param <T>           the type of the response.
-     * @return the parsed API response.
-     */
-    public <T> APIResponse<T> callAPI(String endpoint, RequestType method, Map<String, String> headers, String body, Class<T> responseClass) {
-        JavaType responseType = getMapper().getTypeFactory().constructType(responseClass);
-        return callAPI(endpoint, method, headers, body, responseType);
-    }
-
-    /**
-     * Call an API endpoint with an object body and parse the response.
-     *
-     * @param endpoint      the API endpoint to call.
-     * @param method        the HTTP method (GET, POST, PUT, etc.)
-     * @param body          the request body object for POST/PUT requests
-     * @param responseClass the Class of the response.
-     * @param <T>           the type of the response.
-     * @return the parsed API response.
-     */
-    public <T> APIResponse<T> callAPI(String endpoint, RequestType method, Object body, Class<T> responseClass) {
-        String jsonBody = body != null ? encode(body) : null;
-        return callAPI(endpoint, method, null, jsonBody, responseClass);
-    }
-
-    /**
-     * Call an API endpoint with an object body and parse the response.
-     *
-     * @param endpoint     the API endpoint to call.
-     * @param method       the HTTP method (GET, POST, PUT, etc.)
-     * @param body         the request body object for POST/PUT requests
-     * @param responseType the Java type of the response.
-     * @param <T>          the type of the response.
-     * @return the parsed API response.
-     */
-    public <T> APIResponse<T> callAPI(String endpoint, RequestType method, Object body, JavaType responseType) {
-        String jsonBody = body != null ? encode(body) : null;
-        return callAPI(endpoint, method, null, jsonBody, responseType);
-    }
-
-    /**
-     * Call an API endpoint with an object body and parse the response.
-     *
-     * @param endpoint      the API endpoint to call.
-     * @param method        the HTTP method (GET, POST, PUT, etc.)
-     * @param headers       the HTTP headers to include in the request
-     * @param body          the request body object for POST/PUT requests
-     * @param responseClass the Class of the response.
-     * @param <T>           the type of the response.
-     * @return the parsed API response.
-     */
-    public <T> APIResponse<T> callAPI(String endpoint, RequestType method, Map<String, String> headers, Object body, Class<T> responseClass) {
-        String jsonBody = body != null ? encode(body) : null;
-        return callAPI(endpoint, method, headers, jsonBody, responseClass);
-    }
-
-    /**
-     * Call an API endpoint with an object body and parse the response.
-     *
-     * @param endpoint     the API endpoint to call.
-     * @param method       the HTTP method (GET, POST, PUT, etc.)
-     * @param headers      the HTTP headers to include in the request
-     * @param body         the request body object for POST/PUT requests
-     * @param responseType the Java type of the response.
-     * @param <T>          the type of the response.
-     * @return the parsed API response.
-     */
-    public <T> APIResponse<T> callAPI(String endpoint, RequestType method, Map<String, String> headers, Object body, JavaType responseType) {
-        String jsonBody = body != null ? encode(body) : null;
-        return callAPI(endpoint, method, headers, jsonBody, responseType);
-    }
-
-    /**
-     * Call an API endpoint with a GET request and parse the response.
-     *
-     * @param endpoint the API endpoint to call.
-     * @param type     the Java type of the response.
-     * @param <T>      the type of the response.
-     * @return the parsed API response.
-     */
-    public <T> APIResponse<T> callAPI(String endpoint, JavaType type) {
-        return callAPI(endpoint, RequestType.GET, null, null, type);
-    }
-
-    /**
      * Parse the response from the API call.
      *
-     * @param response     the response from the API call.
-     * @param responseType the Java type of the response.
-     * @param <T>          the type of the response.
-     * @return the parsed API response.
+     * @param response      the response from the API call
+     * @param responseClass the Class of the response
+     * @param <T>           the type of the response
+     * @return the parsed API response
+     */
+    private <T> APIResponse<T> parseResponse(String response, Class<T> responseClass) {
+        try {
+            T data = getMapper().readValue(response, responseClass);
+            return APIResponse.success(ResponseCode.OK.getCodeAndMessage(), data);
+        } catch (JsonParseException e) {
+            JawsLogger.error("Failed to parse API response as JSON: {}", e.getMessage());
+            return APIResponse.error(ResponseCode.BAD_REQUEST.getCodeAndMessage(), "Invalid JSON response");
+        } catch (Exception e) {
+            JawsLogger.error("Failed to parse API response: {}", e.getMessage());
+            return APIResponse.error(ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(), "Failed to parse response");
+        }
+    }
+
+    /**
+     * Parse the response from the API call using JavaType.
+     *
+     * @param response     the response from the API call
+     * @param responseType the JavaType of the response
+     * @param <T>          the type of the response
+     * @return the parsed API response
      */
     private <T> APIResponse<T> parseResponse(String response, JavaType responseType) {
         try {
-            return getMapper().readValue(response, responseType);
+            T data = getMapper().readValue(response, responseType);
+            return APIResponse.success(ResponseCode.OK.getCodeAndMessage(), data);
         } catch (JsonParseException e) {
             JawsLogger.error("Failed to parse API response as JSON: {}", e.getMessage());
             return APIResponse.error(ResponseCode.BAD_REQUEST.getCodeAndMessage(), "Invalid JSON response");

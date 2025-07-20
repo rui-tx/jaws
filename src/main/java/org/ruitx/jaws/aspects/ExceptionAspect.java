@@ -76,8 +76,8 @@ public class ExceptionAspect {
             ResponseCode responseCode = determineResponseCode(ex);
             String errorMessage = ex.getMessage();
 
-            // Use the controller's sendErrorResponse method
-            controller.sendErrorResponse(responseCode, errorMessage != null ? errorMessage : "An unexpected error occurred");
+            // Use the controller's sendFail method
+            controller.sendFail(responseCode, errorMessage != null ? errorMessage : "An unexpected error occurred");
         } catch (Exception e) {
             JawsLogger.error("Failed to send error response through controller: {}", e.getMessage());
         }

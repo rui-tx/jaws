@@ -39,11 +39,11 @@ public class AuthController extends Bragi {
                 ipAddress);
 
         if (!response.success()) {
-            sendErrorResponse(response.code(), response.info());
+            sendFail(response.code(), response.info());
             return;
         }
 
-        sendSuccessfulResponse(OK, response.data());
+        sendSuccess(OK, response.data());
     }
 
     @AccessControl(login = true)
@@ -51,11 +51,11 @@ public class AuthController extends Bragi {
     public void logout(LogoutRequest request) {
         APIResponse<Void> response = authService.logout(request.refreshToken());
         if (!response.success()) {
-            sendErrorResponse(response.code(), response.info());
+            sendFail(response.code(), response.info());
             return;
         }
 
-        sendSuccessfulResponse(OK, null);
+        sendSuccess(OK, null);
     }
 
     @Route(endpoint = API_ENDPOINT + "refresh", method = POST, responseType = JSON)
@@ -70,11 +70,11 @@ public class AuthController extends Bragi {
                 ipAddress);
 
         if (!response.success()) {
-            sendErrorResponse(response.code(), response.info());
+            sendFail(response.code(), response.info());
             return;
         }
 
-        sendSuccessfulResponse(OK, response.data());
+        sendSuccess(OK, response.data());
     }
 
     @AccessControl(login = true)
@@ -82,17 +82,17 @@ public class AuthController extends Bragi {
     public void logoutAll() {
         String userId = getCurrentToken();
         if (userId.isEmpty()) {
-            sendErrorResponse(BAD_REQUEST, "Could not get user id from cookie");
+            sendFail(BAD_REQUEST, "Could not get user id from cookie");
             return;
         }
 
         APIResponse<Void> response = authService.logoutAll(userId);
 
         if (!response.success()) {
-            sendErrorResponse(response.code(), response.info());
+            sendFail(response.code(), response.info());
             return;
         }
 
-        sendSuccessfulResponse(OK, null);
+        sendSuccess(OK, null);
     }
 }

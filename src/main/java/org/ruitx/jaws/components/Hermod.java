@@ -22,8 +22,15 @@ import static org.ruitx.jaws.configs.ApplicationConfig.*;
 
 /**
  * Hermod is a utility class that handles template processing and page assembly using Thymeleaf.
- * It provides methods for processing templates with variables, assembling full pages,
- * and rendering template files.
+ * It provides methods for rendering templates with variables, composing full pages,
+ * and managing template variables across requests.
+ * 
+ * <p>Main methods:</p>
+ * <ul>
+ *   <li>{@link #render(String, Map, Map, HttpServletRequest, HttpServletResponse, Context)} - Render template with full context</li>
+ *   <li>{@link #render(String, HttpServletRequest, HttpServletResponse)} - Render template without parameters</li>
+ *   <li>{@link #composePage(String, String, HttpServletRequest, HttpServletResponse)} - Compose page from base + partial</li>
+ * </ul>
  */
 public final class Hermod {
 
@@ -142,78 +149,23 @@ public final class Hermod {
     }
 
     /**
-     * Process a template file using Thymeleaf.
+     * Render a template with full context including parameters and variables.
      *
-     * @param templateFile The template file to process
-     * @param request      The HTTP servlet request
-     * @param response     The HTTP servlet response
-     * @return the processed template
-     * @throws IOException if there's an error reading the template file
+     * @param templatePath    The template path to render
+     * @param queryParams     The query parameters map
+     * @param bodyParams      The body parameters map
+     * @param request         The HTTP servlet request
+     * @param response        The HTTP servlet response
+     * @param templateContext Additional context variables for the template
+     * @return the rendered template
+     * @throws IOException if there's an error rendering the template
      */
-    public static String processTemplate(File templateFile, HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
-        String templatePath = templateFile.getName();
-        return processTemplate(
-                templatePath,
-                new LinkedHashMap<>(), new LinkedHashMap<>(), request, response, null);
-    }
-
-    /**
-     * Process a template using the template path.
-     *
-     * @param templatePath The template path to process
-     * @param request      The HTTP servlet request
-     * @param response     The HTTP servlet response
-     * @return the processed template
-     * @throws IOException if there's an error processing the template
-     */
-    public static String processTemplate(String templatePath,
-                                         HttpServletRequest request,
-                                         HttpServletResponse response,
-                                         Context context) throws IOException {
-        return processTemplate(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response, context);
-    }
-
-    /**
-     * Process a template string with parameters using Thymeleaf.
-     * If the template parameter looks like a file path, treat it as such.
-     * Otherwise, fall back to reading it as a file path.
-     *
-     * @param template    The template path or content to process
-     * @param queryParams The query parameters map
-     * @param bodyParams  The body parameters map
-     * @param request     The HTTP servlet request
-     * @param response    The HTTP servlet response
-     * @return the processed template
-     * @throws IOException if there's an error processing the template
-     */
-    public static String processTemplate(String template,
-                                         Map<String, String> queryParams,
-                                         Map<String, String> bodyParams,
-                                         HttpServletRequest request,
-                                         HttpServletResponse response) throws IOException {
-        return processTemplate(template, queryParams, bodyParams, request, response, null);
-    }
-
-    /**
-     * Process a template string with parameters using Thymeleaf.
-     * If the template parameter looks like a file path, treat it as such.
-     * Otherwise, fall back to reading it as a file path.
-     *
-     * @param template    The template path or content to process
-     * @param queryParams The query parameters map
-     * @param bodyParams  The body parameters map
-     * @param request     The HTTP servlet request
-     * @param response    The HTTP servlet response
-     * @return the processed template
-     * @throws IOException if there's an error processing the template
-     */
-    public static String processTemplate(String template,
-                                         Map<String, String> queryParams,
-                                         Map<String, String> bodyParams,
-                                         HttpServletRequest request,
-                                         HttpServletResponse response,
-                                         Context templateContext) {
+    public static String render(String templatePath,
+                               Map<String, String> queryParams,
+                               Map<String, String> bodyParams,
+                               HttpServletRequest request,
+                               HttpServletResponse response,
+                               Context templateContext) throws IOException {
         if (queryParams == null) {
             queryParams = new LinkedHashMap<>();
         }
@@ -222,13 +174,72 @@ public final class Hermod {
         }
 
         // If template looks like a file path (doesn't contain HTML tags), use it as a template path
-        if (!template.contains("<") && !template.contains(">")) {
-            return processThymeleafTemplate(template, queryParams, bodyParams, request, response, templateContext);
+        if (!templatePath.contains("<") && !templatePath.contains(">")) {
+            return processTemplateInternal(templatePath, queryParams, bodyParams, request, response, templateContext);
         }
 
         // Otherwise, just return content
-        JawsLogger.trace("Received template content. Template: {}", template);
-        return template;
+        JawsLogger.trace("Received template content. Template: {}", templatePath);
+        return templatePath;
+    }
+
+    /**
+     * Render a template without parameters (simple overload).
+     *
+     * @param templatePath The template path to render
+     * @param request      The HTTP servlet request
+     * @param response     The HTTP servlet response
+     * @return the rendered template
+     * @throws IOException if there's an error rendering the template
+     */
+    public static String render(String templatePath,
+                               HttpServletRequest request,
+                               HttpServletResponse response) throws IOException {
+        return render(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response, null);
+    }
+
+    /**
+     * Render a template with parameters but no additional context.
+     *
+     * @param templatePath The template path to render
+     * @param queryParams  The query parameters map
+     * @param bodyParams   The body parameters map
+     * @param request      The HTTP servlet request
+     * @param response     The HTTP servlet response
+     * @return the rendered template
+     * @throws IOException if there's an error rendering the template
+     */
+    public static String render(String templatePath,
+                               Map<String, String> queryParams,
+                               Map<String, String> bodyParams,
+                               HttpServletRequest request,
+                               HttpServletResponse response) throws IOException {
+        return render(templatePath, queryParams, bodyParams, request, response, null);
+    }
+
+    /**
+     * Compose a full page by combining a base template with a partial template.
+     *
+     * @param baseTemplatePath    The path to the base template file
+     * @param partialTemplatePath The path to the partial template file
+     * @param request             The HTTP servlet request
+     * @param response            The HTTP servlet response
+     * @return the composed page
+     * @throws IOException if there's an error composing the page
+     */
+    public static String composePage(String baseTemplatePath,
+                                    String partialTemplatePath,
+                                    HttpServletRequest request,
+                                    HttpServletResponse response) throws IOException {
+        try {
+            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
+            context.setVariable("bodyContent", partialTemplatePath);
+
+            return templateEngine.process(baseTemplatePath, context);
+        } catch (Exception e) {
+            JawsLogger.error("Error composing page: " + e.getMessage(), e);
+            throw new IOException("Failed to compose page", e);
+        }
     }
 
     /**
@@ -242,12 +253,12 @@ public final class Hermod {
      * @param templateContext Additional context variables for the template
      * @return the processed template as a string
      */
-    private static String processThymeleafTemplate(String templatePath,
-                                                   Map<String, String> queryParams,
-                                                   Map<String, String> bodyParams,
-                                                   HttpServletRequest request,
-                                                   HttpServletResponse response,
-                                                   Context templateContext) {
+    private static String processTemplateInternal(String templatePath,
+                                                 Map<String, String> queryParams,
+                                                 Map<String, String> bodyParams,
+                                                 HttpServletRequest request,
+                                                 HttpServletResponse response,
+                                                 Context templateContext) {
         try {
             // Create Thymeleaf web context
             WebContext context = createThymeleafWebContext(queryParams, bodyParams, request, response);
@@ -311,70 +322,6 @@ public final class Hermod {
         return context;
     }
 
-    /**
-     * Assemble a full page by combining a base template with a partial template using Thymeleaf.
-     *
-     * @param baseTemplatePath    the path to the base template file
-     * @param partialTemplatePath the path to the partial template file
-     * @param request             The HTTP servlet request
-     * @param response            The HTTP servlet response
-     * @return the assembled page
-     * @throws IOException if there's an error reading or processing the templates
-     */
-    public static String assemblePage(String baseTemplatePath,
-                                      String partialTemplatePath,
-                                      HttpServletRequest request,
-                                      HttpServletResponse response) throws IOException {
-        try {
-            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
-            context.setVariable("bodyContent", partialTemplatePath);
 
-            return templateEngine.process(baseTemplatePath, context);
-        } catch (Exception e) {
-            JawsLogger.error("Error assembling page: " + e.getMessage(), e);
-            throw new IOException("Failed to assemble page", e);
-        }
-    }
-
-    /**
-     * Assemble a full page by combining a base template with raw content using Thymeleaf.
-     *
-     * @param baseTemplatePath the path to the base template file
-     * @param content          the raw content to insert
-     * @param request          The HTTP servlet request
-     * @param response         The HTTP servlet response
-     * @return the assembled page
-     * @throws IOException if there's an error reading or processing the template
-     */
-    public static String assemblePageWithContent(String baseTemplatePath, String content, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        try {
-            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
-            context.setVariable("bodyContent", content);
-
-            return templateEngine.process(baseTemplatePath, context);
-        } catch (Exception e) {
-            JawsLogger.error("Error assembling page with content: " + e.getMessage(), e);
-            throw new IOException("Failed to assemble page with content", e);
-        }
-    }
-
-    /**
-     * Render a template file using Thymeleaf.
-     *
-     * @param templatePath the path to the template file
-     * @param request      The HTTP servlet request
-     * @param response     The HTTP servlet response
-     * @return the rendered template
-     * @throws IOException if there's an error reading or processing the template
-     */
-    public static String renderTemplate(String templatePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        try {
-            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
-            return templateEngine.process(templatePath, context);
-        } catch (Exception e) {
-            JawsLogger.error("Error rendering template: " + e.getMessage(), e);
-            throw new IOException("Failed to render template", e);
-        }
-    }
 
 }

@@ -168,18 +168,24 @@ responses. The class automatically adapts to work with the current request conte
 @Route(endpoint = API_ENDPOINT + "posts", responseType = JSON)
 public void testGetExternalAPI() {
     String url = "https://jsonplaceholder.typicode.com/posts";
-    APIResponse<List<Post>> response = callAPI(url, LIST_POST);
+    APIResponse<List<Post>> response = call(url, Post.class);
 
     if (!response.success()) {
-        sendErrorResponse(response.code(), response.info());
+        sendFail(response.code(), response.info());
         return;
     }
 
-    sendSucessfulResponse(response.code(), response.data());
+    sendSuccess(response.code(), response.data());
 }
 ```
 
-```callApi```, ```sendErrorResponse``` and ```sendSucessfulResponse``` are all methods from ```Bragi```
+**Main Methods:**
+- **Response Methods**: `sendSuccess()`, `sendFail()`, `sendHTML()`
+- **Template Methods**: `render()`, `compose()`
+- **Parameter Methods**: `get()`, `file()`, `files()`
+- **API Methods**: `call()`
+
+All these methods are available in ```Bragi```
 
 ### Freyr
 
@@ -246,7 +252,7 @@ public void submitJob() {
     Freyr jobQueue = Freyr.getInstance();
     String jobId = jobQueue.submit(new ExternalApiJob(payload));
     
-    sendSucessfulResponse(OK, Map.of("jobId", jobId, "status", "submitted"));
+    sendSuccess(OK, Map.of("jobId", jobId, "status", "submitted"));
 }
 
 @Route(endpoint = API_ENDPOINT + "job-status/:id", method = GET, responseType = JSON)
@@ -264,7 +270,7 @@ public void getJobStatus() {
         response.put("result", result);
     }
     
-    sendSucessfulResponse(OK, response);
+    sendSuccess(OK, response);
 }
 ```
 
@@ -280,8 +286,13 @@ changes
 ### Hermod
 
 ```Hermod``` is responsible for HTML template processing and page assembly using **Thymeleaf**. It provides powerful
-template processing capabilities with proper servlet context integration, URL resolution, template inheritance, and
+template rendering capabilities with proper servlet context integration, URL resolution, template inheritance, and
 enhanced performance through caching.
+
+**Main Methods:**
+- `render(templatePath, queryParams, bodyParams, request, response, context)` - Render template with full context
+- `render(templatePath, request, response)` - Render template without parameters  
+- `composePage(baseTemplate, partialTemplate, request, response)` - Compose page from base + partial template
 
 **Key Features:**
 
@@ -336,7 +347,7 @@ enhanced performance through caching.
                 : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
         setContext(context);
 
-        sendHTMLResponse(OK, assemblePage(BASE_HTML_PATH, DASHBOARD_PAGE));
+        sendHTML(OK, compose(BASE_HTML_PATH, DASHBOARD_PAGE));
     }
 ```
 

@@ -592,7 +592,7 @@ public class Yggdrasill {
             customResponseHeaders.forEach(response::setHeader);
 
             // Process templates through Hermod
-            String processedHTML = Hermod.processTemplate(body, queryParams, bodyParams, request, response);
+            String processedHTML = Hermod.render(body, queryParams, bodyParams, request, response);
             processedHTML += "\n\n"; // Prevent truncation
 
             response.getWriter().write(processedHTML);
@@ -616,7 +616,7 @@ public class Yggdrasill {
             context.customResponseHeaders.forEach(context.response::setHeader);
 
             // Process templates through Hermod
-            String processedHTML = Hermod.processTemplate(
+            String processedHTML = Hermod.render(
                     body,
                     context.queryParams,
                     context.bodyParams,
@@ -1052,7 +1052,7 @@ public class Yggdrasill {
                         templateName = custom404Page.substring(custom404Page.lastIndexOf("/") + 1);
                     }
 
-                    String processedHTML = Hermod.processTemplate(
+                    String processedHTML = Hermod.render(
                             templateName,
                             context.queryParams,
                             context.bodyParams,
@@ -1103,7 +1103,7 @@ public class Yggdrasill {
                                 templateName = custom401Page.substring(custom401Page.lastIndexOf("/") + 1);
                             }
 
-                            String processedHTML = Hermod.processTemplate(
+                            String processedHTML = Hermod.render(
                                     templateName,
                                     context.queryParams,
                                     context.bodyParams,
@@ -1174,7 +1174,7 @@ public class Yggdrasill {
                 String relativePath = resourcesPath.relativize(filePath).toString();
 
                 // Process HTML templates using the relative file path
-                String processedHTML = Hermod.processTemplate(
+                String processedHTML = Hermod.render(
                         relativePath,
                         context.queryParams,
                         context.bodyParams,
