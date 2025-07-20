@@ -193,4 +193,123 @@ public class BackofficeController extends Bragi {
 
     // endregion
 
+    // region User Management Endpoints
+
+    /**
+     * HTMX endpoint to fetch paginated user table data.
+     * Accessible via GET request to /backoffice/htmx/users.
+     */
+    @Route(endpoint = HTMX_ENDPOINT + "/users", method = GET, responseType = HTML)
+    public void getPaginatedUserTable() {
+        if (!getRequestContext().isHTMX()) {
+            sendFail(BAD_REQUEST, "This endpoint is only accessible via HTMX.");
+        }
+
+        // Parse pagination parameters with defaults
+        int page = 0;
+        int size = 25;
+
+        try {
+            String pageParam = get("page", QUERY);
+            if (pageParam != null) {
+                page = Integer.parseInt(pageParam);
+            }
+        } catch (NumberFormatException e) {
+            Logger.warn("Invalid page number: {}", get("page", QUERY));
+        }
+
+        try {
+            String sizeParam = get("size", QUERY);
+            if (sizeParam != null) {
+                size = Integer.parseInt(sizeParam);
+            }
+        } catch (NumberFormatException e) {
+            Logger.warn("Invalid size number: {}", get("size", QUERY));
+        }
+
+        PageRequest pageRequest = new PageRequest(page, size);
+
+        sendHTML(
+                OK,
+                render("backoffice/components/table/table-view.html",
+                        backofficeService.getPaginatedUserTableData(pageRequest)));
+
+    }
+
+    /**
+     * Renders the users page.
+     * Accessible via GET request to /backoffice/users.
+     */
+    @Route(endpoint = API_ENDPOINT + "/users", method = GET, responseType = HTML)
+    public void renderUsersPage() {
+        sendHTML(
+                OK,
+                render("backoffice/users.html", backofficeService.getUsersPageContext()));
+    }
+
+    /**
+     * Renders the user detail page.
+     * Accessible via GET request to /backoffice/users/{id}.
+     */
+    @Route(endpoint = API_ENDPOINT + "/users/:id", method = GET, responseType = HTML)
+    public void renderUserDetail() {
+        String userId = get("id", PATH);
+        if (userId == null) {
+            sendFail(BAD_REQUEST, "User ID is required.");
+            return;
+        }
+
+        sendHTML(
+                OK,
+                render("backoffice/user-detail.html", backofficeService.getUserDetailContext(userId)));
+    }
+
+    /**
+     * HTMX endpoint to fetch filtered paginated user table data.
+     * Accessible via GET request to /backoffice/htmx/users-filtered.
+     */
+    @Route(endpoint = HTMX_ENDPOINT + "/users-filtered", method = GET, responseType = HTML)
+    public void getFilteredUserTable() {
+        if (!getRequestContext().isHTMX()) {
+            sendFail(BAD_REQUEST, "This endpoint is only accessible via HTMX.");
+        }
+
+        // Parse pagination parameters with defaults
+        int page = 0;
+        int size = 25;
+
+        try {
+            String pageParam = get("page", QUERY);
+            if (pageParam != null) {
+                page = Integer.parseInt(pageParam);
+            }
+        } catch (NumberFormatException e) {
+            Logger.warn("Invalid page number: {}", get("page", QUERY));
+        }
+
+        try {
+            String sizeParam = get("size", QUERY);
+            if (sizeParam != null) {
+                size = Integer.parseInt(sizeParam);
+            }
+        } catch (NumberFormatException e) {
+            Logger.warn("Invalid size number: {}", get("size", QUERY));
+        }
+
+        // Parse filter parameters
+        String status = get("status", QUERY);
+        String role = get("role", QUERY);
+        String search = get("search", QUERY);
+
+        PageRequest pageRequest = new PageRequest(page, size);
+
+        sendHTML(
+                OK,
+                render("backoffice/components/table/table-view.html",
+                        backofficeService.getFilteredUserTableData(pageRequest, status, role, search)));
+
+    }
+
+    // endregion
+
 }

@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>System Logs</title>
+    <title>System Users</title>
     <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/select.min.js" defer></script>
     <script>
     // Debounce function to limit API calls
@@ -25,27 +25,27 @@
         const form = document.getElementById('filters-form');
         if (form) {
             // Get current values from comboboxes
-            const levelSelect = document.getElementById('level-select');
-            const sourceSelect = document.getElementById('source-select');
+            const statusSelect = document.getElementById('status-select');
+            const roleSelect = document.getElementById('role-select');
             const sizeSelect = document.getElementById('size-select');
             const searchInput = document.getElementById('search-filter');
             
             // Update form hidden inputs
-            if (levelSelect) {
-                const levelInput = levelSelect.querySelector('input[type="hidden"]');
-                const formLevelInput = form.querySelector('input[name="level"]');
-                if (levelInput && formLevelInput) {
-                    formLevelInput.value = levelInput.value;
-                    console.log('Level value:', levelInput.value);
+            if (statusSelect) {
+                const statusInput = statusSelect.querySelector('input[type="hidden"]');
+                const formStatusInput = form.querySelector('input[name="status"]');
+                if (statusInput && formStatusInput) {
+                    formStatusInput.value = statusInput.value;
+                    console.log('Status value:', statusInput.value);
                 }
             }
             
-            if (sourceSelect) {
-                const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
-                const formSourceInput = form.querySelector('input[name="source"]');
-                if (sourceInput && formSourceInput) {
-                    formSourceInput.value = sourceInput.value;
-                    console.log('Source value:', sourceInput.value);
+            if (roleSelect) {
+                const roleInput = roleSelect.querySelector('input[type="hidden"]');
+                const formRoleInput = form.querySelector('input[name="role"]');
+                if (roleInput && formRoleInput) {
+                    formRoleInput.value = roleInput.value;
+                    console.log('Role value:', roleInput.value);
                 }
             }
             
@@ -60,11 +60,11 @@
             
             // Build query string
             const params = new URLSearchParams();
-            if (form.querySelector('input[name="level"]').value) {
-                params.append('level', form.querySelector('input[name="level"]').value);
+            if (form.querySelector('input[name="status"]').value) {
+                params.append('status', form.querySelector('input[name="status"]').value);
             }
-            if (form.querySelector('input[name="source"]').value) {
-                params.append('source', form.querySelector('input[name="source"]').value);
+            if (form.querySelector('input[name="role"]').value) {
+                params.append('role', form.querySelector('input[name="role"]').value);
             }
             if (form.querySelector('input[name="search"]').value) {
                 params.append('search', form.querySelector('input[name="search"]').value);
@@ -77,8 +77,8 @@
             console.log('Query params:', params.toString());
             
             // Trigger HTMX request
-            htmx.ajax('GET', '/backoffice/htmx/logs-filtered?' + params.toString(), {
-                target: '#logs-table-container',
+            htmx.ajax('GET', '/backoffice/htmx/users-filtered?' + params.toString(), {
+                target: '#users-table-container',
                 swap: 'outerHTML',
                 indicator: '#loading-indicator'
             });
@@ -97,29 +97,29 @@
             console.log('Setting up combobox event listeners');
             
             // Add event listeners for combobox changes
-            const levelSelect = document.getElementById('level-select');
-            const sourceSelect = document.getElementById('source-select');
+            const statusSelect = document.getElementById('status-select');
+            const roleSelect = document.getElementById('role-select');
             const sizeSelect = document.getElementById('size-select');
             
-            if (levelSelect) {
-                console.log('Setting up level select');
+            if (statusSelect) {
+                console.log('Setting up status select');
                 // Listen for changes on the hidden input
-                const levelInput = levelSelect.querySelector('input[type="hidden"]');
-                if (levelInput) {
-                    levelInput.addEventListener('change', function() {
-                        console.log('Level changed:', this.value);
+                const statusInput = statusSelect.querySelector('input[type="hidden"]');
+                if (statusInput) {
+                    statusInput.addEventListener('change', function() {
+                        console.log('Status changed:', this.value);
                         // Don't auto-apply, let user click button
                     });
                 }
             }
             
-            if (sourceSelect) {
-                console.log('Setting up source select');
+            if (roleSelect) {
+                console.log('Setting up role select');
                 // Listen for changes on the hidden input
-                const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
-                if (sourceInput) {
-                    sourceInput.addEventListener('change', function() {
-                        console.log('Source changed:', this.value);
+                const roleInput = roleSelect.querySelector('input[type="hidden"]');
+                if (roleInput) {
+                    roleInput.addEventListener('change', function() {
+                        console.log('Role changed:', this.value);
                         // Don't auto-apply, let user click button
                     });
                 }
@@ -157,25 +157,25 @@
         const form = document.getElementById('filters-form');
         if (form) {
             // Reset combobox elements to their default options
-            const levelSelect = document.getElementById('level-select');
-            const sourceSelect = document.getElementById('source-select');
+            const statusSelect = document.getElementById('status-select');
+            const roleSelect = document.getElementById('role-select');
             const sizeSelect = document.getElementById('size-select');
             const searchInput = document.getElementById('search-filter');
 
-            if (levelSelect) {
+            if (statusSelect) {
                 // Reset combobox to default
-                const levelInput = levelSelect.querySelector('input[type="hidden"]');
-                const levelTrigger = levelSelect.querySelector('button');
-                if (levelInput) levelInput.value = '';
-                if (levelTrigger) levelTrigger.querySelector('span').textContent = 'All Levels';
+                const statusInput = statusSelect.querySelector('input[type="hidden"]');
+                const statusTrigger = statusSelect.querySelector('button');
+                if (statusInput) statusInput.value = '';
+                if (statusTrigger) statusTrigger.querySelector('span').textContent = 'All Statuses';
             }
             
-            if (sourceSelect) {
+            if (roleSelect) {
                 // Reset combobox to default
-                const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
-                const sourceTrigger = sourceSelect.querySelector('button');
-                if (sourceInput) sourceInput.value = '';
-                if (sourceTrigger) sourceTrigger.querySelector('span').textContent = 'All Sources';
+                const roleInput = roleSelect.querySelector('input[type="hidden"]');
+                const roleTrigger = roleSelect.querySelector('button');
+                if (roleInput) roleInput.value = '';
+                if (roleTrigger) roleTrigger.querySelector('span').textContent = 'All Roles';
             }
             
             if (sizeSelect) {
@@ -219,15 +219,15 @@
         <!-- Page Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold">System Logs</h1>
-                <p class="text-muted-foreground">View and filter system log entries</p>
+                <h1 class="text-2xl font-bold">System Users</h1>
+                <p class="text-muted-foreground">View and filter system users</p>
             </div>
             <div class="flex items-center gap-2">
                 <button class="btn btn-ghost btn-sm"
-                        hx-get="/backoffice/htmx/logs-filtered?page=0&size=25"
+                        hx-get="/backoffice/htmx/users-filtered?page=0&size=25"
                         hx-swap="outerHTML"
-                        hx-target="#logs-table-container"
-                        title="Refresh Logs">
+                        hx-target="#users-table-container"
+                        title="Refresh Users">
                     <i class="icon icon-arrow-path w-4 h-4"></i>
                 </button>
             </div>
@@ -242,16 +242,16 @@
                 <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
                       id="filters-form">
 
-                    <!-- Log Level Filter -->
+                    <!-- User Status Filter -->
                     <div>
-                        <label class="form-label" for="level-select">Log Level</label>
-                        <div class="select" id="level-select">
-                            <button aria-controls="level-select-listbox" aria-expanded="false"
+                        <label class="form-label" for="status-select">User Status</label>
+                        <div class="select" id="status-select">
+                            <button aria-controls="status-select-listbox" aria-expanded="false"
                                     aria-haspopup="listbox"
                                     class="btn-outline justify-between font-normal w-full"
-                                    id="level-select-trigger"
+                                    id="status-select-trigger"
                                     type="button">
-                                <span class="truncate">All Levels</span>
+                                <span class="truncate">All Statuses</span>
                                 <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
                                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
                                      width="24"
@@ -260,7 +260,7 @@
                                     <path d="m7 9 5-5 5 5"/>
                                 </svg>
                             </button>
-                            <div aria-hidden="true" data-popover id="level-select-popover">
+                            <div aria-hidden="true" data-popover id="status-select-popover">
                                 <header>
                                     <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24" stroke="currentColor"
                                          stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
@@ -268,34 +268,34 @@
                                         <circle cx="11" cy="11" r="8"/>
                                         <path d="m21 21-4.3-4.3"/>
                                     </svg>
-                                    <input aria-autocomplete="list" aria-controls="level-select-listbox" aria-expanded="false" aria-labelledby="level-select-trigger"
-                                           autocomplete="off" autocorrect="off" placeholder="Search level..." role="combobox"
+                                    <input aria-autocomplete="list" aria-controls="status-select-listbox" aria-expanded="false" aria-labelledby="status-select-trigger"
+                                           autocomplete="off" autocorrect="off" placeholder="Search status..." role="combobox"
                                            spellcheck="false" type="text"
                                            value=""/>
                                 </header>
-                                <div aria-labelledby="level-select-trigger" aria-orientation="vertical" data-empty="No level found."
-                                     id="level-select-listbox" role="listbox">
-                                    <div data-value="" role="option">All Levels</div>
-                                    <div role="option" th:data-value="${level}"
-                                         th:each="level : ${data.logLevels}"
-                                         th:text="${level}">INFO
+                                <div aria-labelledby="status-select-trigger" aria-orientation="vertical" data-empty="No status found."
+                                     id="status-select-listbox" role="listbox">
+                                    <div data-value="" role="option">All Statuses</div>
+                                    <div role="option" th:data-value="${status}"
+                                         th:each="status : ${data.userStatuses}"
+                                         th:text="${status}">active
                                     </div>
                                 </div>
                             </div>
-                            <input name="level" type="hidden" value=""/>
+                            <input name="status" type="hidden" value=""/>
                         </div>
                     </div>
 
-                    <!-- Source Filter -->
+                    <!-- User Role Filter -->
                     <div>
-                        <label class="form-label" for="source-select">Source</label>
-                        <div class="select" id="source-select">
-                            <button aria-controls="source-select-listbox" aria-expanded="false"
+                        <label class="form-label" for="role-select">User Role</label>
+                        <div class="select" id="role-select">
+                            <button aria-controls="role-select-listbox" aria-expanded="false"
                                     aria-haspopup="listbox"
                                     class="btn-outline justify-between font-normal w-full"
-                                    id="source-select-trigger"
+                                    id="role-select-trigger"
                                     type="button">
-                                <span class="truncate">All Sources</span>
+                                <span class="truncate">All Roles</span>
                                 <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
                                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
                                      width="24"
@@ -304,7 +304,7 @@
                                     <path d="m7 9 5-5 5 5"/>
                                 </svg>
                             </button>
-                            <div aria-hidden="true" data-popover id="source-select-popover">
+                            <div aria-hidden="true" data-popover id="role-select-popover">
                                 <header>
                                     <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24" stroke="currentColor"
                                          stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
@@ -312,31 +312,31 @@
                                         <circle cx="11" cy="11" r="8"/>
                                         <path d="m21 21-4.3-4.3"/>
                                     </svg>
-                                    <input aria-autocomplete="list" aria-controls="source-select-listbox" aria-expanded="false" aria-labelledby="source-select-trigger"
-                                           autocomplete="off" autocorrect="off" placeholder="Search source..." role="combobox"
+                                    <input aria-autocomplete="list" aria-controls="role-select-listbox" aria-expanded="false" aria-labelledby="role-select-trigger"
+                                           autocomplete="off" autocorrect="off" placeholder="Search role..." role="combobox"
                                            spellcheck="false" type="text"
                                            value=""/>
                                 </header>
-                                <div aria-labelledby="source-select-trigger" aria-orientation="vertical" data-empty="No source found."
-                                     id="source-select-listbox" role="listbox">
-                                    <div data-value="" role="option">All Sources</div>
-                                    <div role="option" th:data-value="${source}"
-                                         th:each="source : ${data.logSources}"
-                                         th:text="${source}">System
+                                <div aria-labelledby="role-select-trigger" aria-orientation="vertical" data-empty="No role found."
+                                     id="role-select-listbox" role="listbox">
+                                    <div data-value="" role="option">All Roles</div>
+                                    <div role="option" th:data-value="${role}"
+                                         th:each="role : ${data.userRoles}"
+                                         th:text="${role}">admin
                                     </div>
                                 </div>
                             </div>
-                            <input name="source" type="hidden" value=""/>
+                            <input name="role" type="hidden" value=""/>
                         </div>
                     </div>
 
                     <!-- Search Filter -->
                     <div>
-                        <label class="form-label" for="search-filter">Search Message</label>
+                        <label class="form-label" for="search-filter">Search Users</label>
                         <input class="input"
                                id="search-filter"
                                name="search"
-                               placeholder="Search in messages..."
+                               placeholder="Search username, email, name..."
                                type="text">
                     </div>
 
@@ -397,16 +397,16 @@
         <div id="loading-indicator" class="htmx-indicator flex justify-center p-4" style="display: none;">
             <div class="flex items-center gap-2">
                 <i class="icon icon-arrow-path w-4 h-4 animate-spin"></i>
-                <span>Loading logs...</span>
+                <span>Loading users...</span>
             </div>
         </div>
 
-        <!-- Logs Table Container -->
-        <div id="logs-table-container">
-            <div hx-get="/backoffice/htmx/logs-filtered?page=0&size=25"
+        <!-- Users Table Container -->
+        <div id="users-table-container">
+            <div hx-get="/backoffice/htmx/users-filtered?page=0&size=25"
                  hx-swap="outerHTML transition:true"
                  hx-trigger="load"
-                 id="logs-table">
+                 id="users-table">
                 <!-- Skeleton state while loading -->
                 <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
             </div>
@@ -420,18 +420,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // Wait for Basecoat select.js to initialize
     setTimeout(function () {
         // Add event listeners for combobox changes
-        const levelSelect = document.getElementById('level-select');
-        const sourceSelect = document.getElementById('source-select');
+        const statusSelect = document.getElementById('status-select');
+        const roleSelect = document.getElementById('role-select');
         
-        if (levelSelect) {
+        if (statusSelect) {
             // Listen for changes on the hidden input
-            const levelInput = levelSelect.querySelector('input[type="hidden"]');
-            if (levelInput) {
-                levelInput.addEventListener('change', function () {
+            const statusInput = statusSelect.querySelector('input[type="hidden"]');
+            if (statusInput) {
+                statusInput.addEventListener('change', function () {
                     // Update the form's hidden input
-                    const formLevelInput = document.querySelector('input[name="level"]');
-                    if (formLevelInput) {
-                        formLevelInput.value = this.value;
+                    const formStatusInput = document.querySelector('input[name="status"]');
+                    if (formStatusInput) {
+                        formStatusInput.value = this.value;
                     }
                     // Trigger HTMX request
                     const form = document.getElementById('filters-form');
@@ -442,15 +442,15 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
         
-        if (sourceSelect) {
+        if (roleSelect) {
             // Listen for changes on the hidden input
-            const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
-            if (sourceInput) {
-                sourceInput.addEventListener('change', function () {
+            const roleInput = roleSelect.querySelector('input[type="hidden"]');
+            if (roleInput) {
+                roleInput.addEventListener('change', function () {
                     // Update the form's hidden input
-                    const formSourceInput = document.querySelector('input[name="source"]');
-                    if (formSourceInput) {
-                        formSourceInput.value = this.value;
+                    const formRoleInput = document.querySelector('input[name="role"]');
+                    if (formRoleInput) {
+                        formRoleInput.value = this.value;
                     }
                     // Trigger HTMX request
                     const form = document.getElementById('filters-form');

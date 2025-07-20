@@ -382,12 +382,20 @@
 
                         <!-- Actions column -->
                         <td class="flex gap-2" th:if="${actions != null and !actions.empty}">
-                            <a th:if="${actions.contains('view')}"
+                            <a th:if="${action == 'view'}"
                                th:href="'/backoffice/logs/' + ${row.get('id')}"
-                               class="btn btn-sm btn-ghost"
-                               title="View Details">
+                               th:class="'btn-sm btn-ghost'"
+                               th:title="${action}">
                                 <i class="icon icon-eye w-4 h-4"></i>
                             </a>
+                            <button th:if="${action != 'view'}"
+                                    th:class="${'btn-sm ' + (action == 'delete' ? 'btn-destructive' : 'btn-ghost')}"
+                                    th:data-action="${action}"
+                                    th:data-row-id="${row.get('id')}"
+                                    th:each="action : ${actions}"
+                                    th:title="${action}">
+                                <i th:class="${'icon ' + (action == 'delete' ? 'icon-trash' : action == 'edit' ? 'icon-pencil' : action == 'add' ? 'icon-plus' : 'icon-arrow-path') + ' w-4 h-4'}"></i>
+                            </button>
                         </td>
                     </tr>
                     </tbody>
@@ -524,6 +532,257 @@
                 </table>
             </div>
         </section>
+    </div>
+</div>
+
+<!-- User-specific table with formatted columns -->
+<div th:fragment="table-users(headers, rows, caption, actions)">
+    <div class="card">
+        <header th:if="${caption != null}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 th:text="${caption}">Recent System Users</h2>
+                </div>
+                <button class="btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent"
+                        hx-get="/backoffice/htmx/users?amount=10"
+                        hx-indicator="#refresh-indicator"
+                        hx-swap="outerHTML"
+                        hx-target="closest .card"
+                        title="Refresh Users">
+                    <i class="icon icon-arrow-path w-4 h-4" id="refresh-icon"></i>
+                    <i class="htmx-indicator icon icon-arrow-path w-4 h-4 animate-spin" hidden
+                       id="refresh-indicator"></i>
+                </button>
+            </div>
+        </header>
+        <section>
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th th:each="header : ${headers}" th:text="${header}">Header</th>
+                        <th th:if="${actions != null and !actions.empty}">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${rows}">
+                        <!-- Username column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Username')}"
+                            th:text="${row.get('username')}">john_doe
+                        </td>
+
+                        <!-- Email column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Email')}"
+                            th:text="${row.get('email')}">john@example.com
+                        </td>
+
+                        <!-- Name column -->
+                        <td th:if="${headers.contains('Name')}"
+                            th:text="${row.get('name')}">John Doe
+                        </td>
+
+                        <!-- Status column with color coding -->
+                        <td th:if="${headers.contains('Status')}">
+                                    <span th:class="${'px-2 py-1 rounded-full text-xs font-medium ' +
+                                          (row.get('status') == 'active' ? 'bg-green-100 text-green-800' :
+                                           row.get('status') == 'inactive' ? 'bg-gray-100 text-gray-800' :
+                                           'bg-red-100 text-red-800')}"
+                                          th:text="${row.get('status')}">active</span>
+                        </td>
+
+                        <!-- Last Login column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Last Login')}"
+                            th:text="${row.get('last_login')}">2024-01-15 10:30:45
+                        </td>
+
+                        <!-- Created column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Created')}"
+                            th:text="${row.get('created')}">2024-01-15 10:30:45
+                        </td>
+
+                        <!-- Actions column -->
+                        <td class="flex gap-2" th:if="${actions != null and !actions.empty}">
+                            <button th:class="${'btn-sm ' + (action == 'delete' ? 'btn-destructive' : 'btn-ghost')}"
+                                    th:data-action="${action}"
+                                    th:data-row-id="${row.get('id')}"
+                                    th:each="action : ${actions}"
+                                    th:title="${action}">
+                                <i th:class="${'icon ' + (action == 'view' ? 'icon-eye' : action == 'delete' ? 'icon-trash' : action == 'edit' ? 'icon-pencil' : action == 'add' ? 'icon-plus' : 'icon-arrow-path') + ' w-4 h-4'}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- User-specific table with dynamic pagination controls -->
+<div th:fragment="table-users-with-pagination(headers, rows, caption, actions, pagination)">
+    <div class="card">
+        <header th:if="${caption != null}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 th:text="${caption}">Recent System Users</h2>
+                    <p class="text-sm text-muted-foreground">
+                        Showing <span th:text="${pagination.currentPage + 1}">1</span> of
+                        <span th:text="${pagination.totalPages}">1</span> pages
+                        (<span th:text="${pagination.totalElements}">0</span> total entries)
+                    </p>
+                </div>
+                <button class="btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent"
+                        hx-indicator="#refresh-indicator"
+                        hx-swap="outerHTML"
+                        hx-target="#users-table-container"
+                        th:hx-get="'/backoffice/htmx/users-filtered?page=' + ${pagination.currentPage} + '&size=' + ${pagination.pageSize} + '&status=' + ${data.filters != null ? data.filters.status : ''} + '&role=' + ${data.filters != null ? data.filters.role : ''} + '&search=' + ${data.filters != null ? data.filters.search : ''}"
+                        title="Refresh Users">
+                    <i class="icon icon-arrow-path w-4 h-4" id="refresh-icon"></i>
+                    <i class="htmx-indicator icon icon-arrow-path w-4 h-4 animate-spin" hidden
+                       id="refresh-indicator"></i>
+                </button>
+            </div>
+        </header>
+        <section>
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th th:each="header : ${headers}" th:text="${header}">Header</th>
+                        <th th:if="${actions != null and !actions.empty}">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${rows}">
+                        <!-- Username column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Username')}"
+                            th:text="${row.get('username')}">john_doe
+                        </td>
+
+                        <!-- Email column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Email')}"
+                            th:text="${row.get('email')}">john@example.com
+                        </td>
+
+                        <!-- Name column -->
+                        <td th:if="${headers.contains('Name')}"
+                            th:text="${row.get('name')}">John Doe
+                        </td>
+
+                        <!-- Status column with color coding -->
+                        <td th:if="${headers.contains('Status')}">
+                                    <span th:class="${'px-2 py-1 rounded-full text-xs font-medium ' +
+                                          (row.get('status') == 'active' ? 'bg-green-100 text-green-800' :
+                                           row.get('status') == 'inactive' ? 'bg-gray-100 text-gray-800' :
+                                           'bg-red-100 text-red-800')}"
+                                          th:text="${row.get('status')}">active</span>
+                        </td>
+
+                        <!-- Last Login column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Last Login')}"
+                            th:text="${row.get('last_login')}">2024-01-15 10:30:45
+                        </td>
+
+                        <!-- Created column -->
+                        <td class="font-mono text-sm" th:if="${headers.contains('Created')}"
+                            th:text="${row.get('created')}">2024-01-15 10:30:45
+                        </td>
+
+                        <!-- Actions column -->
+                        <td class="flex gap-2" th:if="${actions != null and !actions.empty}">
+                            <button th:class="${'btn-sm ' + (action == 'delete' ? 'btn-destructive' : 'btn-ghost')}"
+                                    th:data-action="${action}"
+                                    th:data-row-id="${row.get('id')}"
+                                    th:each="action : ${actions}"
+                                    th:title="${action}">
+                                <i th:class="${'icon ' + (action == 'view' ? 'icon-eye' : action == 'delete' ? 'icon-trash' : action == 'edit' ? 'icon-pencil' : action == 'add' ? 'icon-plus' : 'icon-arrow-path') + ' w-4 h-4'}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <footer th:if="${pagination.totalPages > 1}">
+            <nav aria-label="pagination" class="mx-auto flex w-full justify-center" role="navigation">
+                <ul class="flex flex-row items-center gap-1">
+                    <!-- First page button -->
+                    <li th:if="${pagination.currentPage > 0}">
+                        <button class="btn btn-sm p-2 rounded-md hover:bg-accent"
+                                hx-indicator="#refresh-indicator"
+                                hx-swap="outerHTML"
+                                hx-target="#users-table-container"
+                                th:hx-get="'/backoffice/htmx/users-filtered?page=0&size=' + ${pagination.pageSize} + '&status=' + ${data.filters != null ? data.filters.status : ''} + '&role=' + ${data.filters != null ? data.filters.role : ''} + '&search=' + ${data.filters != null ? data.filters.search : ''}"
+                                title="First page">
+                            <i class="icon icon-arrow-left w-4 h-4"></i>
+                            <i class="icon icon-arrow-left w-4 h-4 -ml-2"></i>
+                        </button>
+                    </li>
+                    <li th:unless="${pagination.currentPage > 0}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
+                            <i class="icon icon-arrow-left w-4 h-4"></i>
+                            <i class="icon icon-arrow-left w-4 h-4 -ml-2"></i>
+                        </button>
+                    </li>
+
+                    <!-- Previous button -->
+                    <li th:if="${pagination.hasPrevious}">
+                        <button class="btn btn-sm p-2 rounded-md hover:bg-accent"
+                                hx-indicator="#refresh-indicator"
+                                hx-swap="outerHTML"
+                                hx-target="#users-table-container"
+                                th:hx-get="'/backoffice/htmx/users-filtered?page=' + ${pagination.currentPage - 1} + '&size=' + ${pagination.pageSize} + '&status=' + ${data.filters != null ? data.filters.status : ''} + '&role=' + ${data.filters != null ? data.filters.role : ''} + '&search=' + ${data.filters != null ? data.filters.search : ''}"
+                                title="Previous">
+                            Previous
+                            <i class="icon icon-arrow-left w-4 h-4"></i>
+                        </button>
+                    </li>
+                    <li th:unless="${pagination.hasPrevious}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
+                            Previous
+                        </button>
+                    </li>
+
+                    <!-- Next button -->
+                    <li th:if="${pagination.hasNext}">
+                        <button class="btn  btn-sm p-2 rounded-md hover:bg-accent"
+                                hx-indicator="#refresh-indicator"
+                                hx-swap="outerHTML"
+                                hx-target="#users-table-container"
+                                th:hx-get="'/backoffice/htmx/users-filtered?page=' + ${pagination.currentPage + 1} + '&size=' + ${pagination.pageSize} + '&status=' + ${data.filters != null ? data.filters.status : ''} + '&role=' + ${data.filters != null ? data.filters.role : ''} + '&search=' + ${data.filters != null ? data.filters.search : ''}"
+                                title="Next">
+                            Next
+                            <i class="icon icon-arrow-right w-4 h-4"></i>
+                        </button>
+
+                    </li>
+                    <li th:unless="${pagination.hasNext}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
+                            Next
+                        </button>
+                    </li>
+
+                    <!-- Last page button -->
+                    <li th:if="${pagination.currentPage < pagination.totalPages - 1}">
+                        <button class="btn btn-sm p-2 rounded-md hover:bg-accent"
+                                hx-indicator="#refresh-indicator"
+                                hx-swap="outerHTML"
+                                hx-target="#users-table-container"
+                                th:hx-get="'/backoffice/htmx/users-filtered?page=' + ${pagination.totalPages - 1} + '&size=' + ${pagination.pageSize} + '&status=' + ${data.filters != null ? data.filters.status : ''} + '&role=' + ${data.filters != null ? data.filters.role : ''} + '&search=' + ${data.filters != null ? data.filters.search : ''}"
+                                title="Last page">
+                            <i class="icon icon-arrow-right w-4 h-4"></i>
+                            <i class="icon icon-arrow-right w-4 h-4 -ml-2"></i>
+                        </button>
+                    </li>
+                    <li th:unless="${pagination.currentPage < pagination.totalPages - 1}">
+                        <button class="btn btn-sm p-2 rounded-md opacity-50 cursor-not-allowed" disabled>
+                            <i class="icon icon-arrow-right w-4 h-4"></i>
+                            <i class="icon icon-arrow-right w-4 h-4 -ml-2"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </footer>
     </div>
 </div>
 </body>

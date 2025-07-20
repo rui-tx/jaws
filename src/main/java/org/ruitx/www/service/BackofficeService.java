@@ -174,4 +174,118 @@ public class BackofficeService {
                 .with("data", data)
                 .build();
     }
+
+    // region User Management Methods
+
+    /**
+     * Retrieves paginated user table data.
+     *
+     * @param pageRequest Pagination parameters
+     * @return Context containing paginated user table data.
+     */
+    public Context getPaginatedUserTableData(PageRequest pageRequest) {
+        Page<Map<String, String>> userPage = backofficeRepo.getPaginatedUsers(pageRequest);
+        Map<String, Object> data = Map.of(
+                "headers", Arrays.asList("Username", "Email", "Name", "Status", "Last Login", "Created"),
+                "rows", userPage.getContent(),
+                "caption", "Recent System Users",
+                "actions", Arrays.asList("view"),
+                "pagination", Map.of(
+                        "currentPage", userPage.getCurrentPage(),
+                        "totalPages", userPage.getTotalPages(),
+                        "totalElements", userPage.getTotalElements(),
+                        "pageSize", userPage.getPageSize(),
+                        "hasNext", userPage.hasNext(),
+                        "hasPrevious", userPage.hasPrevious()
+                )
+        );
+
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
+
+    /**
+     * Retrieves the context for the users page.
+     *
+     * @return Context containing data for the users page.
+     */
+    public Context getUsersPageContext() {
+        Map<String, Object> data = Map.of(
+                "currentPage", "users",
+                "userStatuses", backofficeRepo.getDistinctUserStatuses(),
+                "userRoles", backofficeRepo.getDistinctUserRoles()
+        );
+
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
+
+    /**
+     * Retrieves filtered paginated user table data for the users page.
+     *
+     * @param pageRequest Pagination parameters
+     * @param status Filter by user status (null for all statuses)
+     * @param role Filter by user role (null for all roles)
+     * @param search Search term in username, email, or name (null for no search)
+     * @return Context containing filtered paginated user table data.
+     */
+    public Context getFilteredUserTableData(PageRequest pageRequest, String status, String role, String search) {
+        Page<Map<String, String>> userPage = backofficeRepo.getFilteredUsers(pageRequest, status, role, search);
+        Map<String, Object> data = Map.of(
+                "headers", Arrays.asList("Username", "Email", "Name", "Status", "Last Login", "Created"),
+                "rows", userPage.getContent(),
+                "caption", "System Users",
+                "actions", Arrays.asList("view"),
+                "pagination", Map.of(
+                        "currentPage", userPage.getCurrentPage(),
+                        "totalPages", userPage.getTotalPages(),
+                        "totalElements", userPage.getTotalElements(),
+                        "pageSize", userPage.getPageSize(),
+                        "hasNext", userPage.hasNext(),
+                        "hasPrevious", userPage.hasPrevious()
+                ),
+                "filters", Map.of(
+                        "status", status != null ? status : "",
+                        "role", role != null ? role : "",
+                        "search", search != null ? search : ""
+                )
+        );
+
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
+
+    /**
+     * Retrieves a single user for detail view.
+     *
+     * @param userId The ID of the user to retrieve
+     * @return Context containing the user data.
+     */
+    public Context getUserDetailContext(String userId) {
+        Map<String, String> userEntry = backofficeRepo.getUserById(userId);
+        
+        if (userEntry == null) {
+            Map<String, Object> data = Map.of(
+                    "error", "User not found",
+                    "userId", userId
+            );
+            return Context.builder()
+                    .with("data", data)
+                    .build();
+        }
+
+        Map<String, Object> data = Map.of(
+                "currentPage", "user-detail",
+                "userEntry", userEntry
+        );
+
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
+
+    // endregion
 }
