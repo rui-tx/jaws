@@ -10,8 +10,8 @@ import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.ResponseCode.BAD_REQUEST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.strings.ResponseType.HTML;
-import static org.ruitx.jaws.types.ParamType.QUERY;
 import static org.ruitx.jaws.types.ParamType.PATH;
+import static org.ruitx.jaws.types.ParamType.QUERY;
 
 public class BackofficeController extends Bragi {
 
@@ -132,7 +132,7 @@ public class BackofficeController extends Bragi {
      * Renders the log detail page.
      * Accessible via GET request to /backoffice/logs/{id}.
      */
-    @Route(endpoint = API_ENDPOINT + "/logs/{id}", method = GET, responseType = HTML)
+    @Route(endpoint = API_ENDPOINT + "/logs/:id", method = GET, responseType = HTML)
     public void renderLogDetail() {
         String logId = get("id", PATH);
         if (logId == null) {
