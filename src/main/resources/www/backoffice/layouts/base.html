@@ -67,7 +67,7 @@
                         class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]">
                     <i class="icon icon-bars-3 w-5 h-5"></i>
                 </button>
-                <h2 class="text-lg font-semibold">Dashboard</h2>
+                <h2 class="text-lg font-semibold" th:text="${data.currentPage != null ? (data.currentPage == 'dashboard' ? 'Dashboard' : data.currentPage == 'logs' ? 'System Logs' : data.currentPage == 'log-detail' ? 'Log Detail' : 'Dashboard') : 'Dashboard'}">Dashboard</h2>
             </div>
             
             <div class="flex items-center gap-2">

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html layout:decorate="~{backoffice/layouts/base.html}"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>System Logs</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/select.min.js"></script>
+    <script>
+    // Function to apply filters - defined globally
+    function applyFilters() {
+        console.log('applyFilters called');
+        const form = document.getElementById('filters-form');
+        if (form) {
+            console.log('Form found');
+            // Get current values from comboboxes
+            const levelSelect = document.getElementById('level-select');
+            const sourceSelect = document.getElementById('source-select');
+            
+            if (levelSelect) {
+                const levelInput = levelSelect.querySelector('input[type="hidden"]');
+                const formLevelInput = form.querySelector('input[name="level"]');
+                if (levelInput && formLevelInput) {
+                    formLevelInput.value = levelInput.value;
+                    console.log('Level value:', levelInput.value);
+                }
+            }
+            
+            if (sourceSelect) {
+                const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
+                const formSourceInput = form.querySelector('input[name="source"]');
+                if (sourceInput && formSourceInput) {
+                    formSourceInput.value = sourceInput.value;
+                    console.log('Source value:', sourceInput.value);
+                }
+            }
+            
+            // Check if target exists
+            const target = document.getElementById('logs-table-container');
+            if (target) {
+                console.log('Target found');
+            } else {
+                console.log('Target not found');
+            }
+            
+            // Trigger HTMX request
+            console.log('Triggering HTMX request');
+            htmx.trigger(form, 'submit');
+        } else {
+            console.log('Form not found');
+        }
+    }
+    </script>
+</head>
+<body>
+<section layout:fragment="content">
+    <div class="space-y-6">
+        <!-- Page Header -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">System Logs</h1>
+                <p class="text-muted-foreground">View and filter system log entries</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="btn btn-ghost btn-sm"
+                        hx-get="/backoffice/htmx/logs-filtered?page=0&size=25"
+                        hx-swap="outerHTML"
+                        hx-target="#logs-table-container"
+                        title="Refresh Logs">
+                    <i class="icon icon-arrow-path w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card">
+            <header>
+                <h2 class="text-lg font-semibold">Filters</h2>
+            </header>
+            <section>
+                <form class="grid grid-cols-1 md:grid-cols-4 gap-4"
+                      hx-get="/backoffice/htmx/logs-filtered"
+                      hx-push-url="false"
+                      hx-swap="outerHTML"
+                      hx-target="#logs-table-container"
+                      hx-indicator="#loading-indicator"
+                      hx-on::after-request="console.log('HTMX request completed')"
+                      hx-on::response-error="console.log('HTMX error:', event.detail.xhr.status, event.detail.xhr.responseText)"
+                      id="filters-form">
+
+                    <!-- Log Level Filter -->
+                    <div>
+                        <label class="form-label" for="level-filter">Log Level</label>
+                        <div class="select" id="level-select">
+                            <button aria-controls="level-select-listbox" aria-expanded="false"
+                                    aria-haspopup="listbox"
+                                    class="btn-outline justify-between font-normal w-full"
+                                    id="level-select-trigger"
+                                    type="button">
+                                <span class="truncate">All Levels</span>
+                                <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
+                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
+                                     width="24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="m7 15 5 5 5-5"/>
+                                    <path d="m7 9 5-5 5 5"/>
+                                </svg>
+                            </button>
+                            <div aria-hidden="true" data-popover id="level-select-popover">
+                                <header>
+                                    <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24" stroke="currentColor"
+                                         stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
+                                         width="24" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="m21 21-4.3-4.3"/>
+                                    </svg>
+                                    <input aria-autocomplete="list" aria-controls="level-select-listbox" aria-expanded="false" aria-labelledby="level-select-trigger"
+                                           autocomplete="off" autocorrect="off" placeholder="Search level..." role="combobox"
+                                           spellcheck="false" type="text"
+                                           value=""/>
+                                </header>
+                                <div aria-labelledby="level-select-trigger" aria-orientation="vertical" data-empty="No level found."
+                                     id="level-select-listbox" role="listbox">
+                                    <div data-value="" role="option">All Levels</div>
+                                    <div role="option" th:data-value="${level}"
+                                         th:each="level : ${data.logLevels}"
+                                         th:text="${level}">INFO
+                                    </div>
+                                </div>
+                            </div>
+                            <input name="level" type="hidden" value=""/>
+                        </div>
+                    </div>
+
+                    <!-- Source Filter -->
+                    <div>
+                        <label class="form-label" for="source-filter">Source</label>
+                        <div class="select" id="source-select">
+                            <button aria-controls="source-select-listbox" aria-expanded="false"
+                                    aria-haspopup="listbox"
+                                    class="btn-outline justify-between font-normal w-full"
+                                    id="source-select-trigger"
+                                    type="button">
+                                <span class="truncate">All Sources</span>
+                                <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
+                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
+                                     width="24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="m7 15 5 5 5-5"/>
+                                    <path d="m7 9 5-5 5 5"/>
+                                </svg>
+                            </button>
+                            <div aria-hidden="true" data-popover id="source-select-popover">
+                                <header>
+                                    <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24" stroke="currentColor"
+                                         stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
+                                         width="24" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="m21 21-4.3-4.3"/>
+                                    </svg>
+                                    <input aria-autocomplete="list" aria-controls="source-select-listbox" aria-expanded="false" aria-labelledby="source-select-trigger"
+                                           autocomplete="off" autocorrect="off" placeholder="Search source..." role="combobox"
+                                           spellcheck="false" type="text"
+                                           value=""/>
+                                </header>
+                                <div aria-labelledby="source-select-trigger" aria-orientation="vertical" data-empty="No source found."
+                                     id="source-select-listbox" role="listbox">
+                                    <div data-value="" role="option">All Sources</div>
+                                    <div role="option" th:data-value="${source}"
+                                         th:each="source : ${data.logSources}"
+                                         th:text="${source}">System
+                                    </div>
+                                </div>
+                            </div>
+                            <input name="source" type="hidden" value=""/>
+                        </div>
+                    </div>
+
+                    <!-- Search Filter -->
+                    <div>
+                        <label class="form-label" for="search-filter">Search Message</label>
+                        <input class="input"
+                               id="search-filter"
+                               name="search"
+                               placeholder="Search in messages..."
+                               type="text">
+                    </div>
+
+                    <!-- Page Size -->
+                    <div>
+                        <label class="form-label" for="size-filter">Page Size</label>
+                        <select class="form-select" id="size-filter" name="size">
+                            <option value="25">25 per page</option>
+                            <option value="50">50 per page</option>
+                            <option value="100">100 per page</option>
+                        </select>
+                    </div>
+                </form>
+                
+                <!-- Apply Filters Button -->
+                <div class="flex justify-end mt-4">
+                    <button type="button" 
+                            class="btn btn-primary"
+                            onclick="applyFilters()">
+                        <i class="icon icon-funnel w-4 h-4"></i>
+                        Apply Filters
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="htmx-indicator flex justify-center p-4" style="display: none;">
+            <div class="flex items-center gap-2">
+                <i class="icon icon-arrow-path w-4 h-4 animate-spin"></i>
+                <span>Loading logs...</span>
+            </div>
+        </div>
+
+        <!-- Logs Table Container -->
+        <div id="logs-table-container">
+            <div hx-get="/backoffice/htmx/logs-filtered?page=0&size=25"
+                 hx-swap="outerHTML transition:true"
+                 hx-trigger="load"
+                 id="logs-table">
+                <!-- Skeleton state while loading -->
+                <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Initialize comboboxes when the page loads
+document.addEventListener('DOMContentLoaded', function () {
+    // Wait for Basecoat select.js to initialize
+    setTimeout(function () {
+        // Add event listeners for combobox changes
+        const levelSelect = document.getElementById('level-select');
+        const sourceSelect = document.getElementById('source-select');
+        
+        if (levelSelect) {
+            // Listen for changes on the hidden input
+            const levelInput = levelSelect.querySelector('input[type="hidden"]');
+            if (levelInput) {
+                levelInput.addEventListener('change', function () {
+                    // Update the form's hidden input
+                    const formLevelInput = document.querySelector('input[name="level"]');
+                    if (formLevelInput) {
+                        formLevelInput.value = this.value;
+                    }
+                });
+            }
+        }
+        
+        if (sourceSelect) {
+            // Listen for changes on the hidden input
+            const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
+            if (sourceInput) {
+                sourceInput.addEventListener('change', function () {
+                    // Update the form's hidden input
+                    const formSourceInput = document.querySelector('input[name="source"]');
+                    if (formSourceInput) {
+                        formSourceInput.value = this.value;
+                    }
+                });
+            }
+        }
+    }, 100);
+    
+    // Also allow Enter key in search input to apply filters
+    const searchInput = document.getElementById('search-filter');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFilters();
+            }
+        });
+    }
+});
+</script>
+</body>
+</html> 

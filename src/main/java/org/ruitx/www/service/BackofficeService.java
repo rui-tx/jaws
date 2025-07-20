@@ -92,4 +92,86 @@ public class BackofficeService {
                 .with("data", data)
                 .build();
     }
+
+    /**
+     * Retrieves the context for the logs page.
+     *
+     * @return Context containing data for the logs page.
+     */
+    public Context getLogsPageContext() {
+        Map<String, Object> data = Map.of(
+                "currentPage", "logs",
+                "logLevels", backofficeRepo.getDistinctLogLevels(),
+                "logSources", backofficeRepo.getDistinctLogSources()
+        );
+
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
+
+    /**
+     * Retrieves filtered paginated log table data for the logs page.
+     *
+     * @param pageRequest Pagination parameters
+     * @param level Filter by log level (null for all levels)
+     * @param source Filter by logger/source (null for all sources)
+     * @param search Search term in message (null for no search)
+     * @return Context containing filtered paginated log table data.
+     */
+    public Context getFilteredLogTableData(PageRequest pageRequest, String level, String source, String search) {
+        Page<Map<String, String>> logPage = backofficeRepo.getFilteredLogs(pageRequest, level, source, search);
+        Map<String, Object> data = Map.of(
+                "headers", Arrays.asList("Timestamp", "Level", "Message", "Source"),
+                "rows", logPage.getContent(),
+                "caption", "System Logs",
+                "actions", Arrays.asList("view"),
+                "pagination", Map.of(
+                        "currentPage", logPage.getCurrentPage(),
+                        "totalPages", logPage.getTotalPages(),
+                        "totalElements", logPage.getTotalElements(),
+                        "pageSize", logPage.getPageSize(),
+                        "hasNext", logPage.hasNext(),
+                        "hasPrevious", logPage.hasPrevious()
+                ),
+                "filters", Map.of(
+                        "level", level != null ? level : "",
+                        "source", source != null ? source : "",
+                        "search", search != null ? search : ""
+                )
+        );
+
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
+
+    /**
+     * Retrieves a single log entry for detail view.
+     *
+     * @param logId The ID of the log entry to retrieve
+     * @return Context containing the log entry data.
+     */
+    public Context getLogDetailContext(String logId) {
+        Map<String, String> logEntry = backofficeRepo.getLogById(logId);
+        
+        if (logEntry == null) {
+            Map<String, Object> data = Map.of(
+                    "error", "Log entry not found",
+                    "logId", logId
+            );
+            return Context.builder()
+                    .with("data", data)
+                    .build();
+        }
+
+        Map<String, Object> data = Map.of(
+                "currentPage", "log-detail",
+                "logEntry", logEntry
+        );
+
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
 }

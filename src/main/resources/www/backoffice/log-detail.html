@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html layout:decorate="~{backoffice/layouts/base.html}"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Log Detail</title>
+</head>
+<body>
+<section layout:fragment="content">
+    <div class="space-y-6">
+        <!-- Error State -->
+        <div th:if="${data.error != null}" class="card">
+            <header>
+                <h1 class="text-2xl font-bold text-destructive">Log Not Found</h1>
+            </header>
+            <section>
+                <p class="text-muted-foreground">
+                    The log entry with ID <span th:text="${data.logId}" class="font-mono">123</span> could not be found.
+                </p>
+                <div class="mt-4">
+                    <a href="/backoffice/logs" class="btn btn-primary">
+                        <i class="icon icon-arrow-left w-4 h-4"></i>
+                        Back to Logs
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <!-- Log Detail Content -->
+        <div th:if="${data.logEntry != null}">
+            <!-- Page Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold">Log Entry Details</h1>
+                    <p class="text-muted-foreground">Complete information for log entry</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="btn btn-ghost btn-sm" 
+                            onclick="copyLogToClipboard()"
+                            title="Copy to Clipboard">
+                        <i class="icon icon-clipboard w-4 h-4"></i>
+                    </button>
+                    <a href="/backoffice/logs" class="btn btn-primary">
+                        <i class="icon icon-arrow-left w-4 h-4"></i>
+                        Back to Logs
+                    </a>
+                </div>
+            </div>
+
+            <!-- Log Details Card -->
+            <div class="card">
+                <header>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold">Log Information</h2>
+                        <span th:class="${'px-3 py-1 rounded-full text-sm font-medium ' +
+                              (data.logEntry.level == 'ERROR' ? 'bg-red-100 text-red-800' :
+                               data.logEntry.level == 'WARN' ? 'bg-yellow-100 text-yellow-800' :
+                               data.logEntry.level == 'INFO' ? 'bg-blue-100 text-blue-800' :
+                               'bg-gray-100 text-gray-800')}"
+                              th:text="${data.logEntry.level}">INFO</span>
+                    </div>
+                </header>
+                <section>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Basic Information -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">ID</label>
+                                <p class="font-mono text-sm" th:text="${data.logEntry.id}">123</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">Timestamp</label>
+                                <p class="font-mono text-sm" th:text="${data.logEntry.timestamp}">2024-01-15 10:30:45</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">Level</label>
+                                <p th:text="${data.logEntry.level}">INFO</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">Source</label>
+                                <p th:text="${data.logEntry.source}">System</p>
+                            </div>
+                        </div>
+
+                        <!-- Additional Information -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">Thread</label>
+                                <p class="font-mono text-sm" th:text="${data.logEntry.thread}">main</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">Method</label>
+                                <p class="font-mono text-sm" th:text="${data.logEntry.method}">execute</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">Line Number</label>
+                                <p class="font-mono text-sm" th:text="${data.logEntry.line}">42</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-muted-foreground">Created At</label>
+                                <p class="font-mono text-sm" th:text="${data.logEntry.created_at}">2024-01-15 10:30:45</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Message Card -->
+            <div class="card">
+                <header>
+                    <h2 class="text-lg font-semibold">Message</h2>
+                </header>
+                <section>
+                    <div class="bg-muted p-4 rounded-md">
+                        <p class="whitespace-pre-wrap font-mono text-sm" th:text="${data.logEntry.message}">Log message content</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Exception Card (if present) -->
+            <div th:if="${data.logEntry.exception != null and !data.logEntry.exception.isEmpty()}" class="card">
+                <header>
+                    <h2 class="text-lg font-semibold text-destructive">Exception Stack Trace</h2>
+                </header>
+                <section>
+                    <div class="bg-destructive/10 p-4 rounded-md border border-destructive/20">
+                        <pre class="whitespace-pre-wrap font-mono text-sm text-destructive overflow-x-auto" 
+                             th:text="${data.logEntry.exception}">Exception stack trace</pre>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function copyLogToClipboard() {
+    const logEntry = {
+        id: '[[${data.logEntry.id}]]',
+        timestamp: '[[${data.logEntry.timestamp}]]',
+        level: '[[${data.logEntry.level}]]',
+        source: '[[${data.logEntry.source}]]',
+        thread: '[[${data.logEntry.thread}]]',
+        method: '[[${data.logEntry.method}]]',
+        line: '[[${data.logEntry.line}]]',
+        message: '[[${data.logEntry.message}]]',
+        exception: '[[${data.logEntry.exception}]]',
+        created_at: '[[${data.logEntry.created_at}]]'
+    };
+    
+    navigator.clipboard.writeText(JSON.stringify(logEntry, null, 2)).then(() => {
+        // Show a brief success message
+        const button = event.target.closest('button');
+        const originalIcon = button.innerHTML;
+        button.innerHTML = '<i class="icon icon-check w-4 h-4"></i>';
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+        }, 1000);
+    }).catch(err => {
+        console.error('Failed to copy log entry: ', err);
+    });
+}
+</script>
+</body>
+</html> 
