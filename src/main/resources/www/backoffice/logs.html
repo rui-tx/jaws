@@ -4,18 +4,33 @@
       xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>System Logs</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/select.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/select.min.js" defer></script>
     <script>
-    // Function to apply filters - defined globally
+    // Debounce function to limit API calls
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Function to apply filters
     function applyFilters() {
         console.log('applyFilters called');
         const form = document.getElementById('filters-form');
         if (form) {
-            console.log('Form found');
             // Get current values from comboboxes
             const levelSelect = document.getElementById('level-select');
             const sourceSelect = document.getElementById('source-select');
+            const sizeSelect = document.getElementById('size-select');
+            const searchInput = document.getElementById('search-filter');
             
+            // Update form hidden inputs
             if (levelSelect) {
                 const levelInput = levelSelect.querySelector('input[type="hidden"]');
                 const formLevelInput = form.querySelector('input[name="level"]');
@@ -34,19 +49,149 @@
                 }
             }
             
-            // Check if target exists
-            const target = document.getElementById('logs-table-container');
-            if (target) {
-                console.log('Target found');
-            } else {
-                console.log('Target not found');
+            if (sizeSelect) {
+                const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
+                const formSizeInput = form.querySelector('input[name="size"]');
+                if (sizeInput && formSizeInput) {
+                    formSizeInput.value = sizeInput.value;
+                    console.log('Size value:', sizeInput.value);
+                }
             }
             
+            // Build query string
+            const params = new URLSearchParams();
+            if (form.querySelector('input[name="level"]').value) {
+                params.append('level', form.querySelector('input[name="level"]').value);
+            }
+            if (form.querySelector('input[name="source"]').value) {
+                params.append('source', form.querySelector('input[name="source"]').value);
+            }
+            if (form.querySelector('input[name="search"]').value) {
+                params.append('search', form.querySelector('input[name="search"]').value);
+            }
+            if (form.querySelector('input[name="size"]').value) {
+                params.append('size', form.querySelector('input[name="size"]').value);
+            }
+            params.append('page', '0'); // Reset to first page when filtering
+            
+            console.log('Query params:', params.toString());
+            
             // Trigger HTMX request
-            console.log('Triggering HTMX request');
-            htmx.trigger(form, 'submit');
-        } else {
-            console.log('Form not found');
+            htmx.ajax('GET', '/backoffice/htmx/logs-filtered?' + params.toString(), {
+                target: '#logs-table-container',
+                swap: 'outerHTML',
+                indicator: '#loading-indicator'
+            });
+        }
+    }
+
+    // Debounced version of applyFilters for search input
+    const debouncedApplyFilters = debounce(applyFilters, 500);
+
+    // Initialize filters when the page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('DOM loaded, initializing filters');
+        
+        // Wait for Basecoat select.js to initialize
+        setTimeout(function () {
+            console.log('Setting up combobox event listeners');
+            
+            // Add event listeners for combobox changes
+            const levelSelect = document.getElementById('level-select');
+            const sourceSelect = document.getElementById('source-select');
+            const sizeSelect = document.getElementById('size-select');
+            
+            if (levelSelect) {
+                console.log('Setting up level select');
+                // Listen for changes on the hidden input
+                const levelInput = levelSelect.querySelector('input[type="hidden"]');
+                if (levelInput) {
+                    levelInput.addEventListener('change', function() {
+                        console.log('Level changed:', this.value);
+                        // Don't auto-apply, let user click button
+                    });
+                }
+            }
+            
+            if (sourceSelect) {
+                console.log('Setting up source select');
+                // Listen for changes on the hidden input
+                const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
+                if (sourceInput) {
+                    sourceInput.addEventListener('change', function() {
+                        console.log('Source changed:', this.value);
+                        // Don't auto-apply, let user click button
+                    });
+                }
+            }
+            
+            if (sizeSelect) {
+                console.log('Setting up size select');
+                // Listen for changes on the hidden input
+                const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
+                if (sizeInput) {
+                    sizeInput.addEventListener('change', function() {
+                        console.log('Size changed:', this.value);
+                        // Don't auto-apply, let user click button
+                    });
+                }
+            }
+        }, 200); // Increased delay to ensure Basecoat is loaded
+        
+        // Handle search input with debouncing
+        const searchInput = document.getElementById('search-filter');
+        if (searchInput) {
+            searchInput.addEventListener('input', debouncedApplyFilters);
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyFilters(); // Apply immediately on Enter
+                }
+            });
+        }
+    });
+
+    // Function to clear filters
+    function clearFilters() {
+        console.log('clearFilters called');
+        const form = document.getElementById('filters-form');
+        if (form) {
+            // Reset combobox elements to their default options
+            const levelSelect = document.getElementById('level-select');
+            const sourceSelect = document.getElementById('source-select');
+            const sizeSelect = document.getElementById('size-select');
+            const searchInput = document.getElementById('search-filter');
+
+            if (levelSelect) {
+                // Reset combobox to default
+                const levelInput = levelSelect.querySelector('input[type="hidden"]');
+                const levelTrigger = levelSelect.querySelector('button');
+                if (levelInput) levelInput.value = '';
+                if (levelTrigger) levelTrigger.querySelector('span').textContent = 'All Levels';
+            }
+            
+            if (sourceSelect) {
+                // Reset combobox to default
+                const sourceInput = sourceSelect.querySelector('input[type="hidden"]');
+                const sourceTrigger = sourceSelect.querySelector('button');
+                if (sourceInput) sourceInput.value = '';
+                if (sourceTrigger) sourceTrigger.querySelector('span').textContent = 'All Sources';
+            }
+            
+            if (sizeSelect) {
+                // Reset combobox to default
+                const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
+                const sizeTrigger = sizeSelect.querySelector('button');
+                if (sizeInput) sizeInput.value = '25';
+                if (sizeTrigger) sizeTrigger.querySelector('span').textContent = '25 per page';
+            }
+            
+            if (searchInput) {
+                searchInput.value = ''; // Clear search input
+            }
+
+            // Trigger HTMX request to clear filters
+            applyFilters();
         }
     }
     </script>
@@ -77,19 +222,12 @@
                 <h2 class="text-lg font-semibold">Filters</h2>
             </header>
             <section>
-                <form class="grid grid-cols-1 md:grid-cols-4 gap-4"
-                      hx-get="/backoffice/htmx/logs-filtered"
-                      hx-push-url="false"
-                      hx-swap="outerHTML"
-                      hx-target="#logs-table-container"
-                      hx-indicator="#loading-indicator"
-                      hx-on::after-request="console.log('HTMX request completed')"
-                      hx-on::response-error="console.log('HTMX error:', event.detail.xhr.status, event.detail.xhr.responseText)"
+                <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
                       id="filters-form">
 
                     <!-- Log Level Filter -->
                     <div>
-                        <label class="form-label" for="level-filter">Log Level</label>
+                        <label class="form-label" for="level-select">Log Level</label>
                         <div class="select" id="level-select">
                             <button aria-controls="level-select-listbox" aria-expanded="false"
                                     aria-haspopup="listbox"
@@ -133,7 +271,7 @@
 
                     <!-- Source Filter -->
                     <div>
-                        <label class="form-label" for="source-filter">Source</label>
+                        <label class="form-label" for="source-select">Source</label>
                         <div class="select" id="source-select">
                             <button aria-controls="source-select-listbox" aria-expanded="false"
                                     aria-haspopup="listbox"
@@ -187,23 +325,53 @@
 
                     <!-- Page Size -->
                     <div>
-                        <label class="form-label" for="size-filter">Page Size</label>
-                        <select class="form-select" id="size-filter" name="size">
-                            <option value="25">25 per page</option>
-                            <option value="50">50 per page</option>
-                            <option value="100">100 per page</option>
-                        </select>
+                        <label class="form-label" for="size-select">Page Size</label>
+                        <div class="select" id="size-select">
+                            <button aria-controls="size-select-listbox" aria-expanded="false"
+                                    aria-haspopup="listbox"
+                                    class="btn-outline justify-between font-normal w-full"
+                                    id="size-select-trigger"
+                                    type="button">
+                                <span class="truncate">25 per page</span>
+                                <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
+                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
+                                     width="24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="m7 15 5 5 5-5"/>
+                                    <path d="m7 9 5-5 5 5"/>
+                                </svg>
+                            </button>
+                            <div aria-hidden="true" data-popover id="size-select-popover">
+                                <div aria-labelledby="size-select-trigger" aria-orientation="vertical"
+                                     id="size-select-listbox" role="listbox">
+                                    <div data-value="25" role="option">25 per page</div>
+                                    <div data-value="50" role="option">50 per page</div>
+                                    <div data-value="100" role="option">100 per page</div>
+                                </div>
+                            </div>
+                            <input name="size" type="hidden" value="25"/>
+                        </div>
                     </div>
                 </form>
                 
-                <!-- Apply Filters Button -->
-                <div class="flex justify-end mt-4">
+                <!-- Clear Filters Button -->
+                <div class="flex justify-between items-center mt-4">
                     <button type="button" 
-                            class="btn btn-primary"
-                            onclick="applyFilters()">
-                        <i class="icon icon-funnel w-4 h-4"></i>
-                        Apply Filters
+                            class="btn"
+                            onclick="clearFilters()">
+                        <i class="icon icon-x-mark w-4 h-4"></i>
+                        Clear Filters
                     </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" 
+                                class="btn btn-primary btn-sm"
+                                onclick="applyFilters()">
+                            <i class="icon icon-funnel w-4 h-4"></i>
+                            Apply Filters
+                        </button>
+                        <div class="text-sm text-muted-foreground">
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
@@ -230,7 +398,7 @@
 </section>
 
 <script>
-// Initialize comboboxes when the page loads
+// Initialize filters when the page loads
 document.addEventListener('DOMContentLoaded', function () {
     // Wait for Basecoat select.js to initialize
     setTimeout(function () {
@@ -248,6 +416,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (formLevelInput) {
                         formLevelInput.value = this.value;
                     }
+                    // Trigger HTMX request
+                    const form = document.getElementById('filters-form');
+                    if (form) {
+                        htmx.trigger(form, 'submit');
+                    }
                 });
             }
         }
@@ -262,18 +435,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (formSourceInput) {
                         formSourceInput.value = this.value;
                     }
+                    // Trigger HTMX request
+                    const form = document.getElementById('filters-form');
+                    if (form) {
+                        htmx.trigger(form, 'submit');
+                    }
                 });
             }
         }
     }, 100);
     
-    // Also allow Enter key in search input to apply filters
+    // Allow Enter key in search input to trigger filtering
     const searchInput = document.getElementById('search-filter');
     if (searchInput) {
         searchInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                applyFilters();
+                // The form will automatically trigger due to hx-trigger="change"
             }
         });
     }
