@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-    <!-- Stats Card View - Generic template for any stats card -->
-    <div th:replace="~{backoffice/components/card/card.html :: stats-card(
-        '&lt;i class=&quot;icon ' + ${statsData.icon} + ' w-6 h-6&quot;&gt;&lt;/i&gt;',
-        ${statsData.label},
-        ${statsData.value}, 
+<div th:replace="~{backoffice/components/card/card.html :: stats-card(
+        '&lt;i class=&quot;icon ' + ${data.icon} + ' w-6 h-6&quot;&gt;&lt;/i&gt;',
+        ${data.label},
+        ${data.value},
         'blue'
     )}"></div>
 </body>

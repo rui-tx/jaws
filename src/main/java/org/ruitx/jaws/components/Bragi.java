@@ -490,14 +490,14 @@ public abstract class Bragi {
      */
     protected String render(String templatePath, Context context) {
         try {
-            Yggdrasill.RequestContext requestContext = this.requestContext.get();
+            Yggdrasill.RequestContext rqContext = requestContext.get();
             if (requestContext != null) {
                 return Hermod.render(
                         templatePath,
-                        requestContext.getQueryParams(),
-                        requestContext.getBodyParams(),
-                        requestContext.getRequest(),
-                        requestContext.getResponse(),
+                        rqContext.getQueryParams(),
+                        rqContext.getBodyParams(),
+                        rqContext.getRequest(),
+                        rqContext.getResponse(),
                         context);
             } else {
                 throw new IllegalStateException("No request context available");
@@ -609,11 +609,11 @@ public abstract class Bragi {
     /**
      * Call an API endpoint with an object body and parse the response using JavaType.
      *
-     * @param endpoint      the API endpoint to call
-     * @param method        the HTTP method
-     * @param body          the request body object
-     * @param responseType  the JavaType of the response
-     * @param <T>           the type of the response
+     * @param endpoint     the API endpoint to call
+     * @param method       the HTTP method
+     * @param body         the request body object
+     * @param responseType the JavaType of the response
+     * @param <T>          the type of the response
      * @return the parsed API response
      */
     public <T> APIResponse<T> call(String endpoint, RequestType method, Object body, JavaType responseType) {
@@ -624,12 +624,12 @@ public abstract class Bragi {
     /**
      * Call an API endpoint with headers and an object body and parse the response using JavaType.
      *
-     * @param endpoint      the API endpoint to call
-     * @param method        the HTTP method
-     * @param headers       the HTTP headers to include in the request
-     * @param body          the request body object
-     * @param responseType  the JavaType of the response
-     * @param <T>           the type of the response
+     * @param endpoint     the API endpoint to call
+     * @param method       the HTTP method
+     * @param headers      the HTTP headers to include in the request
+     * @param body         the request body object
+     * @param responseType the JavaType of the response
+     * @param <T>          the type of the response
      * @return the parsed API response
      */
     public <T> APIResponse<T> call(String endpoint, RequestType method, Map<String, String> headers, Object body, JavaType responseType) {
@@ -699,12 +699,12 @@ public abstract class Bragi {
     /**
      * Internal method to make HTTP calls and parse responses using JavaType.
      *
-     * @param endpoint      the API endpoint to call
-     * @param method        the HTTP method
-     * @param headers       the HTTP headers to include in the request
-     * @param body          the request body
-     * @param responseType  the JavaType of the response
-     * @param <T>           the type of the response
+     * @param endpoint     the API endpoint to call
+     * @param method       the HTTP method
+     * @param headers      the HTTP headers to include in the request
+     * @param body         the request body
+     * @param responseType the JavaType of the response
+     * @param <T>          the type of the response
      * @return the parsed API response
      */
     private <T> APIResponse<T> callInternal(String endpoint, RequestType method, Map<String, String> headers, String body, JavaType responseType) {

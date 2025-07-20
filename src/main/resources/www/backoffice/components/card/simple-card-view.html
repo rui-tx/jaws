@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-    <!-- Simple Card View - Generic template for any simple card -->
-    <div th:replace="~{backoffice/components/card/card.html :: simple-card(
-        ${cardData.title},
-        ${cardData.description},
-        ${cardData.content},
-        ${cardData.footer}
+<div th:replace="~{backoffice/components/card/card.html :: simple-card(
+        ${data.title},
+        ${data.description},
+        ${data.content},
+        ${data.footer}
     )}"></div>
 </body>
 </html> 

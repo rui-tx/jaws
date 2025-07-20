@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-    <!-- Refreshable Card View - Generic template for any refreshable card -->
-    <div th:replace="~{backoffice/components/card/card.html :: refreshable-card(
-        ${cardData.title},
-        ${cardData.description},
-        ${cardData.content},
-        ${cardData.footer},
-        ${cardData.refreshUrl}
+<div th:replace="~{backoffice/components/card/card.html :: refreshable-card(
+        ${data.title},
+        ${data.description},
+        ${data.content},
+        ${data.footer},
+        ${data.refreshUrl}
     )}"></div>
 </body>
 </html> 
