@@ -3,11 +3,13 @@ package org.ruitx.www.controller;
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.www.service.BackofficeService;
+import org.tinylog.Logger;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
 import static org.ruitx.jaws.strings.ResponseCode.BAD_REQUEST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.strings.ResponseType.HTML;
+import static org.ruitx.jaws.types.ParamType.QUERY;
 
 public class BackofficeController extends Bragi {
 
@@ -82,14 +84,20 @@ public class BackofficeController extends Bragi {
             sendFail(BAD_REQUEST, "This endpoint is only accessible via HTMX.");
         }
 
+        int amount = 5;
+        try {
+            String pageParam = get("amount", QUERY);
+            amount = Integer.parseInt(pageParam);
+        } catch (NumberFormatException e) {
+            Logger.warn("Invalid amount number: {}", get("amount", QUERY));
+        }
+
         sendHTML(
                 OK,
                 render("backoffice/components/table/table-view.html",
-                        backofficeService.getLogTableData()));
+                        backofficeService.getLogTableData(amount)));
 
     }
-
-
 
     // endregion
 

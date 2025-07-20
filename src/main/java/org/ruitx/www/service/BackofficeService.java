@@ -1,6 +1,8 @@
 package org.ruitx.www.service;
 
 import org.ruitx.jaws.types.Context;
+import org.ruitx.jaws.types.Page;
+import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.www.repository.BackofficeRepo;
 
 import java.util.Arrays;
@@ -65,13 +67,13 @@ public class BackofficeService {
     }
 
     /**
-     * Retrieves the log table data for the top 25 log entries.
+     * Retrieves the log table data.
      *
+     * @param amount The amount to retrieve.
      * @return Context containing log table data.
      */
-    public Context getLogTableData() {
-        // Get real log data from the database
-        List<Map<String, String>> logRows = backofficeRepo.getTopLogs(25);
+    public Context getLogTableData(int amount) {
+        List<Map<String, String>> logRows = backofficeRepo.getTopLogs(amount);
 
         Map<String, Object> data = Map.of(
                 "headers", Arrays.asList("Timestamp", "Level", "Message", "Source"),
@@ -80,13 +82,33 @@ public class BackofficeService {
                 "actions", Arrays.asList("view", "delete", "refresh")
         );
 
-        try {
-            // add a delay to simulate log retrieval
-            Thread.sleep(1000); // Simulate delay for log retrieval
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // Restore interrupted status
-            throw new RuntimeException("Log retrieval interrupted", e);
-        }
+        return Context.builder()
+                .with("data", data)
+                .build();
+    }
+
+    /**
+     * Retrieves paginated log table data.
+     *
+     * @param pageRequest Pagination parameters
+     * @return Context containing paginated log table data.
+     */
+    public Context getPaginatedLogTableData(PageRequest pageRequest) {
+        Page<Map<String, String>> logPage = backofficeRepo.getPaginatedLogs(pageRequest);
+        Map<String, Object> data = Map.of(
+                "headers", Arrays.asList("Timestamp", "Level", "Message", "Source"),
+                "rows", logPage.getContent(),
+                "caption", "Recent System Logs",
+                "actions", Arrays.asList("view", "delete", "refresh"),
+                "pagination", Map.of(
+                        "currentPage", logPage.getCurrentPage(),
+                        "totalPages", logPage.getTotalPages(),
+                        "totalElements", logPage.getTotalElements(),
+                        "pageSize", logPage.getPageSize(),
+                        "hasNext", logPage.hasNext(),
+                        "hasPrevious", logPage.hasPrevious()
+                )
+        );
 
         return Context.builder()
                 .with("data", data)

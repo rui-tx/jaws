@@ -2,6 +2,8 @@ package org.ruitx.www.repository;
 
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.interfaces.Cacheable;
+import org.ruitx.jaws.types.Page;
+import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.www.model.auth.User;
 import org.ruitx.www.model.auth.UserSession;
@@ -15,9 +17,11 @@ import java.util.Optional;
 public class BackofficeRepo {
 
     private final Mimir db;
+    private final Mimir logsDb;
 
     public BackofficeRepo() {
         this.db = new Mimir();
+        this.logsDb = new Mimir("src/main/resources/logs.db");
     }
 
     /**
@@ -82,6 +86,44 @@ public class BackofficeRepo {
         } catch (Exception e) {
             // If logs database is not available, return empty list
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Retrieves paginated log entries from the logs database.
+     *
+     * @param pageRequest Pagination parameters
+     * @return Page containing log entries and pagination metadata
+     */
+    public Page<Map<String, String>> getPaginatedLogs(PageRequest pageRequest) {
+        try {
+          
+            String baseSql = "SELECT id, timestamp, level, message, logger as source FROM LOG_ENTRIES";
+            
+            // Use Mimir's built-in pagination support
+            Page<Row> rowPage = logsDb.getPage(
+                baseSql + " ORDER BY timestamp DESC",
+                pageRequest
+            );
+
+            // Transform Row objects to Map<String, String>
+            List<Map<String, String>> logEntries = rowPage.getContent().stream()
+                    .map(row -> {
+                        Map<String, String> logEntry = new HashMap<>();
+                        logEntry.put("id", row.get("id").toString());
+                        logEntry.put("timestamp", formatTimestamp(row.get("timestamp")));
+                        logEntry.put("level", row.get("level").toString());
+                        logEntry.put("message", row.get("message").toString());
+                        logEntry.put("source", row.get("source") != null ? row.get("source").toString() : "System");
+                        return logEntry;
+                    })
+                    .toList();
+
+            return new Page<>(logEntries, pageRequest, rowPage.getTotalElements());
+
+        } catch (Exception e) {
+            // If logs database is not available, return empty page
+            return Page.empty(pageRequest);
         }
     }
 
