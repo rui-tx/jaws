@@ -191,8 +191,6 @@ public abstract class Bragi {
         }
     }
 
-    // ===== NEW RESPONSE METHODS =====
-
     /**
      * Send a success response with data.
      *
@@ -253,6 +251,16 @@ public abstract class Bragi {
     public void sendFail(String code, String message) {
         ResponseCode responseCode = ResponseCode.fromCodeAndMessage(code);
         sendJSONResponse(false, responseCode, message, null);
+    }
+
+    /**
+     * Send an error response with code and message.
+     *
+     * @param code    the response code
+     * @param message the error message
+     */
+    public void sendFail(boolean success, ResponseCode code, String message, Object data) {
+        sendJSONResponse(success, code, message, data);
     }
 
     /**

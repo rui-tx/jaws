@@ -11,7 +11,6 @@ import org.ruitx.www.dto.auth.RefreshTokenRequest;
 import org.ruitx.www.service.AuthService;
 
 import static org.ruitx.jaws.strings.RequestType.POST;
-import static org.ruitx.jaws.strings.ResponseCode.BAD_REQUEST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.strings.ResponseType.JSON;
 
@@ -38,23 +37,13 @@ public class AuthController extends Bragi {
                 userAgent,
                 ipAddress);
 
-        if (!response.success()) {
-            sendFail(response.code(), response.info());
-            return;
-        }
-
         sendSuccess(OK, response.data());
     }
 
     @AccessControl(login = true)
     @Route(endpoint = API_ENDPOINT + "logout", method = POST, responseType = JSON)
     public void logout(LogoutRequest request) {
-        APIResponse<Void> response = authService.logout(request.refreshToken());
-        if (!response.success()) {
-            sendFail(response.code(), response.info());
-            return;
-        }
-
+        authService.logout(request.refreshToken());
         sendSuccess(OK, null);
     }
 
@@ -69,30 +58,13 @@ public class AuthController extends Bragi {
                 userAgent,
                 ipAddress);
 
-        if (!response.success()) {
-            sendFail(response.code(), response.info());
-            return;
-        }
-
         sendSuccess(OK, response.data());
     }
 
     @AccessControl(login = true)
     @Route(endpoint = API_ENDPOINT + "logout-all", method = POST, responseType = JSON)
     public void logoutAll() {
-        String userId = getCurrentToken();
-        if (userId.isEmpty()) {
-            sendFail(BAD_REQUEST, "Could not get user id from cookie");
-            return;
-        }
-
-        APIResponse<Void> response = authService.logoutAll(userId);
-
-        if (!response.success()) {
-            sendFail(response.code(), response.info());
-            return;
-        }
-
+        authService.logoutAll(getCurrentToken());
         sendSuccess(OK, null);
     }
 }

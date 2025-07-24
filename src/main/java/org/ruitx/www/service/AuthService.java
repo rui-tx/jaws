@@ -2,6 +2,8 @@ package org.ruitx.www.service;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.ruitx.jaws.components.Tyr;
+import org.ruitx.jaws.exceptions.AuthenticationException;
+import org.ruitx.jaws.exceptions.BusinessException;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.www.dto.auth.LoginResponse;
 import org.ruitx.www.dto.auth.UserCreateRequest;
@@ -14,6 +16,7 @@ import org.ruitx.www.repository.AuthRepo;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+
 
 import static org.ruitx.jaws.strings.ResponseCode.*;
 
@@ -34,7 +37,7 @@ public class AuthService {
     public APIResponse<String> createUser(UserCreateRequest request) {
         Optional<User> user = authRepo.getUserByUsername(request.username().toLowerCase());
         if (user.isPresent()) {
-            return APIResponse.error(CONFLICT, "User already exists");
+            throw new BusinessException(CONFLICT, "User already exists");
         }
 
         Optional<Integer> result = authRepo.createUser(
@@ -44,7 +47,7 @@ public class AuthService {
                 request.lastName());
 
         if (result.isEmpty()) {
-            return APIResponse.error(INTERNAL_SERVER_ERROR, "Cannot create user. Check the logs for more details");
+            throw new BusinessException(INTERNAL_SERVER_ERROR, "Cannot create user. Check the logs for more details");
         }
 
         // Assign default "user" role to new user
@@ -61,7 +64,7 @@ public class AuthService {
     public APIResponse<String> updateUser(Integer userId, UserUpdateRequest updateRequest) {
         Optional<User> userOpt = authRepo.getUserById(userId);
         if (userOpt.isEmpty()) {
-            return APIResponse.error(NOT_FOUND, "User not found");
+            throw new BusinessException(NOT_FOUND, "User not found");
         }
         User currentUser = userOpt.get();
 
@@ -94,20 +97,22 @@ public class AuthService {
                 .build();
 
         Optional<Integer> result = authRepo.updateUser(updatedUser);
-        return result.isEmpty()
-                ? APIResponse.error(INTERNAL_SERVER_ERROR, "Error updating the user")
-                : APIResponse.success(NO_CONTENT, "User updated sucessfully");
+        if (result.isEmpty()) {
+            throw new BusinessException(INTERNAL_SERVER_ERROR, "Error updating the user");
+        }
+
+        return APIResponse.success(NO_CONTENT, "User updated sucessfully");
     }
 
     public APIResponse<LoginResponse> loginUser(String username, String password, String userAgent, String ipAddress) {
         Optional<User> user = authRepo.getUserByUsername(username.toLowerCase());
         if (user.isEmpty()) {
-            return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
+            throw new AuthenticationException("Credentials are invalid");
         }
 
         if (!BCrypt.verifyer()
                 .verify(password.toCharArray(), user.get().passwordHash()).verified) {
-            return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
+            throw new AuthenticationException( "Credentials are invalid");
         }
 
         // Get user roles for JWT token
@@ -126,7 +131,7 @@ public class AuthService {
     public APIResponse<LoginResponse> refreshToken(String refreshToken, String userAgent, String ipAddress) {
         Optional<Tyr.TokenPair> newTokens = Tyr.refreshToken(refreshToken, userAgent, ipAddress);
         if (newTokens.isEmpty()) {
-            return APIResponse.error(UNAUTHORIZED, "Invalid or expired refresh token");
+            throw new AuthenticationException("Invalid or expired refresh token");
         }
 
         return APIResponse.success(OK, LoginResponse.fromTokenPair(newTokens.get()));
@@ -138,6 +143,10 @@ public class AuthService {
     }
 
     public APIResponse<Void> logoutAll(String userId) {
+        if (userId.isEmpty()) {
+            throw new BusinessException(BAD_REQUEST, "Could not get user id from cookie");
+        }
+
         authRepo.deactivateAllUserSessions(Integer.parseInt(userId));
         return APIResponse.success(OK, null);
     }
