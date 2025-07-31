@@ -1,7 +1,16 @@
 package org.ruitx.jaws.components;
 
+import static org.ruitx.jaws.configs.ApplicationConfig.HERMOD_DEVELOPMENT_MODE;
+import static org.ruitx.jaws.configs.ApplicationConfig.HERMOD_TEMPLATE_CACHE_TTL;
+import static org.ruitx.jaws.configs.ApplicationConfig.WWW_PATH;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
 import org.ruitx.jaws.types.Context;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.jaws.utils.ThymeleafUtils;
@@ -10,21 +19,13 @@ import org.thymeleaf.context.WebContext;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
 import org.thymeleaf.web.servlet.JakartaServletWebApplication;
-import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import static org.ruitx.jaws.configs.ApplicationConfig.*;
 
 /**
- * Hermod is a utility class that handles template processing and page assembly using Thymeleaf.
- * It provides methods for rendering templates with variables, composing full pages,
- * and managing template variables across requests.
- * 
+ * Hermod is a utility class that handles template processing and page assembly using Thymeleaf. It
+ * provides methods for rendering templates with variables, composing full pages, and managing
+ * template variables across requests.
+ * <p>
+ *
  * <p>Main methods:</p>
  * <ul>
  *   <li>{@link #render(String, Map, Map, HttpServletRequest, HttpServletResponse, Context)} - Render template with full context</li>
@@ -34,294 +35,293 @@ import static org.ruitx.jaws.configs.ApplicationConfig.*;
  */
 public final class Hermod {
 
-    private static final String DEFAULT_BODY_PATH = "_body.html";
-    private static final ThreadLocal<String> BODY_PATH = ThreadLocal.withInitial(() -> DEFAULT_BODY_PATH);
+  private static final String DEFAULT_BODY_PATH = "_body.html";
+  private static final ThreadLocal<String> BODY_PATH = ThreadLocal.withInitial(
+      () -> DEFAULT_BODY_PATH);
 
-    // Global template variables that persist across requests
-    private static final ThreadLocal<Map<String, Object>> TEMPLATE_VARIABLES =
-            ThreadLocal.withInitial(HashMap::new);
+  // Global template variables that persist across requests
+  private static final ThreadLocal<Map<String, Object>> TEMPLATE_VARIABLES =
+      ThreadLocal.withInitial(HashMap::new);
 
-    // Thymeleaf template engine - configured once and reused
-    private static final TemplateEngine templateEngine = createTemplateEngine();
+  // Thymeleaf template engine - configured once and reused
+  private static final TemplateEngine templateEngine = createTemplateEngine();
 
-    // Utility objects for templates
-    private static final ThymeleafUtils utils = new ThymeleafUtils();
+  // Utility objects for templates
+  private static final ThymeleafUtils utils = new ThymeleafUtils();
 
-    private Hermod() {
+  private Hermod() {
+  }
+
+  /**
+   * Create and configure the Thymeleaf template engine.
+   */
+  private static TemplateEngine createTemplateEngine() {
+    TemplateEngine engine = new TemplateEngine();
+
+    // Configure file template resolver for loading templates from the file system
+    FileTemplateResolver fileResolver = new FileTemplateResolver();
+    fileResolver.setPrefix(WWW_PATH);
+    fileResolver.setSuffix("");
+    fileResolver.setTemplateMode(TemplateMode.HTML);
+
+    // Configure caching based on development mode
+    if (HERMOD_DEVELOPMENT_MODE) {
+      fileResolver.setCacheable(false);
+      fileResolver.setCacheTTLMs(0L);
+      JawsLogger.trace("Hermod template caching disabled for live reload");
+    } else {
+      fileResolver.setCacheable(true);
+      fileResolver.setCacheTTLMs(HERMOD_TEMPLATE_CACHE_TTL);
+      JawsLogger.trace(
+          "Hermod template caching enabled (TTL: " + HERMOD_TEMPLATE_CACHE_TTL + "ms)");
     }
 
-    /**
-     * Create and configure the Thymeleaf template engine.
-     */
-    private static TemplateEngine createTemplateEngine() {
-        TemplateEngine engine = new TemplateEngine();
+    fileResolver.setOrder(1);
 
-        // Configure file template resolver for loading templates from the file system
-        FileTemplateResolver fileResolver = new FileTemplateResolver();
-        fileResolver.setPrefix(WWW_PATH);
-        fileResolver.setSuffix("");
-        fileResolver.setTemplateMode(TemplateMode.HTML);
+    engine.addTemplateResolver(fileResolver);
 
-        // Configure caching based on development mode
-        if (HERMOD_DEVELOPMENT_MODE) {
-            fileResolver.setCacheable(false);
-            fileResolver.setCacheTTLMs(0L);
-            JawsLogger.trace("Hermod template caching disabled for live reload");
-        } else {
-            fileResolver.setCacheable(true);
-            fileResolver.setCacheTTLMs(HERMOD_TEMPLATE_CACHE_TTL);
-            JawsLogger.trace("Hermod template caching enabled (TTL: " + HERMOD_TEMPLATE_CACHE_TTL + "ms)");
-        }
+    // Add layout dialect for template inheritance
+    engine.addDialect(new LayoutDialect());
 
-        fileResolver.setOrder(1);
+    return engine;
+  }
 
-        engine.addTemplateResolver(fileResolver);
+  /**
+   * Set a template variable for the current request.
+   *
+   * @param name  the variable name
+   * @param value the variable value
+   */
+  public static void setTemplateVariable(String name, Object value) {
+    if (name != null && !name.isEmpty()) {
+      TEMPLATE_VARIABLES.get().put(name, value);
+    }
+  }
 
-        // Add layout dialect for template inheritance
-        engine.addDialect(new LayoutDialect());
+  /**
+   * Get a template variable for the current request.
+   *
+   * @param name the variable name
+   * @return the variable value or null if not found
+   */
+  public static Object getTemplateVariable(String name) {
+    return TEMPLATE_VARIABLES.get().get(name);
+  }
 
-        return engine;
+  /**
+   * Remove a template variable for the current request.
+   *
+   * @param name the variable name
+   */
+  public static void removeTemplateVariable(String name) {
+    TEMPLATE_VARIABLES.get().remove(name);
+  }
+
+  /**
+   * Clear all template variables for the current request. Should be called at the end of request
+   * processing to prevent memory leaks.
+   */
+  public static void clearTemplateVariables() {
+    TEMPLATE_VARIABLES.get().clear();
+    // Important to prevent memory leaks in thread pools
+    TEMPLATE_VARIABLES.remove();
+  }
+
+  /**
+   * Get the body path for the default body template. This method is synchronized to prevent
+   * concurrent access.
+   *
+   * @return the path to the default template.
+   */
+  public static synchronized String getBodyPath() {
+    return BODY_PATH.get();
+  }
+
+  /**
+   * Set the body path for the default body template. This method is synchronized to prevent
+   * concurrent access.
+   *
+   * @param path the path to the default template.
+   */
+  public static synchronized void setBodyPath(String path) {
+    if (path != null && !path.isEmpty()) {
+      BODY_PATH.set(path);
+      return;
+    }
+    BODY_PATH.set(DEFAULT_BODY_PATH);
+  }
+
+  /**
+   * Render a template with full context including parameters and variables.
+   *
+   * @param templatePath    The template path to render
+   * @param queryParams     The query parameters map
+   * @param bodyParams      The body parameters map
+   * @param request         The HTTP servlet request
+   * @param response        The HTTP servlet response
+   * @param templateContext Additional context variables for the template
+   * @return the rendered template
+   * @throws IOException if there's an error rendering the template
+   */
+  public static String render(String templatePath,
+      Map<String, String> queryParams,
+      Map<String, String> bodyParams,
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Context templateContext) throws IOException {
+    if (queryParams == null) {
+      queryParams = new LinkedHashMap<>();
+    }
+    if (bodyParams == null) {
+      bodyParams = new LinkedHashMap<>();
     }
 
-    /**
-     * Set a template variable for the current request.
-     *
-     * @param name  the variable name
-     * @param value the variable value
-     */
-    public static void setTemplateVariable(String name, Object value) {
-        if (name != null && !name.isEmpty()) {
-            TEMPLATE_VARIABLES.get().put(name, value);
-        }
+    // If template looks like a file path (doesn't contain HTML tags), use it as a template path
+    if (!templatePath.contains("<") && !templatePath.contains(">")) {
+      return processTemplateInternal(templatePath, queryParams, bodyParams, request, response,
+          templateContext);
     }
 
-    /**
-     * Get a template variable for the current request.
-     *
-     * @param name the variable name
-     * @return the variable value or null if not found
-     */
-    public static Object getTemplateVariable(String name) {
-        return TEMPLATE_VARIABLES.get().get(name);
+    // Otherwise, just return content
+    JawsLogger.trace("Received template content. Template: {}", templatePath);
+    return templatePath;
+  }
+
+  /**
+   * Render a template without parameters (simple overload).
+   *
+   * @param templatePath The template path to render
+   * @param request      The HTTP servlet request
+   * @param response     The HTTP servlet response
+   * @return the rendered template
+   * @throws IOException if there's an error rendering the template
+   */
+  public static String render(String templatePath,
+      HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    return render(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response,
+        null);
+  }
+
+  /**
+   * Render a template with parameters but no additional context.
+   *
+   * @param templatePath The template path to render
+   * @param queryParams  The query parameters map
+   * @param bodyParams   The body parameters map
+   * @param request      The HTTP servlet request
+   * @param response     The HTTP servlet response
+   * @return the rendered template
+   * @throws IOException if there's an error rendering the template
+   */
+  public static String render(String templatePath,
+      Map<String, String> queryParams,
+      Map<String, String> bodyParams,
+      HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    return render(templatePath, queryParams, bodyParams, request, response, null);
+  }
+
+  /**
+   * Compose a full page by combining a base template with a partial template.
+   *
+   * @param baseTemplatePath    The path to the base template file
+   * @param partialTemplatePath The path to the partial template file
+   * @param request             The HTTP servlet request
+   * @param response            The HTTP servlet response
+   * @return the composed page
+   * @throws IOException if there's an error composing the page
+   */
+  public static String composePage(String baseTemplatePath,
+      String partialTemplatePath,
+      HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    try {
+      WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request,
+          response);
+      context.setVariable("bodyContent", partialTemplatePath);
+
+      return templateEngine.process(baseTemplatePath, context);
+    } catch (Exception e) {
+      JawsLogger.error("Error composing page: " + e.getMessage(), e);
+      throw new IOException("Failed to compose page", e);
+    }
+  }
+
+  /**
+   * Process a Thymeleaf template file with parameters.
+   *
+   * @param templatePath    The path to the template file
+   * @param queryParams     The query parameters map
+   * @param bodyParams      The body parameters map
+   * @param request         The HTTP servlet request
+   * @param response        The HTTP servlet response
+   * @param templateContext Additional context variables for the template
+   * @return the processed template as a string
+   */
+  private static String processTemplateInternal(String templatePath,
+      Map<String, String> queryParams,
+      Map<String, String> bodyParams,
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Context templateContext) {
+    try {
+      // Create Thymeleaf web context
+      WebContext context = createThymeleafWebContext(queryParams, bodyParams, request, response);
+
+      // Add template context variables
+      if (templateContext != null) {
+        context.setVariables(templateContext.context());
+      }
+
+      // Process the template using the file path
+      return templateEngine.process(templatePath, context);
+
+    } catch (Exception e) {
+      JawsLogger.error("Error processing Thymeleaf template '{}': {}", templatePath,
+          e.getMessage());
+      return "Error processing template: " + templatePath;
+    } finally {
+      // Clean up template variables
+      clearTemplateVariables();
+    }
+  }
+
+  /**
+   * Create a Thymeleaf web context with all available variables. This method initializes the web
+   * context with the request and response, and sets up the template variables, query parameters,
+   * body parameters, and utility objects.
+   *
+   * @param queryParams the query parameters map
+   * @param bodyParams  the body parameters map
+   * @param request     the HTTP servlet request
+   * @param response    the HTTP servlet response
+   */
+  private static WebContext createThymeleafWebContext(Map<String, String> queryParams,
+      Map<String, String> bodyParams,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    // Create the web application instance
+    JakartaServletWebApplication application = JakartaServletWebApplication.buildApplication(
+        request.getServletContext());
+
+    // Create web context with proper servlet request/response
+    WebContext context = new WebContext(application.buildExchange(request, response));
+
+    // Populate context
+    context.setVariables(TEMPLATE_VARIABLES.get());
+    context.setVariable("queryParams", queryParams);
+    context.setVariable("bodyParams", bodyParams);
+    context.setVariable("utils", utils);
+
+    // Add individual parameters to root context for easy access
+    for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+      context.setVariable(entry.getKey(), entry.getValue());
+    }
+    for (Map.Entry<String, String> entry : bodyParams.entrySet()) {
+      context.setVariable(entry.getKey(), entry.getValue());
     }
 
-    /**
-     * Remove a template variable for the current request.
-     *
-     * @param name the variable name
-     */
-    public static void removeTemplateVariable(String name) {
-        TEMPLATE_VARIABLES.get().remove(name);
-    }
-
-    /**
-     * Clear all template variables for the current request.
-     * Should be called at the end of request processing to prevent memory leaks.
-     */
-    public static void clearTemplateVariables() {
-        TEMPLATE_VARIABLES.get().clear();
-        // Important to prevent memory leaks in thread pools
-        TEMPLATE_VARIABLES.remove();
-    }
-
-    /**
-     * Get the body path for the default body template.
-     * This method is synchronized to prevent concurrent access.
-     *
-     * @return the path to the default template.
-     */
-    public static synchronized String getBodyPath() {
-        return BODY_PATH.get();
-    }
-
-    /**
-     * Set the body path for the default body template.
-     * This method is synchronized to prevent concurrent access.
-     *
-     * @param path the path to the default template.
-     */
-    public static synchronized void setBodyPath(String path) {
-        if (path != null && !path.isEmpty()) {
-            BODY_PATH.set(path);
-            return;
-        }
-        BODY_PATH.set(DEFAULT_BODY_PATH);
-    }
-
-    /**
-     * Render a template with full context including parameters and variables.
-     *
-     * @param templatePath    The template path to render
-     * @param queryParams     The query parameters map
-     * @param bodyParams      The body parameters map
-     * @param request         The HTTP servlet request
-     * @param response        The HTTP servlet response
-     * @param templateContext Additional context variables for the template
-     * @return the rendered template
-     * @throws IOException if there's an error rendering the template
-     */
-    public static String render(String templatePath,
-                               Map<String, String> queryParams,
-                               Map<String, String> bodyParams,
-                               HttpServletRequest request,
-                               HttpServletResponse response,
-                               Context templateContext) throws IOException {
-        if (queryParams == null) {
-            queryParams = new LinkedHashMap<>();
-        }
-        if (bodyParams == null) {
-            bodyParams = new LinkedHashMap<>();
-        }
-
-        // If template looks like a file path (doesn't contain HTML tags), use it as a template path
-        if (!templatePath.contains("<") && !templatePath.contains(">")) {
-            return processTemplateInternal(templatePath, queryParams, bodyParams, request, response, templateContext);
-        }
-
-        // Otherwise, just return content
-        JawsLogger.trace("Received template content. Template: {}", templatePath);
-        return templatePath;
-    }
-
-    /**
-     * Render a template without parameters (simple overload).
-     *
-     * @param templatePath The template path to render
-     * @param request      The HTTP servlet request
-     * @param response     The HTTP servlet response
-     * @return the rendered template
-     * @throws IOException if there's an error rendering the template
-     */
-    public static String render(String templatePath,
-                               HttpServletRequest request,
-                               HttpServletResponse response) throws IOException {
-        return render(templatePath, new LinkedHashMap<>(), new LinkedHashMap<>(), request, response, null);
-    }
-
-    /**
-     * Render a template with parameters but no additional context.
-     *
-     * @param templatePath The template path to render
-     * @param queryParams  The query parameters map
-     * @param bodyParams   The body parameters map
-     * @param request      The HTTP servlet request
-     * @param response     The HTTP servlet response
-     * @return the rendered template
-     * @throws IOException if there's an error rendering the template
-     */
-    public static String render(String templatePath,
-                               Map<String, String> queryParams,
-                               Map<String, String> bodyParams,
-                               HttpServletRequest request,
-                               HttpServletResponse response) throws IOException {
-        return render(templatePath, queryParams, bodyParams, request, response, null);
-    }
-
-    /**
-     * Compose a full page by combining a base template with a partial template.
-     *
-     * @param baseTemplatePath    The path to the base template file
-     * @param partialTemplatePath The path to the partial template file
-     * @param request             The HTTP servlet request
-     * @param response            The HTTP servlet response
-     * @return the composed page
-     * @throws IOException if there's an error composing the page
-     */
-    public static String composePage(String baseTemplatePath,
-                                    String partialTemplatePath,
-                                    HttpServletRequest request,
-                                    HttpServletResponse response) throws IOException {
-        try {
-            WebContext context = createThymeleafWebContext(new HashMap<>(), new HashMap<>(), request, response);
-            context.setVariable("bodyContent", partialTemplatePath);
-
-            return templateEngine.process(baseTemplatePath, context);
-        } catch (Exception e) {
-            JawsLogger.error("Error composing page: " + e.getMessage(), e);
-            throw new IOException("Failed to compose page", e);
-        }
-    }
-
-    /**
-     * Process a Thymeleaf template file with parameters.
-     *
-     * @param templatePath    The path to the template file
-     * @param queryParams     The query parameters map
-     * @param bodyParams      The body parameters map
-     * @param request         The HTTP servlet request
-     * @param response        The HTTP servlet response
-     * @param templateContext Additional context variables for the template
-     * @return the processed template as a string
-     */
-    private static String processTemplateInternal(String templatePath,
-                                                 Map<String, String> queryParams,
-                                                 Map<String, String> bodyParams,
-                                                 HttpServletRequest request,
-                                                 HttpServletResponse response,
-                                                 Context templateContext) {
-        try {
-            // Create Thymeleaf web context
-            WebContext context = createThymeleafWebContext(queryParams, bodyParams, request, response);
-
-            // Add template context variables
-            if (templateContext != null) {
-                context.setVariables(templateContext.context());
-            }
-
-            // Process the template using the file path
-            return templateEngine.process(templatePath, context);
-
-        } catch (Exception e) {
-            JawsLogger.error("Error processing Thymeleaf template '{}': {}", templatePath, e.getMessage());
-            return "Error processing template: " + templatePath;
-        } finally {
-            // Clean up template variables
-            clearTemplateVariables();
-        }
-    }
-
-    /**
-     * Create a Thymeleaf web context with all available variables.
-     * This method initializes the web context with the request and response,
-     * and sets up the template variables, query parameters, body parameters,
-     * and utility objects.
-     *
-     * @param queryParams the query parameters map
-     * @param bodyParams  the body parameters map
-     * @param request     the HTTP servlet request
-     * @param response    the HTTP servlet response
-     */
-    private static WebContext createThymeleafWebContext(Map<String, String> queryParams,
-                                                        Map<String, String> bodyParams,
-                                                        HttpServletRequest request,
-                                                        HttpServletResponse response) {
-        // Create the web application instance
-        JakartaServletWebApplication application = JakartaServletWebApplication.buildApplication(request.getServletContext());
-
-        // Create web context with proper servlet request/response
-        WebContext context = new WebContext(application.buildExchange(request, response));
-
-        // Add template variables
-        context.setVariables(TEMPLATE_VARIABLES.get());
-
-        // Add request parameters
-        context.setVariable("queryParams", queryParams);
-        context.setVariable("bodyParams", bodyParams);
-
-        // Add utility objects
-        context.setVariable("utils", utils);
-
-        // Add individual parameters to root context for easy access
-        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
-            context.setVariable(entry.getKey(), entry.getValue());
-        }
-        for (Map.Entry<String, String> entry : bodyParams.entrySet()) {
-            context.setVariable(entry.getKey(), entry.getValue());
-        }
-
-        return context;
-    }
-
-
-
+    return context;
+  }
 }

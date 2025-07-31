@@ -1,25 +1,30 @@
 package org.ruitx.jaws.exceptions;
 
-import org.ruitx.jaws.strings.ResponseCode;
-
 /**
  * Exception for input validation errors.
  */
-public class ValidationException extends BusinessException {
-    private final String field;
-    private final Object rejectedValue;
+public class ValidationException extends RuntimeException {
 
-    public ValidationException(String field, Object rejectedValue, String message) {
-        super(ResponseCode.BAD_REQUEST, message);
-        this.field = field;
-        this.rejectedValue = rejectedValue;
-    }
+  private final ValidationError error;
+  private final String field;
+  private final Object rejectedValue;
 
-    public String getField() {
-        return field;
-    }
+  public ValidationException(ValidationError error, String field, Object rejectedValue) {
+    super(error.getMessage());
+    this.error = error;
+    this.field = field;
+    this.rejectedValue = rejectedValue;
+  }
 
-    public Object getRejectedValue() {
-        return rejectedValue;
-    }
+  public ValidationError getError() {
+    return error;
+  }
+
+  public String getField() {
+    return field;
+  }
+
+  public Object getRejectedValue() {
+    return rejectedValue;
+  }
 }

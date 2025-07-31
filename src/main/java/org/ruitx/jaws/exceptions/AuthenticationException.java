@@ -1,16 +1,18 @@
 package org.ruitx.jaws.exceptions;
 
-import org.ruitx.jaws.strings.ResponseCode;
-
 /**
  * Exception for authentication and authorization errors.
  */
-public class AuthenticationException extends BusinessException {
-    public AuthenticationException(String message) {
-        super(ResponseCode.UNAUTHORIZED, message);
-    }
+public class AuthenticationException extends RuntimeException {
 
-    public AuthenticationException(ResponseCode responseCode, String message) {
-        super(responseCode, message);
-    }
+  private final AuthenticationError error;
+
+  public AuthenticationException(AuthenticationError error) {
+    super(error.getMessage());
+    this.error = error;
+  }
+
+  public AuthenticationError getError() {
+    return error;
+  }
 }

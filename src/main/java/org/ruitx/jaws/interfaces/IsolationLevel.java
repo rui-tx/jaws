@@ -1,10 +1,10 @@
 package org.ruitx.jaws.interfaces;
 
 /**
- * Enumeration representing the isolation levels for database transactions.
- * This is used to define how transaction integrity is visible to other transactions.
+ * Enumeration representing the isolation levels for database transactions. This is used to define
+ * how transaction integrity is visible to other transactions.
  */
 public enum IsolationLevel {
-    READ_UNCOMMITTED,
-    SERIALIZABLE
-} 
+  READ_UNCOMMITTED,
+  SERIALIZABLE
+}

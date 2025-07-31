@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/sidebar.min.js" defer></script>
     <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
     <script th:src="@{/backoffice/scripts/base.js}" defer></script>
+    <script th:src="@{/backoffice/scripts/auth.js}" defer></script>
     <script th:src="@{/backoffice/scripts/refresh-button.js}" defer></script>
 </head>
 <body class="min-h-screen bg-background">
@@ -72,8 +73,9 @@
                         <i class="icon icon-moon w-5 h-5"></i>
                     </div>
                 </button>
-                <button class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]">
-                    <i class="icon icon-ellipsis-vertical w-5 h-5"></i>
+                <button class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]" onclick="handleLogout()">
+                    <i class="icon icon-arrow-right-on-rectangle w-5 h-5"></i>
+                    <span class="sr-only">Logout</span>
                 </button>
             </div>
         </header>

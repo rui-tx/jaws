@@ -1,88 +1,87 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <div id="main">
-    <div class="strings">
-        <h1>404 - Not found.</h1>
-        <h2>The page you are looking for does not exist</h2>
+  <div class="strings">
+    <h1>404 - Not found.</h1>
+    <h2>The page you are looking for does not exist.</h2>
 
-        <a href="#" onclick="window.history.back(); return false;">Go back</a>
-    </div>
+  </div>
 </div>
 
 <script>
-    const backLink = document.querySelector('a[href="#"]');
-    if (backLink) {
-        backLink.addEventListener('click', (event) => {
-            event.preventDefault();
-            window.history.back();
-        });
-    }
+  const backLink = document.querySelector('a[href="#"]');
+  if (backLink) {
+    backLink.addEventListener('click', (event) => {
+      event.preventDefault();
+      window.history.back();
+    });
+  }
 </script>
 
 <style>
-    * {
-        transition: all 0.6s;
-    }
+  * {
+    transition: all 0.6s;
+  }
 
-    :root {
-        --background: #f2f2f2;
-        --default-font-color: #4a4a4a;
-    }
+  :root {
+    --background: #f2f2f2;
+    --default-font-color: #4a4a4a;
+  }
 
-    body {
-        margin: 5% auto;
-        background-color: var(--background);
-        color: #444444;
-        font-size: 16px;
-        line-height: 1.8;
-        text-shadow: 0 1px 0 #ffffff;
-        max-width: 73%;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-        sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
+  body {
+    margin: 5% auto;
+    background-color: var(--background);
+    color: #444444;
+    font-size: 16px;
+    line-height: 1.8;
+    text-shadow: 0 1px 0 #ffffff;
+    max-width: 73%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-    #main {
-        display: table;
-        width: 100%;
-        text-align: center;
-    }
+  #main {
+    display: table;
+    width: 100%;
+    text-align: center;
+  }
 
-    .strings {
-        display: table-cell;
-        vertical-align: middle;
-    }
+  .strings {
+    display: table-cell;
+    vertical-align: middle;
+  }
 
-    .strings h1 {
-        font-size: 6rem;
-        display: inline-block;
-        padding-right: 0.5rem;
-        animation: type .5s alternate infinite;
-    }
+  .strings h1 {
+    font-size: 6rem;
+    display: inline-block;
+    padding-right: 0.5rem;
+    animation: type .5s alternate infinite;
+  }
 
-    .strings h2 {
-        font-size: 2rem;
-    }
+  .strings h2 {
+    font-size: 2rem;
+  }
 
-    .strings a {
-        font-size: 1rem;
-        border-bottom: 1px solid #444444;
-        color: #444444;
-        text-decoration: none;
-    }
+  .strings a {
+    font-size: 1rem;
+    border-bottom: 1px solid #444444;
+    color: #444444;
+    text-decoration: none;
+  }
 
-    .strings a:hover {
-        border-bottom: 0;
-    }
+  .strings a:hover {
+    border-bottom: 0;
+  }
 
-    @keyframes type {
-        from {
-            box-shadow: inset -3px 0px 0px #888;
-        }
-        to {
-            box-shadow: inset -3px 0px 0px transparent;
-        }
+  @keyframes type {
+    from {
+      box-shadow: inset -3px 0px 0px #888;
     }
+    to {
+      box-shadow: inset -3px 0px 0px transparent;
+    }
+  }
 </style>
 </html>

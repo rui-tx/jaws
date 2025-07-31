@@ -8,19 +8,19 @@ package org.ruitx.jaws.components.freyr;
  */
 public enum ExecutionMode {
 
-    /**
-     * Process jobs in parallel using multiple worker threads.
-     */
-    PARALLEL,
+  /**
+   * Process jobs in parallel using multiple worker threads.
+   */
+  PARALLEL,
 
-    /**
-     * Process jobs sequentially using a single worker thread.
-     * Jobs are processed one at a time in the order they were submitted.
-     */
-    SEQUENTIAL;
+  /**
+   * Process jobs sequentially using a single worker thread. Jobs are processed one at a time in the
+   * order they were submitted.
+   */
+  SEQUENTIAL;
 
-    /**
-     * Default execution mode
-     */
-    public static final ExecutionMode DEFAULT = PARALLEL;
+  /**
+   * Default execution mode
+   */
+  public static final ExecutionMode DEFAULT = PARALLEL;
 } 

@@ -1,0 +1,169 @@
+<!-- File: /backoffice/components/auth/login-form.html -->
+<div class="card w-full max-w-md mx-auto">
+  <header class="text-center">
+    <h2>Login to Jaws Backoffice</h2>
+    <p>Enter your details to continue</p>
+  </header>
+  
+  <section class="mt-6">
+    <form id="loginForm" class="form grid gap-4">
+      <div class="grid gap-2">
+        <label for="email">User</label>
+        <input type="text" id="email" name="user" required>
+      </div>
+      
+      <div class="grid gap-2">
+        <div class="flex items-center gap-2">
+          <label for="password">Password</label>
+          <a href="#" class="ml-auto text-sm link">Forgot password?</a>
+        </div>
+        <input type="password" id="password" name="password" required>
+      </div>
+      
+      <div id="error" class="text-error text-sm hidden"></div>
+    </form>
+
+    <footer class="">
+      <button type="submit" form="loginForm" class="btn w-full" id="loginButton">
+        <span class="button-text">Login</span>
+        <span class="button-loading hidden">
+          <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </span>
+      </button>
+      <p class="text-center text-sm mt-4">Don't have an account? <a href="#" class="link">Contact admin</a></p>
+    </footer>
+  </section>
+</div>
+
+<style>
+  .link {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+  .link:hover {
+    text-decoration: underline;
+  }
+  .text-error {
+    color: #dc2626;
+  }
+  .btn {
+    position: relative;
+  }
+  .button-text, .button-loading {
+    transition: opacity 0.2s;
+  }
+  .button-loading {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .hidden {
+    display: none;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    const loginButton = document.getElementById('loginButton');
+    const errorElement = document.getElementById('error');
+    const buttonText = loginButton.querySelector('.button-text');
+    const buttonLoading = loginButton.querySelector('.button-loading');
+
+    loginForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      // Reset error state
+      errorElement.classList.add('hidden');
+      
+      // Show loading state
+      buttonText.classList.add('hidden');
+      buttonLoading.classList.remove('hidden');
+      loginButton.disabled = true;
+      
+      try {
+        const formData = {
+          user: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value
+        };
+        
+        const response = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+          credentials: 'include' // Important for cookies/sessions
+        });
+        
+        const data = await response.json();
+        console.log('Login response:', data); // Debug log
+        
+        if (!response.ok) {
+          console.error('Login failed with status:', response.status);
+          throw new Error(data.message || 'Login failed');
+        }
+        
+        // Store the token if it exists in the response
+        if (data.data && data.data.access_token) {
+          console.log('Storing access token');
+          const token = data.data.access_token;
+          
+          // Store in both localStorage and sessionStorage
+          localStorage.setItem('accessToken', token);
+          sessionStorage.setItem('accessToken', token);
+          
+          // Also set as a cookie that will be sent with subsequent requests
+          document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
+          
+          if (data.data.refresh_token) {
+            localStorage.setItem('refreshToken', data.data.refresh_token);
+          }
+          
+          console.log('Auth tokens stored');
+          
+          // Create a hidden form to submit with the token
+          const form = document.createElement('form');
+          form.method = 'GET';
+          form.action = '/backoffice';
+          document.body.appendChild(form);
+          form.submit();
+          return; // Stop further execution
+        } else {
+          console.warn('No access token in response data:', data);
+          // If we still have the data but with different casing, try to find the token
+          const accessTokenKey = Object.keys(data.data || {}).find(k => k.toLowerCase() === 'access_token');
+          if (accessTokenKey) {
+            console.log('Found access token with different casing, storing it');
+            const token = data.data[accessTokenKey];
+            localStorage.setItem('accessToken', token);
+            sessionStorage.setItem('accessToken', token);
+            document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
+            
+            // Create a hidden form to submit with the token
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = '/backoffice';
+            document.body.appendChild(form);
+            form.submit();
+            return; // Stop further execution
+          }
+        }
+        
+      } catch (error) {
+        console.error('Login error:', error);
+        errorElement.textContent = error.message || 'An error occurred during login. Please try again.';
+        errorElement.classList.remove('hidden');
+      } finally {
+        // Reset button state
+        buttonText.classList.remove('hidden');
+        buttonLoading.classList.add('hidden');
+        loginButton.disabled = false;
+      }
+    });
+  });
+</script>
