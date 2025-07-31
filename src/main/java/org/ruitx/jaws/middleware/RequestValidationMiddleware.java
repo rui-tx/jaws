@@ -44,7 +44,9 @@ public class RequestValidationMiddleware implements Middleware {
       Method routeMethod = findRouteMethod(endPoint, requestType);
       if (routeMethod != null && routeMethod.isAnnotationPresent(Route.class)) {
         Route routeAnnotation = routeMethod.getAnnotation(Route.class);
-        if (routeAnnotation.htmx() && !"true".equals(context.getHeader("HX-Request"))) {
+        if (routeAnnotation.htmx() && 
+            !"true".equals(context.getHeader("HX-Request")) && 
+            !"true".equals(context.getHeader("hx-request"))) {
           APIResponse<String> response = APIResponse.error(
               ResponseCode.BAD_REQUEST.getCodeAndMessage(),
               "This endpoint is only accessible via HTMX."
@@ -412,4 +414,4 @@ public class RequestValidationMiddleware implements Middleware {
       return new ValidationResult(false, null);
     }
   }
-} 
+}
