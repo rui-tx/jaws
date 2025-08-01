@@ -27,7 +27,7 @@ public class LoggingMiddleware implements Middleware {
       String fullUrl = queryString != null ? uri + "?" + queryString : uri;
       String clientIp = context.getClientIpAddress();
 
-      JawsLogger.info(traceId, "{} {} {} {}", traceId, method, fullUrl, clientIp);
+      JawsLogger.info("{} {} {} {}", traceId, traceId, method, fullUrl, clientIp);
 
       return chain.next();
 
