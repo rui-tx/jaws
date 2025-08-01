@@ -13,6 +13,7 @@ public class LogEntry {
   private final String exception;
   private final String method;
   private final int lineNumber;
+  private final String traceId;
   private final long createdAt;
 
   /**
@@ -28,7 +29,7 @@ public class LogEntry {
    * @param lineNumber the line number in the source code where this log entry was created
    */
   public LogEntry(long timestamp, String level, String logger, String thread,
-      String message, String exception, String method, int lineNumber) {
+      String message, String exception, String method, int lineNumber, String traceId) {
     this.timestamp = timestamp;
     this.level = level;
     this.logger = logger;
@@ -37,6 +38,7 @@ public class LogEntry {
     this.exception = exception;
     this.method = method;
     this.lineNumber = lineNumber;
+    this.traceId = traceId;
     this.createdAt = System.currentTimeMillis();
   }
 
@@ -71,6 +73,10 @@ public class LogEntry {
 
   public int getLineNumber() {
     return lineNumber;
+  }
+
+  public String getTraceId() {
+    return traceId;
   }
 
   public long getCreatedAt() {

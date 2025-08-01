@@ -98,27 +98,32 @@ public class JawsLogger {
 
   public static void trace(String message) {
     Logger.trace(message);
-    queueLogEntry("TRACE", message, null);
+    queueLogEntry("TRACE", message, null, null);
+  }
+
+  public static void trace(String message, String traceId) {
+    Logger.trace(message);
+    queueLogEntry("TRACE", message, null, traceId);
   }
 
   public static void trace(String message, Object... arguments) {
     Logger.trace(message, arguments);
-    queueLogEntry("TRACE", formatMessage(message, arguments), null);
+    queueLogEntry("TRACE", formatMessage(message, arguments), null, null);
   }
 
   public static void trace(Throwable exception) {
     Logger.trace(exception);
-    queueLogEntry("TRACE", exception.getMessage(), exception);
+    queueLogEntry("TRACE", exception.getMessage(), exception, null);
   }
 
   public static void trace(Throwable exception, String message) {
     Logger.trace(exception, message);
-    queueLogEntry("TRACE", message, exception);
+    queueLogEntry("TRACE", message, exception, null);
   }
 
   public static void trace(Throwable exception, String message, Object... arguments) {
     Logger.trace(exception, message, arguments);
-    queueLogEntry("TRACE", formatMessage(message, arguments), exception);
+    queueLogEntry("TRACE", formatMessage(message, arguments), exception, null);
   }
 
   // ============================================================================
@@ -127,27 +132,32 @@ public class JawsLogger {
 
   public static void debug(String message) {
     Logger.debug(message);
-    queueLogEntry("DEBUG", message, null);
+    queueLogEntry("DEBUG", message, null, null);
+  }
+
+  public static void debug(String message, String traceId) {
+    Logger.debug(message);
+    queueLogEntry("DEBUG", message, null, traceId);
   }
 
   public static void debug(String message, Object... arguments) {
     Logger.debug(message, arguments);
-    queueLogEntry("DEBUG", formatMessage(message, arguments), null);
+    queueLogEntry("DEBUG", formatMessage(message, arguments), null, null);
   }
 
   public static void debug(Throwable exception) {
     Logger.debug(exception);
-    queueLogEntry("DEBUG", exception.getMessage(), exception);
+    queueLogEntry("DEBUG", exception.getMessage(), exception, null);
   }
 
   public static void debug(Throwable exception, String message) {
     Logger.debug(exception, message);
-    queueLogEntry("DEBUG", message, exception);
+    queueLogEntry("DEBUG", message, exception, null);
   }
 
   public static void debug(Throwable exception, String message, Object... arguments) {
     Logger.debug(exception, message, arguments);
-    queueLogEntry("DEBUG", formatMessage(message, arguments), exception);
+    queueLogEntry("DEBUG", formatMessage(message, arguments), exception, null);
   }
 
   // ============================================================================
@@ -156,27 +166,37 @@ public class JawsLogger {
 
   public static void info(String message) {
     Logger.info(message);
-    queueLogEntry("INFO", message, null);
+    queueLogEntry("INFO", message, null, null);
+  }
+
+  public static void info(String message, String traceId) {
+    Logger.info(message);
+    queueLogEntry("INFO", message, null, traceId);
   }
 
   public static void info(String message, Object... arguments) {
     Logger.info(message, arguments);
-    queueLogEntry("INFO", formatMessage(message, arguments), null);
+    queueLogEntry("INFO", formatMessage(message, arguments), null, null);
+  }
+
+  public static void info(String message, String traceId, Object... arguments) {
+    Logger.info(message, arguments);
+    queueLogEntry("INFO", formatMessage(message, arguments), null, traceId);
   }
 
   public static void info(Throwable exception) {
     Logger.info(exception);
-    queueLogEntry("INFO", exception.getMessage(), exception);
+    queueLogEntry("INFO", exception.getMessage(), exception, null);
   }
 
   public static void info(Throwable exception, String message) {
     Logger.info(exception, message);
-    queueLogEntry("INFO", message, exception);
+    queueLogEntry("INFO", message, exception, null);
   }
 
   public static void info(Throwable exception, String message, Object... arguments) {
     Logger.info(exception, message, arguments);
-    queueLogEntry("INFO", formatMessage(message, arguments), exception);
+    queueLogEntry("INFO", formatMessage(message, arguments), exception, null);
   }
 
   // ============================================================================
@@ -185,27 +205,27 @@ public class JawsLogger {
 
   public static void warn(String message) {
     Logger.warn(message);
-    queueLogEntry("WARN", message, null);
+    queueLogEntry("WARN", message, null, null);
   }
 
   public static void warn(String message, Object... arguments) {
     Logger.warn(message, arguments);
-    queueLogEntry("WARN", formatMessage(message, arguments), null);
+    queueLogEntry("WARN", formatMessage(message, arguments), null, null);
   }
 
   public static void warn(Throwable exception) {
     Logger.warn(exception);
-    queueLogEntry("WARN", exception.getMessage(), exception);
+    queueLogEntry("WARN", exception.getMessage(), exception, null);
   }
 
   public static void warn(Throwable exception, String message) {
     Logger.warn(exception, message);
-    queueLogEntry("WARN", message, exception);
+    queueLogEntry("WARN", message, exception, null);
   }
 
   public static void warn(Throwable exception, String message, Object... arguments) {
     Logger.warn(exception, message, arguments);
-    queueLogEntry("WARN", formatMessage(message, arguments), exception);
+    queueLogEntry("WARN", formatMessage(message, arguments), exception, null);
   }
 
   // ============================================================================
@@ -214,27 +234,27 @@ public class JawsLogger {
 
   public static void error(String message) {
     Logger.error(message);
-    queueLogEntry("ERROR", message, null);
+    queueLogEntry("ERROR", message, null, null);
   }
 
   public static void error(String message, Object... arguments) {
     Logger.error(message, arguments);
-    queueLogEntry("ERROR", formatMessage(message, arguments), null);
+    queueLogEntry("ERROR", formatMessage(message, arguments), null, null);
   }
 
   public static void error(Throwable exception) {
     Logger.error(exception);
-    queueLogEntry("ERROR", exception.getMessage(), exception);
+    queueLogEntry("ERROR", exception.getMessage(), exception, null);
   }
 
   public static void error(Throwable exception, String message) {
     Logger.error(exception, message);
-    queueLogEntry("ERROR", message, exception);
+    queueLogEntry("ERROR", message, exception, null);
   }
 
   public static void error(Throwable exception, String message, Object... arguments) {
     Logger.error(exception, message, arguments);
-    queueLogEntry("ERROR", formatMessage(message, arguments), exception);
+    queueLogEntry("ERROR", formatMessage(message, arguments), exception, null);
   }
 
   // ============================================================================
@@ -312,12 +332,15 @@ public class JawsLogger {
   /**
    * Queue a log entry for batch processing
    */
-  private static void queueLogEntry(String level, String message, Throwable exception) {
+  private static void queueLogEntry(
+      String level,
+      String message,
+      Throwable exception,
+      String traceId) {
     if (!dbAvailable || !batchingEnabled) {
       return; // Skip queuing if database unavailable or batching disabled
     }
 
-    // Check if this log level should be saved to database
     if (!shouldLogToDatabase(level)) {
       return; // Skip queuing if level is below configured DB_LEVEL
     }
@@ -325,12 +348,9 @@ public class JawsLogger {
     try {
       // Get caller information
       CallerInfo caller = getCallerInfo();
-
-      // Get current thread info
       Thread currentThread = Thread.currentThread();
       String threadName = currentThread.getName();
 
-      // Prepare exception string if present
       String exceptionStr = null;
       if (exception != null) {
         exceptionStr = getStackTraceAsString(exception);
@@ -345,7 +365,8 @@ public class JawsLogger {
           message,
           exceptionStr,
           caller.methodName,
-          caller.lineNumber
+          caller.lineNumber,
+          traceId
       );
 
       // Try to add to buffer (non-blocking)
@@ -450,6 +471,7 @@ public class JawsLogger {
         entryMap.put("exception", entry.getException());
         entryMap.put("method", entry.getMethod());
         entryMap.put("lineNumber", entry.getLineNumber());
+        entryMap.put("traceId", entry.getTraceId());
         logEntryMaps.add(entryMap);
       }
 

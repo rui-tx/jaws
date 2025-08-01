@@ -47,7 +47,7 @@ public class JawsLoggerJob extends BaseJob {
         for (Map<String, Object> logEntryMap : logEntryMaps) {
           try {
             logsDb.executeSql(
-                "INSERT INTO LOG_ENTRIES (timestamp, level, logger, thread, message, exception, method, line) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO LOG_ENTRIES (timestamp, level, logger, thread, message, exception, method, line, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (Long) logEntryMap.get("timestamp"),
                 (String) logEntryMap.get("level"),
                 (String) logEntryMap.get("logger"),
@@ -55,7 +55,8 @@ public class JawsLoggerJob extends BaseJob {
                 (String) logEntryMap.get("message"),
                 (String) logEntryMap.get("exception"),
                 (String) logEntryMap.get("method"),
-                (Integer) logEntryMap.get("lineNumber")
+                (Integer) logEntryMap.get("lineNumber"),
+                (String) logEntryMap.get("traceId")
             );
           } catch (Exception e) {
             Logger.error("Failed to insert log entry in batch: {}", e.getMessage());
