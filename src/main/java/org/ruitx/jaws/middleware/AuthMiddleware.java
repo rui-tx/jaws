@@ -3,6 +3,7 @@ package org.ruitx.jaws.middleware;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.Hermod;
 import org.ruitx.jaws.components.Njord;
@@ -34,13 +35,17 @@ public class AuthMiddleware implements Middleware {
   @Override
   public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
     try {
-      JawsLogger.debug("AuthMiddleware: Handling request");
+      JawsLogger.debug(
+          UUID.fromString(context.getTraceId()),
+          "AuthMiddleware: Handling request");
       String endPoint = context.getRequest().getRequestURI();
       String methodStr = context.getRequest().getMethod().toUpperCase();
       RequestType requestType = RequestType.fromString(methodStr);
 
       if (requestType == null) {
-        JawsLogger.debug("AuthMiddleware: Invalid request type");
+        JawsLogger.debug(
+            UUID.fromString(context.getTraceId()),
+            "AuthMiddleware: Invalid request type");
         return chain.next(); // Let other middleware handle invalid methods
       }
 
@@ -54,12 +59,17 @@ public class AuthMiddleware implements Middleware {
 
       if (routeMethod != null && routeMethod.isAnnotationPresent(AccessControl.class)) {
         AccessControl auth = routeMethod.getAnnotation(AccessControl.class);
-        JawsLogger.debug("AuthMiddleware: Found AccessControl - login: {}, role: '{}'",
-            auth.login(), auth.role());
+        JawsLogger.debug(
+            UUID.fromString(context.getTraceId()),
+            "AuthMiddleware: Found AccessControl - login: {}, role: '{}'",
+            auth.login(),
+            auth.role());
 
         if (auth.login()) {
           if (!isAuthenticated(context)) {
-            JawsLogger.debug("AuthMiddleware: User is not authenticated");
+            JawsLogger.debug(
+                UUID.fromString(context.getTraceId()),
+                "AuthMiddleware: User is not authenticated");
             sendUnauthorizedResponse(context, routeMethod);
             return false; // Stop the chain
           }
@@ -67,7 +77,9 @@ public class AuthMiddleware implements Middleware {
           // Check role-based authorization if a specific role is required
           if (!auth.role().isEmpty()) {
             if (!isAuthorized(context, auth.role())) {
-              JawsLogger.debug("AuthMiddleware: User is not authorized");
+              JawsLogger.debug(
+                  UUID.fromString(context.getTraceId()),
+                  "AuthMiddleware: User is not authorized");
               sendUnauthorizedResponse(context, routeMethod);
               return false; // Stop the chain
             }
@@ -76,11 +88,18 @@ public class AuthMiddleware implements Middleware {
       }
 
       // Continue to next middleware if authenticated or no auth required
-      JawsLogger.debug("AuthMiddleware: Continuing to next middleware");
+      JawsLogger.debug(
+          UUID.fromString(context.getTraceId()),
+          "AuthMiddleware: Continuing to next middleware");
       return chain.next();
 
     } catch (Exception e) {
-      JawsLogger.error("Error in AuthMiddleware: {}", e.getMessage(), e);
+      JawsLogger.error(
+          UUID.fromString(context.getTraceId()),
+          e.getCause(),
+          "Error in AuthMiddleware: {}",
+          e.getMessage(),
+          e);
       return chain.next(); // Continue on error to avoid breaking the chain
     }
   }
@@ -89,12 +108,14 @@ public class AuthMiddleware implements Middleware {
    * Find the route method for the given endpoint and request type.
    */
   private Method findRouteMethod(String endPoint, RequestType requestType) {
-    JawsLogger.debug("AuthMiddleware: Finding route method for endpoint: {} and request type: {}",
-        endPoint, requestType);
+    JawsLogger.trace(
+        "AuthMiddleware: Finding route method for endpoint: {} and request type: {}",
+        endPoint,
+        requestType);
     // First check for direct route match
     Method routeMethod = Njord.getInstance().getRoute(endPoint, requestType);
     if (routeMethod != null) {
-      JawsLogger.debug("AuthMiddleware: Direct route match found");
+      JawsLogger.trace("AuthMiddleware: Direct route match found");
       return routeMethod;
     }
 
@@ -104,13 +125,13 @@ public class AuthMiddleware implements Middleware {
         Route routeAnnotation = route.getAnnotation(Route.class);
         if (routeAnnotation.method() == requestType && matchesRoutePattern(
             routeAnnotation.endpoint(), endPoint)) {
-          JawsLogger.debug("AuthMiddleware: Dynamic route match found");
+          JawsLogger.trace("AuthMiddleware: Dynamic route match found");
           return route;
         }
       }
     }
 
-    JawsLogger.debug("AuthMiddleware: No route method found");
+    JawsLogger.trace("AuthMiddleware: No route method found");
     return null;
   }
 
@@ -118,10 +139,13 @@ public class AuthMiddleware implements Middleware {
    * Simple pattern matching for dynamic routes.
    */
   private boolean matchesRoutePattern(String pattern, String path) {
-    JawsLogger.debug("AuthMiddleware: Matching route pattern: {} for path: {}", pattern, path);
+    JawsLogger.trace(
+        "AuthMiddleware: Matching route pattern: {} for path: {}",
+        pattern,
+        path);
     // Handle exact matches
     if (pattern.equals(path)) {
-      JawsLogger.debug("AuthMiddleware: Exact match found");
+      JawsLogger.trace("AuthMiddleware: Exact match found");
       return true;
     }
 
@@ -130,8 +154,10 @@ public class AuthMiddleware implements Middleware {
     String[] pathParts = path.split("/");
 
     if (patternParts.length != pathParts.length) {
-      JawsLogger.debug("AuthMiddleware: Length mismatch: pattern length: {}, path length: {}",
-          patternParts.length, pathParts.length);
+      JawsLogger.trace(
+          "AuthMiddleware: Length mismatch: pattern length: {}, path length: {}",
+          patternParts.length,
+          pathParts.length);
       return false;
     }
 
@@ -141,19 +167,21 @@ public class AuthMiddleware implements Middleware {
 
       // Skip dynamic parts (enclosed in {})
       if (patternPart.startsWith("{") && patternPart.endsWith("}")) {
-        JawsLogger.debug("AuthMiddleware: Dynamic part found: {}", patternPart);
+        JawsLogger.trace("AuthMiddleware: Dynamic part found: {}", patternPart);
         continue;
       }
 
       // Must match exactly for non-dynamic parts
       if (!patternPart.equals(pathPart)) {
-        JawsLogger.debug("AuthMiddleware: Mismatch found: pattern part: {}, path part: {}",
-            patternPart, pathPart);
+        JawsLogger.trace(
+            "AuthMiddleware: Mismatch found: pattern part: {}, path part: {}",
+            patternPart,
+            pathPart);
         return false;
       }
     }
 
-    JawsLogger.debug("AuthMiddleware: Route pattern matches path");
+    JawsLogger.trace("AuthMiddleware: Route pattern matches path");
     return true;
   }
 
@@ -167,18 +195,25 @@ public class AuthMiddleware implements Middleware {
         context.getRequest().getRequestURI());
 
     if (token == null || token.trim().isEmpty()) {
-      JawsLogger.debug("AuthMiddleware: No authentication token found");
+      JawsLogger.debug(
+          UUID.fromString(context.getTraceId()),
+          "AuthMiddleware: No authentication token found");
       return false;
     }
 
     JawsLogger.debug("AuthMiddleware: Token found, validating...");
     if (!Tyr.isTokenValid(token)) {
-      JawsLogger.debug("AuthMiddleware: Invalid authentication token");
+      JawsLogger.debug(
+          UUID.fromString(context.getTraceId()),
+          "AuthMiddleware: Invalid authentication token");
       return false;
     }
 
     String userId = Tyr.getUserIdFromJWT(token);
-    JawsLogger.debug("AuthMiddleware: Authentication successful for user: {}", userId);
+    JawsLogger.debug(
+        UUID.fromString(context.getTraceId()),
+        "AuthMiddleware: Authentication successful for user: {}",
+        userId);
     return true;
   }
 
@@ -190,13 +225,17 @@ public class AuthMiddleware implements Middleware {
     String token = context.getCurrentToken();
 
     if (token == null || token.trim().isEmpty()) {
-      JawsLogger.debug("AuthMiddleware: No token for role-based authorization");
+      JawsLogger.debug(
+          UUID.fromString(context.getTraceId()),
+          "AuthMiddleware: No token for role-based authorization");
       return false;
     }
 
     try {
       List<String> userRoles = Tyr.getUserRolesFromJWT(token);
-      JawsLogger.debug("AuthMiddleware: Role check - required: '{}', user roles: {}", requiredRoles,
+      JawsLogger.debug(UUID.fromString(context.getTraceId()),
+          "AuthMiddleware: Role check - required: '{}', user roles: {}",
+          requiredRoles,
           userRoles);
 
       // Admin always has access to everything
@@ -304,6 +343,6 @@ public class AuthMiddleware implements Middleware {
 
   @Override
   public int getOrder() {
-    return order; // Execute after CORS and logging, but before most other middleware
+    return order;
   }
 } 

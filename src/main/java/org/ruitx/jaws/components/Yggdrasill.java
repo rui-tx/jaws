@@ -426,7 +426,7 @@ public class Yggdrasill {
     private void extractAndStoreToken() {
 
       Collections.list(request.getHeaderNames()).forEach(name ->
-          JawsLogger.debug("Header: {} = {}", name, request.getHeader(name)));
+          JawsLogger.trace("Header: {} = {}", name, request.getHeader(name)));
 
       // First try Authorization header
       String authHeader = request.getHeader("Authorization");
@@ -734,9 +734,9 @@ public class Yggdrasill {
         // Process the request
         processRequest(context);
 
-        JawsLogger.info(
-            "{} {} {} {} {} {} ms",
-            context.getTraceId(),
+        JawsLogger.debug(
+            UUID.fromString(context.getTraceId()),
+            "{} {} {} {} {} ms",
             context.getRequest().getMethod(),
             context.getRequest().getQueryString() != null
                 ? context.getRequest().getRequestURI() + "?" + context.getRequest().getQueryString()

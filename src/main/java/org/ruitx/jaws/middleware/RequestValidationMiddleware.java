@@ -292,12 +292,14 @@ public class RequestValidationMiddleware implements Middleware {
    * Simple pattern matching for dynamic routes. This matches the logic used in AuthMiddleware.
    */
   private boolean matchesRoutePattern(String pattern, String path) {
-    JawsLogger.debug("RequestValidationMiddleware: Matching route pattern: {} for path: {}",
-        pattern, path);
+    JawsLogger.trace(
+        "RequestValidationMiddleware: Matching route pattern: {} for path: {}",
+        pattern,
+        path);
 
     // Handle exact matches
     if (pattern.equals(path)) {
-      JawsLogger.debug("RequestValidationMiddleware: Exact match found");
+      JawsLogger.trace("RequestValidationMiddleware: Exact match found");
       return true;
     }
 
@@ -306,9 +308,10 @@ public class RequestValidationMiddleware implements Middleware {
     String[] pathParts = path.split("/");
 
     if (patternParts.length != pathParts.length) {
-      JawsLogger.debug(
+      JawsLogger.trace(
           "RequestValidationMiddleware: Length mismatch: pattern length: {}, path length: {}",
-          patternParts.length, pathParts.length);
+          patternParts.length,
+          pathParts.length);
       return false;
     }
 
@@ -318,20 +321,20 @@ public class RequestValidationMiddleware implements Middleware {
 
       // Skip dynamic parts (parameters starting with :)
       if (patternPart.startsWith(":")) {
-        JawsLogger.debug("RequestValidationMiddleware: Dynamic part found: {}", patternPart);
+        JawsLogger.trace("RequestValidationMiddleware: Dynamic part found: {}", patternPart);
         continue;
       }
 
       // Must match exactly for non-dynamic parts
       if (!patternPart.equals(pathPart)) {
-        JawsLogger.debug(
+        JawsLogger.trace(
             "RequestValidationMiddleware: Mismatch found: pattern part: {}, path part: {}",
             patternPart, pathPart);
         return false;
       }
     }
 
-    JawsLogger.debug("RequestValidationMiddleware: Route pattern matches path");
+    JawsLogger.trace("RequestValidationMiddleware: Route pattern matches path");
     return true;
   }
 

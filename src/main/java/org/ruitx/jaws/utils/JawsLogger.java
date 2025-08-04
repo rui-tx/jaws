@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -101,11 +102,6 @@ public class JawsLogger {
     queueLogEntry("TRACE", message, null, null);
   }
 
-  public static void trace(String message, String traceId) {
-    Logger.trace(message);
-    queueLogEntry("TRACE", message, null, traceId);
-  }
-
   public static void trace(String message, Object... arguments) {
     Logger.trace(message, arguments);
     queueLogEntry("TRACE", formatMessage(message, arguments), null, null);
@@ -126,6 +122,20 @@ public class JawsLogger {
     queueLogEntry("TRACE", formatMessage(message, arguments), exception, null);
   }
 
+  public static void trace(UUID traceId, String message) {
+    Logger.trace(message);
+    queueLogEntry("TRACE", message, null, traceId.toString());
+  }
+
+  public static void trace(UUID traceId, String message, Object... arguments) {
+    Logger.trace(message, arguments);
+    queueLogEntry(
+        "TRACE",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
+  }
+
   // ============================================================================
   // DEBUG LEVEL METHODS
   // ============================================================================
@@ -133,11 +143,6 @@ public class JawsLogger {
   public static void debug(String message) {
     Logger.debug(message);
     queueLogEntry("DEBUG", message, null, null);
-  }
-
-  public static void debug(String message, String traceId) {
-    Logger.debug(message);
-    queueLogEntry("DEBUG", message, null, traceId);
   }
 
   public static void debug(String message, Object... arguments) {
@@ -160,6 +165,20 @@ public class JawsLogger {
     queueLogEntry("DEBUG", formatMessage(message, arguments), exception, null);
   }
 
+  public static void debug(UUID traceId, String message) {
+    Logger.debug(message);
+    queueLogEntry("DEBUG", message, null, traceId.toString());
+  }
+
+  public static void debug(UUID traceId, String message, Object... arguments) {
+    Logger.debug(message, arguments);
+    queueLogEntry(
+        "DEBUG",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
+  }
+
   // ============================================================================
   // INFO LEVEL METHODS
   // ============================================================================
@@ -169,19 +188,9 @@ public class JawsLogger {
     queueLogEntry("INFO", message, null, null);
   }
 
-  public static void info(String message, String traceId) {
-    Logger.info(message);
-    queueLogEntry("INFO", message, null, traceId);
-  }
-
   public static void info(String message, Object... arguments) {
     Logger.info(message, arguments);
     queueLogEntry("INFO", formatMessage(message, arguments), null, null);
-  }
-
-  public static void info(String message, String traceId, Object... arguments) {
-    Logger.info(message, arguments);
-    queueLogEntry("INFO", formatMessage(message, arguments), null, traceId);
   }
 
   public static void info(Throwable exception) {
@@ -197,6 +206,20 @@ public class JawsLogger {
   public static void info(Throwable exception, String message, Object... arguments) {
     Logger.info(exception, message, arguments);
     queueLogEntry("INFO", formatMessage(message, arguments), exception, null);
+  }
+
+  public static void info(UUID traceId, String message) {
+    Logger.info(message);
+    queueLogEntry("INFO", message, null, traceId.toString());
+  }
+
+  public static void info(UUID traceId, String message, Object... arguments) {
+    Logger.info(message, arguments);
+    queueLogEntry(
+        "INFO",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
   }
 
   // ============================================================================
@@ -228,6 +251,20 @@ public class JawsLogger {
     queueLogEntry("WARN", formatMessage(message, arguments), exception, null);
   }
 
+  public static void warn(UUID traceId, String message) {
+    Logger.warn(message);
+    queueLogEntry("WARN", message, null, traceId.toString());
+  }
+
+  public static void warn(UUID traceId, String message, Object... arguments) {
+    Logger.warn(message, arguments);
+    queueLogEntry(
+        "WARN",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
+  }
+
   // ============================================================================
   // ERROR LEVEL METHODS
   // ============================================================================
@@ -255,6 +292,20 @@ public class JawsLogger {
   public static void error(Throwable exception, String message, Object... arguments) {
     Logger.error(exception, message, arguments);
     queueLogEntry("ERROR", formatMessage(message, arguments), exception, null);
+  }
+
+  public static void error(UUID traceId, String message) {
+    Logger.error(message);
+    queueLogEntry("ERROR", message, null, traceId.toString());
+  }
+
+  public static void error(UUID traceId, Throwable exception, String message, Object... arguments) {
+    Logger.error(message, arguments);
+    queueLogEntry(
+        "ERROR",
+        formatMessage(message, arguments),
+        exception,
+        traceId.toString());
   }
 
   // ============================================================================

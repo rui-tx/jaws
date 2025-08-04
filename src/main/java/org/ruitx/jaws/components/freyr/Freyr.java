@@ -18,8 +18,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.interfaces.Job;
+import org.ruitx.jaws.types.Page;
+import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.types.SortDirection;
 import org.tinylog.Logger;
 
 /**
@@ -43,12 +47,13 @@ public class Freyr implements Runnable {
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final AtomicInteger activeWorkers = new AtomicInteger(0);
   private final ScheduledExecutorService cleanupScheduler;
-
-  // Statistics
   private final AtomicInteger totalJobs = new AtomicInteger(0);
   private final AtomicInteger completedJobs = new AtomicInteger(0);
   private final AtomicInteger failedJobs = new AtomicInteger(0);
   private final AtomicInteger retriedJobs = new AtomicInteger(0);
+  private final ExecutorService jobLoaderExecutor = Executors.newSingleThreadExecutor(
+      r -> new Thread(r, "job-loader"));
+  private final AtomicBoolean jobLoadingComplete = new AtomicBoolean(false);
 
   private Freyr(Map<String, Object> config) {
     // Get singleton JobRegistry instance
@@ -66,12 +71,12 @@ public class Freyr implements Runnable {
     this.cleanupScheduler = Executors.newSingleThreadScheduledExecutor(
         r -> new Thread(r, "job-cleanup"));
 
-    loadPendingJobs();
+    // Start job loading in the background
+    scheduleJobLoading();
 
     Logger.info("JobQueue initialized with {} worker threads, queue capacity of {}, and shared DLQ",
         DEFAULT_WORKER_THREADS, DEFAULT_QUEUE_CAPACITY);
   }
-
 
   /**
    * Returns the singleton instance of Freyr. This method ensures that only one instance of Freyr is
@@ -89,7 +94,6 @@ public class Freyr implements Runnable {
     }
     return instance;
   }
-
 
   /**
    * Submit a job for processing.
@@ -127,7 +131,6 @@ public class Freyr implements Runnable {
     }
   }
 
-
   /**
    * Retrieve the status of a job by its ID.
    *
@@ -149,7 +152,6 @@ public class Freyr implements Runnable {
       return null;
     }
   }
-
 
   /**
    * Retrieve the result of a job by its ID.
@@ -183,7 +185,6 @@ public class Freyr implements Runnable {
       return null;
     }
   }
-
 
   /**
    * Starts the JobQueue processing system.
@@ -261,6 +262,17 @@ public class Freyr implements Runnable {
       } catch (InterruptedException e) {
         workerPool.shutdownNow();
         cleanupScheduler.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+
+      // Shutdown job loader
+      jobLoaderExecutor.shutdown();
+      try {
+        if (!jobLoaderExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+          jobLoaderExecutor.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        jobLoaderExecutor.shutdownNow();
         Thread.currentThread().interrupt();
       }
 
@@ -391,35 +403,89 @@ public class Freyr implements Runnable {
    */
   private void loadPendingJobs() {
     try {
-      List<Row> rows = mimir.getRows(
-          "SELECT * FROM JOBS WHERE status IN ('PENDING', 'PROCESSING') ORDER BY priority, created_at");
+      int pageSize = 25;  // Smaller batch size to reduce memory pressure
+      int currentPage = 0;
+      boolean hasMoreJobs = true;
       int parallelLoaded = 0;
       int sequentialLoaded = 0;
+      String sql = "SELECT * FROM JOBS WHERE status IN ('PENDING', 'PROCESSING') ORDER BY priority, created_at";
 
-      for (Row row : rows) {
-        try {
-          String jobType = row.getString("type").orElse("");
-          String payloadJson = row.getString("payload").orElse("{}");
-          Map<String, Object> payload = Odin.getMapper().readValue(payloadJson, Map.class);
+      Logger.info("Starting paginated load of pending jobs with page size {}", pageSize);
 
-          // Create job instance using registry
-          Job job = jobRegistry.createJob(jobType, payload);
-          if (job != null) {
-            // Route to appropriate queue based on execution mode
-            if (job.getExecutionMode() == ExecutionMode.SEQUENTIAL) {
-              sequentialJobQueue.submit(job);
-              sequentialLoaded++;
-            } else {
-              jobQueue.offer(new JobInstance(job));
-              parallelLoaded++;
-            }
+      while (hasMoreJobs && running.get()) {
+
+        // Check queue sizes and pause if they're getting too full
+        if (sequentialJobQueue.getQueueSize() > DEFAULT_QUEUE_CAPACITY * 0.8 ||
+            jobQueue.size() > DEFAULT_QUEUE_CAPACITY * 0.8) {
+          Logger.info("Job queues filling up, pausing job loading for 5 seconds");
+          Thread.sleep(5000);
+          continue;
+        }
+
+        PageRequest pageRequest = new PageRequest(
+            currentPage,
+            pageSize,
+            "priority",
+            SortDirection.ASC);
+
+        // Use pagination to get only a subset of jobs
+        Page<Row> page = mimir.getPage(sql, pageRequest);
+        List<Row> rows = page.getContent();
+
+        // If we got an empty page, we're done
+        if (rows.isEmpty()) {
+          hasMoreJobs = false;
+          continue;
+        }
+
+        Logger.debug("Processing page {} of pending jobs (size: {})", currentPage, rows.size());
+
+        // Process this page of jobs
+        for (Row row : rows) {
+          if (!running.get()) {  // Check if system is shutting down
+            Logger.info("Job loading interrupted due to system shutdown");
+            return;
           }
-        } catch (Exception e) {
-          Logger.error("Failed to load pending job from row: {}", e.getMessage());
+
+          try {
+            String jobType = row.getString("type").orElse("");
+            String payloadJson = row.getString("payload").orElse("{}");
+            Map<String, Object> payload = Odin.getMapper().readValue(payloadJson, Map.class);
+
+            // Create job instance using registry
+            Job job = jobRegistry.createJob(jobType, payload);
+            if (job != null) {
+              // Route to appropriate queue based on execution mode
+              if (job.getExecutionMode() == ExecutionMode.SEQUENTIAL) {
+                sequentialJobQueue.submit(job);
+                sequentialLoaded++;
+              } else {
+                jobQueue.offer(new JobInstance(job));
+                parallelLoaded++;
+              }
+            }
+          } catch (Exception e) {
+            Logger.error("Failed to load pending job from row: {}", e.getMessage());
+          }
+        }
+
+        // Move to next page
+        currentPage++;
+
+        // Check if we've processed all pages
+        hasMoreJobs = rows.size() == pageSize;
+
+        // Log progress periodically
+        if (currentPage % 10 == 0) {
+          Logger.info("Loaded {} pages of pending jobs so far ({} parallel, {} sequential)",
+              currentPage, parallelLoaded, sequentialLoaded);
+
+          // Force garbage collection to help with memory pressure
+          System.gc();
         }
       }
 
-      Logger.info("Loaded {} parallel jobs and {} sequential jobs from database",
+      Logger.info("Completed loading {} parallel jobs and {} sequential jobs from database",
           parallelLoaded, sequentialLoaded);
     } catch (Exception e) {
       Logger.error("Failed to load pending jobs: {}", e.getMessage());
@@ -444,7 +510,6 @@ public class Freyr implements Runnable {
       return new HashMap<>();
     }
   }
-
 
   /**
    * Periodically cleans up expired job results and old completed/failed jobs from the database.
@@ -504,6 +569,36 @@ public class Freyr implements Runnable {
   }
 
   /**
+   * Schedule the loading of pending jobs in a background thread to avoid blocking server startup.
+   * This allows the server to start quickly while jobs are loaded and processed in the background.
+   */
+  private void scheduleJobLoading() {
+    jobLoaderExecutor.submit(() -> {
+      try {
+        Logger.info("Starting background loading of pending jobs");
+
+        // Explicitly initialize the database in this thread
+        mimir.initializeDatabase(ApplicationConfig.DATABASE_PATH);
+
+        loadPendingJobs();
+        jobLoadingComplete.set(true);
+        Logger.info("Background job loading completed");
+      } catch (Exception e) {
+        Logger.error("Error during background job loading: {}", e.getMessage(), e);
+      }
+    });
+  }
+
+  /**
+   * Check if background job loading has completed.
+   *
+   * @return true if job loading is complete, false otherwise
+   */
+  public boolean isJobLoadingComplete() {
+    return jobLoadingComplete.get();
+  }
+
+  /**
    * Job status enum
    */
   public enum JobStatus {
@@ -528,7 +623,6 @@ public class Freyr implements Runnable {
    * Worker thread that processes jobs
    */
   private class JobWorker implements Runnable {
-
 
     /**
      * Worker thread's main execution loop.
@@ -632,4 +726,4 @@ public class Freyr implements Runnable {
       }
     }
   }
-} 
+}

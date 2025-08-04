@@ -14,7 +14,6 @@ public class LogEntry {
   private final String method;
   private final int lineNumber;
   private final String traceId;
-  private final long createdAt;
 
   /**
    * Constructs a new LogEntry with the specified parameters.
@@ -39,7 +38,6 @@ public class LogEntry {
     this.method = method;
     this.lineNumber = lineNumber;
     this.traceId = traceId;
-    this.createdAt = System.currentTimeMillis();
   }
 
   // Getters
@@ -77,10 +75,6 @@ public class LogEntry {
 
   public String getTraceId() {
     return traceId;
-  }
-
-  public long getCreatedAt() {
-    return createdAt;
   }
 
   @Override

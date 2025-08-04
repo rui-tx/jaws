@@ -5,17 +5,19 @@
 -- separate from the main application database.
 
 -- Log entries table for JawsLogger
-CREATE TABLE IF NOT EXISTS LOG_ENTRIES (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp       INTEGER NOT NULL,           -- Log timestamp (epoch milliseconds)
-    level           TEXT    NOT NULL,           -- Log level (ERROR, WARN, INFO, DEBUG, TRACE)
-    logger          TEXT,                       -- Logger name/class
-    thread          TEXT,                       -- Thread name
-    message         TEXT    NOT NULL,           -- Log message
-    exception       TEXT,                       -- Exception stack trace if present
-    method          TEXT,                       -- Method name where log occurred
-    line            INTEGER,                    -- Line number where log occurred
-    created_at      INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+CREATE TABLE IF NOT EXISTS LOG_ENTRIES
+(
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp INTEGER NOT NULL, -- Log timestamp (epoch milliseconds)
+    level     TEXT    NOT NULL, -- Log level (ERROR, WARN, INFO, DEBUG, TRACE)
+    logger    TEXT,             -- Logger name/class
+    thread    TEXT,             -- Thread name
+    message   TEXT    NOT NULL, -- Log message
+    exception TEXT,             -- Exception stack trace if present
+    method    TEXT,             -- Method name where log occurred
+    line      INTEGER,          -- Line number where log occurred
+    trace_id  TEXT              -- ID to trace several logs to the same request
+
 );
 
 -- =============================================
@@ -34,5 +36,5 @@ CREATE INDEX IF NOT EXISTS idx_log_entries_logger ON LOG_ENTRIES (logger);
 -- Composite index for level + timestamp queries
 CREATE INDEX IF NOT EXISTS idx_log_entries_level_timestamp ON LOG_ENTRIES (level, timestamp);
 
--- Index for created_at for maintenance queries
-CREATE INDEX IF NOT EXISTS idx_log_entries_created_at ON LOG_ENTRIES (created_at); 
+-- Index for querying by trace id
+CREATE INDEX IF NOT EXISTS idx_log_entries_trace_id ON LOG_ENTRIES (trace_id);

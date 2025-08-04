@@ -139,7 +139,7 @@ public class Tyr {
       return Optional.of(newTokens);
 
     } catch (JwtException e) {
-      JawsLogger.error("Error validating refresh token: " + e);
+      JawsLogger.debug("Error validating refresh token: " + e);
       return Optional.empty();
     }
   }
@@ -159,7 +159,7 @@ public class Tyr {
           .parse(token);
 
     } catch (JwtException e) {
-      JawsLogger.error("Error validating: " + e);
+      JawsLogger.debug("Error validating: " + e);
       return false;
     }
     return true;
@@ -197,7 +197,7 @@ public class Tyr {
 
 
     } catch (JwtException e) {
-      JawsLogger.error("Error validating: " + e);
+      JawsLogger.debug("Error validating: " + e);
       return "";
     }
 

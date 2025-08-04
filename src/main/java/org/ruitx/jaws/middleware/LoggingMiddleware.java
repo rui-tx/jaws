@@ -1,5 +1,6 @@
 package org.ruitx.jaws.middleware;
 
+import java.util.UUID;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
@@ -19,15 +20,17 @@ public class LoggingMiddleware implements Middleware {
   @Override
   public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
     try {
-      JawsLogger.debug("LoggingMiddleware: Handling request");
       String traceId = context.getTraceId();
       String method = context.getRequest().getMethod();
       String uri = context.getRequest().getRequestURI();
       String queryString = context.getRequest().getQueryString();
       String fullUrl = queryString != null ? uri + "?" + queryString : uri;
-      String clientIp = context.getClientIpAddress();
 
-      JawsLogger.info("{} {} {} {}", traceId, traceId, method, fullUrl, clientIp);
+      JawsLogger.debug(
+          UUID.fromString(traceId),
+          "LoggingMiddleware: Handling request {} {}",
+          method,
+          fullUrl);
 
       return chain.next();
 

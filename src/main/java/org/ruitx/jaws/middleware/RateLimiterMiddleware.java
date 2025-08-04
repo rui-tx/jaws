@@ -1,6 +1,7 @@
 package org.ruitx.jaws.middleware;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.ruitx.jaws.components.Yggdrasill;
@@ -30,7 +31,10 @@ public class RateLimiterMiddleware implements Middleware {
   public boolean handle(Yggdrasill.RequestContext context, MiddlewareChain chain) {
     String clientIp = context.getClientIpAddress();
 
-    JawsLogger.debug("RateLimiterMiddleware: Checking rate limit for IP {}", clientIp);
+    JawsLogger.debug(
+        UUID.fromString(context.getTraceId()),
+        "RateLimiterMiddleware: Checking rate limit for IP {}",
+        clientIp);
 
     // Get or create counter for this IP
     RequestCounter counter = requestCounts.computeIfAbsent(
@@ -39,16 +43,23 @@ public class RateLimiterMiddleware implements Middleware {
 
     // Check if rate limit is exceeded
     if (counter.incrementAndCheck() > maxRequestsPerWindow) {
-      JawsLogger.warn("Rate limit exceeded for IP: {}", clientIp);
+      JawsLogger.warn(
+          UUID.fromString(context.getTraceId()),
+          "Rate limit exceeded for IP: {}",
+          clientIp);
 
       // Calculate seconds until window reset
       long secondsUntilReset = (counter.getNextResetTimeMs() - System.currentTimeMillis()) / 1000;
       secondsUntilReset = Math.max(1, secondsUntilReset); // Ensure at least 1 second
 
       // Set rate limit headers
-      context.getResponse().setHeader("X-RateLimit-Limit", String.valueOf(maxRequestsPerWindow));
+      context.getResponse().setHeader(
+          "X-RateLimit-Limit",
+          String.valueOf(maxRequestsPerWindow));
       context.getResponse()
-          .setHeader("X-RateLimit-Reset", String.valueOf(counter.getNextResetTimeMs() / 1000));
+          .setHeader(
+              "X-RateLimit-Reset",
+              String.valueOf(counter.getNextResetTimeMs() / 1000));
       context.getResponse().setHeader("Retry-After", String.valueOf(secondsUntilReset));
       context.getResponse().setStatus(429);
       context.getResponse().setContentType("application/json");
@@ -56,7 +67,11 @@ public class RateLimiterMiddleware implements Middleware {
         context.getResponse().getWriter().write(
             "{\"error\":\"Rate limit exceeded\",\"message\":\"Too many requests, please try again later\"}");
       } catch (Exception e) {
-        JawsLogger.error("Error sending rate limit response: {}", e.getMessage());
+        JawsLogger.error(
+            UUID.fromString(context.getTraceId()),
+            e.getCause(),
+            "Error sending rate limit response: {}",
+            e.getMessage());
       }
 
       return false;
