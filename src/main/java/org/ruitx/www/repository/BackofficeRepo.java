@@ -113,23 +113,26 @@ public class BackofficeRepo {
    */
   public Map<String, String> getLogById(String logId) {
     try {
-      Row row = logsDb.getRow("SELECT * FROM LOG_ENTRIES WHERE id = ?", logId);
-      if (row == null) {
+      Optional<Row> row = logsDb.getRow("SELECT * FROM LOG_ENTRIES WHERE id = ?", logId);
+      if (row.isEmpty()) {
         return null;
       }
 
       Map<String, String> logEntry = new HashMap<>();
-      logEntry.put("id", row.get("id").toString());
-      logEntry.put("timestamp", formatTimestamp(row.get("timestamp")));
-      logEntry.put("level", row.get("level").toString());
-      logEntry.put("message", row.get("message").toString());
-      logEntry.put("source", row.get("logger") != null ? row.get("logger").toString() : "System");
-      logEntry.put("thread", row.get("thread") != null ? row.get("thread").toString() : "");
-      logEntry.put("method", row.get("method") != null ? row.get("method").toString() : "");
-      logEntry.put("line", row.get("line") != null ? row.get("line").toString() : "");
+      logEntry.put("id", row.get().get("id").toString());
+      logEntry.put("timestamp", formatTimestamp(row.get().get("timestamp")));
+      logEntry.put("level", row.get().get("level").toString());
+      logEntry.put("message", row.get().get("message").toString());
+      logEntry.put("source",
+          row.get().get("logger") != null ? row.get().get("logger").toString() : "System");
+      logEntry.put("thread",
+          row.get().get("thread") != null ? row.get().get("thread").toString() : "");
+      logEntry.put("method",
+          row.get().get("method") != null ? row.get().get("method").toString() : "");
+      logEntry.put("line", row.get().get("line") != null ? row.get().get("line").toString() : "");
       logEntry.put("exception",
-          row.get("exception") != null ? row.get("exception").toString() : "");
-      logEntry.put("created_at", formatTimestamp(row.get("created_at")));
+          row.get().get("exception") != null ? row.get().get("exception").toString() : "");
+      logEntry.put("created_at", formatTimestamp(row.get().get("created_at")));
 
       return logEntry;
 
@@ -263,12 +266,12 @@ public class BackofficeRepo {
    */
   public Map<String, String> getUserById(String userId) {
     try {
-      Row row = db.getRow("SELECT * FROM USER WHERE id = ?", userId);
-      if (row == null) {
+      Optional<Row> row = db.getRow("SELECT * FROM USER WHERE id = ?", userId);
+      if (row.isEmpty()) {
         return null;
       }
 
-      return mapUserDetailRow(row);
+      return mapUserDetailRow(row.get());
 
     } catch (Exception e) {
       Logger.error("Failed to get user {}: {}", userId, e.getMessage());

@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
@@ -39,19 +40,19 @@ public class DeadLetterQueue {
   public boolean moveToDeadLetterQueue(String jobId, String failureReason) {
     try {
       // Get the job details from the JOBS table
-      Row jobRow = mimir.getRow("SELECT * FROM JOBS WHERE id = ?", jobId);
-      if (jobRow == null) {
+      Optional<Row> jobRow = mimir.getRow("SELECT * FROM JOBS WHERE id = ?", jobId);
+      if (jobRow.isEmpty()) {
         Logger.error("Cannot move job {} to DLQ - job not found in database", jobId);
         return false;
       }
 
       // Extract job information
-      String jobType = jobRow.getString("type").orElse("unknown");
-      String executionMode = jobRow.getString("execution_mode").orElse("PARALLEL");
-      String payloadJson = jobRow.getString("payload").orElse("{}");
-      int priority = jobRow.getInt("priority").orElse(5);
-      int maxRetries = jobRow.getInt("max_retries").orElse(3);
-      int retryAttempts = jobRow.getInt("current_retries").orElse(0);
+      String jobType = jobRow.get().getString("type").orElse("unknown");
+      String executionMode = jobRow.get().getString("execution_mode").orElse("PARALLEL");
+      String payloadJson = jobRow.get().getString("payload").orElse("{}");
+      int priority = jobRow.get().getInt("priority").orElse(5);
+      int maxRetries = jobRow.get().getInt("max_retries").orElse(3);
+      int retryAttempts = jobRow.get().getInt("current_retries").orElse(0);
       long failedAt = Instant.now().toEpochMilli();
 
       // Parse payload
@@ -71,7 +72,7 @@ public class DeadLetterQueue {
       String dlqId = UUID.randomUUID().toString();
 
       String retryHistoryJson = Odin.getMapper().writeValueAsString(retryHistory);
-      int inserted = mimir.executeSql("""
+      int inserted = mimir.execute("""
               INSERT INTO DEAD_LETTER_QUEUE 
               (id, original_job_id, job_type, execution_mode, payload, priority, 
                max_retries, failure_reason, failed_at, retry_attempts, retry_history, 
@@ -85,7 +86,7 @@ public class DeadLetterQueue {
 
       if (inserted > 0) {
         // Update the job status to DEAD_LETTER
-        mimir.executeSql(
+        mimir.execute(
             "UPDATE JOBS SET status = ? WHERE id = ?",
             Freyr.JobStatus.DEAD_LETTER.name(), jobId
         );
@@ -141,7 +142,7 @@ public class DeadLetterQueue {
       String payloadJson = Odin.getMapper().writeValueAsString(entry.getPayload());
       long now = Instant.now().toEpochMilli();
 
-      int inserted = mimir.executeSql("""
+      int inserted = mimir.execute("""
               INSERT INTO JOBS 
               (id, type, payload, priority, max_retries, current_retries, timeout_ms, 
                execution_mode, status, created_at, client_id, user_id) 
@@ -160,7 +161,7 @@ public class DeadLetterQueue {
 
         if (submittedJobId != null) {
           // Update DLQ entry to mark it as retried
-          mimir.executeSql("""
+          mimir.execute("""
               UPDATE DEAD_LETTER_QUEUE 
               SET can_be_retried = 0 
               WHERE id = ?
@@ -189,9 +190,9 @@ public class DeadLetterQueue {
    */
   public DLQEntry getDLQEntry(String dlqEntryId) {
     try {
-      Row row = mimir.getRow("SELECT * FROM DEAD_LETTER_QUEUE WHERE id = ?", dlqEntryId);
-      if (row != null) {
-        return createDLQEntryFromRow(row);
+      Optional<Row> row = mimir.getRow("SELECT * FROM DEAD_LETTER_QUEUE WHERE id = ?", dlqEntryId);
+      if (row.isPresent()) {
+        return createDLQEntryFromRow(row.get());
       }
       return null;
     } catch (Exception e) {
@@ -253,13 +254,14 @@ public class DeadLetterQueue {
   public DLQStatistics getStatistics() {
     try {
       // Count total entries
-      Row totalRow = mimir.getRow("SELECT COUNT(*) as count FROM DEAD_LETTER_QUEUE");
-      int totalEntries = totalRow != null ? totalRow.getInt("count").orElse(0) : 0;
+      Optional<Row> totalRow = mimir.getRow("SELECT COUNT(*) as count FROM DEAD_LETTER_QUEUE");
+      int totalEntries = totalRow.isPresent() ? totalRow.get().getInt("count").orElse(0) : 0;
 
       // Count retryable entries
-      Row retryableRow = mimir.getRow(
+      Optional<Row> retryableRow = mimir.getRow(
           "SELECT COUNT(*) as count FROM DEAD_LETTER_QUEUE WHERE can_be_retried = 1");
-      int retryableEntries = retryableRow != null ? retryableRow.getInt("count").orElse(0) : 0;
+      int retryableEntries =
+          retryableRow.isPresent() ? retryableRow.get().getInt("count").orElse(0) : 0;
 
       // Count by job type
       List<Row> typeRows = mimir.getRows(
@@ -272,8 +274,10 @@ public class DeadLetterQueue {
       }
 
       // Get oldest entry timestamp
-      Row oldestRow = mimir.getRow("SELECT MIN(failed_at) as oldest FROM DEAD_LETTER_QUEUE");
-      Long oldestEntry = oldestRow != null ? oldestRow.getLong("oldest").orElse(null) : null;
+      Optional<Row> oldestRow = mimir.getRow(
+          "SELECT MIN(failed_at) as oldest FROM DEAD_LETTER_QUEUE");
+      Long oldestEntry =
+          oldestRow.isPresent() ? oldestRow.get().getLong("oldest").orElse(null) : null;
 
       return new DLQStatistics(totalEntries, retryableEntries, entriesByType, oldestEntry);
 
@@ -293,7 +297,7 @@ public class DeadLetterQueue {
     try {
       long cutoffTime = Instant.now().toEpochMilli() - (retentionDays * 24 * 60 * 60 * 1000L);
 
-      int deleted = mimir.executeSql(
+      int deleted = mimir.execute(
           "DELETE FROM DEAD_LETTER_QUEUE WHERE failed_at < ? AND can_be_retried = 0",
           cutoffTime
       );

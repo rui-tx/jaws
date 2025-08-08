@@ -15,7 +15,7 @@ import org.ruitx.www.model.auth.UserRole;
 import org.ruitx.www.model.auth.UserSession;
 
 public class AuthRepo {
-    
+
   private final Mimir db;
 
   public AuthRepo() {
@@ -26,14 +26,14 @@ public class AuthRepo {
       String hashedPassword,
       String firstName,
       String lastName) {
-    int result = db.executeSql(
+    int result = db.execute(
         "INSERT INTO USER (user, password_hash, first_name, last_name, created_at) VALUES (?, ?, ?, ?, ?)",
         username, hashedPassword, firstName, lastName, Date.from(Instant.now()));
     return result > 0 ? Optional.of(result) : Optional.empty();
   }
 
   public Optional<Integer> updateUser(User user) {
-    int result = db.executeSql(
+    int result = db.execute(
         """
             UPDATE USER SET
                     password_hash = ?,
@@ -77,26 +77,26 @@ public class AuthRepo {
     Row result = db.getRow(
         "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
         refreshToken
-    );
+    ).get();
     return UserSession.fromRow(result);
   }
 
   public void deactivateSession(String refreshToken) {
-    db.executeSql(
+    db.execute(
         "UPDATE USER_SESSION SET is_active = 0 WHERE refresh_token = ?",
         refreshToken
     );
   }
 
   public void deactivateAllUserSessions(Integer userId) {
-    db.executeSql(
+    db.execute(
         "UPDATE USER_SESSION SET is_active = 0 WHERE user_id = ?",
         userId
     );
   }
 
   public void updateLastLogin(Integer userId) {
-    db.executeSql(
+    db.execute(
         "UPDATE USER SET last_login = ? WHERE id = ?",
         Date.from(Instant.now()),
         userId
@@ -105,20 +105,20 @@ public class AuthRepo {
 
   @Cacheable(tables = {"USER"})
   public Optional<User> getUserByUsername(String username) {
-    Row row = db.getRow("SELECT * FROM USER WHERE user = ?", username);
-    if (row == null) {
+    Optional<Row> row = db.getRow("SELECT * FROM USER WHERE user = ?", username);
+    if (row.isEmpty()) {
       return Optional.empty();
     }
-    return User.fromRow(row);
+    return User.fromRow(row.get());
   }
 
   @Cacheable(tables = {"USER"})
   public Optional<User> getUserById(Long id) {
-    Row row = db.getRow("SELECT * FROM USER WHERE id = ?", id);
-    if (row == null) {
+    Optional<Row> row = db.getRow("SELECT * FROM USER WHERE id = ?", id);
+    if (row.isEmpty()) {
       return Optional.empty();
     }
-    return User.fromRow(row);
+    return User.fromRow(row.get());
   }
 
   public Optional<User> getUserById(Integer id) {
@@ -136,7 +136,7 @@ public class AuthRepo {
 
   // schedule method
   public void cleanOldSessions() {
-    db.executeSql("DELETE FROM USER_SESSION WHERE expires_at < ?", Date.from(Instant.now()));
+    db.execute("DELETE FROM USER_SESSION WHERE expires_at < ?", Date.from(Instant.now()));
   }
 
   // Role-related database operations (moved from AuthorizationService)
@@ -189,7 +189,7 @@ public class AuthRepo {
     }
 
     try {
-      Row row = db.getRow(
+      Optional<Row> row = db.getRow(
           """
               SELECT COUNT(*) as count 
               FROM USER_ROLE ur 
@@ -199,7 +199,7 @@ public class AuthRepo {
           userId, roleName.trim()
       );
 
-      return row != null && row.getInt("count").orElse(0) > 0;
+      return row.isPresent() && row.get().getInt("count").orElse(0) > 0;
     } catch (Exception e) {
       JawsLogger.error("Failed to check role {} for user {}: {}", roleName, userId, e.getMessage());
       return false;
@@ -238,8 +238,8 @@ public class AuthRepo {
     }
 
     try {
-      Row row = db.getRow("SELECT * FROM ROLE WHERE name = ?", roleName.trim());
-      return row != null ? Role.fromRow(row) : Optional.empty();
+      Optional<Row> row = db.getRow("SELECT * FROM ROLE WHERE name = ?", roleName.trim());
+      return row.isPresent() ? Role.fromRow(row.get()) : Optional.empty();
     } catch (Exception e) {
       JawsLogger.error("Failed to get role by name {}: {}", roleName, e.getMessage());
       return Optional.empty();
@@ -259,8 +259,8 @@ public class AuthRepo {
     }
 
     try {
-      Row row = db.getRow("SELECT * FROM ROLE WHERE id = ?", roleId);
-      return row != null ? Role.fromRow(row) : Optional.empty();
+      Optional<Row> row = db.getRow("SELECT * FROM ROLE WHERE id = ?", roleId);
+      return row.isPresent() ? Role.fromRow(row.get()) : Optional.empty();
     } catch (Exception e) {
       JawsLogger.error("Failed to get role by ID {}: {}", roleId, e.getMessage());
       return Optional.empty();
@@ -286,7 +286,7 @@ public class AuthRepo {
       }
 
       long now = Instant.now().getEpochSecond();
-      int result = db.executeSql(
+      int result = db.execute(
           "INSERT INTO ROLE (name, description, created_at) VALUES (?, ?, ?)",
           roleName.trim(), description, now
       );
@@ -330,7 +330,7 @@ public class AuthRepo {
 
       // Assign the role
       long now = Instant.now().getEpochSecond();
-      int result = db.executeSql(
+      int result = db.execute(
           "INSERT INTO USER_ROLE (user_id, role_id, assigned_at, assigned_by) VALUES (?, ?, ?, ?)",
           userId, roleId, now, assignedBy
       );
@@ -360,7 +360,7 @@ public class AuthRepo {
     }
 
     try {
-      int result = db.executeSql(
+      int result = db.execute(
           """
               DELETE FROM USER_ROLE 
               WHERE user_id = ? AND role_id = (
@@ -417,8 +417,9 @@ public class AuthRepo {
     }
 
     try {
-      Row row = db.getRow("SELECT COUNT(*) as count FROM USER_ROLE WHERE role_id = ?", roleId);
-      return row != null ? row.getInt("count").orElse(0) : 0;
+      Optional<Row> row = db.getRow("SELECT COUNT(*) as count FROM USER_ROLE WHERE role_id = ?",
+          roleId);
+      return row.isPresent() ? row.get().getInt("count").orElse(0) : 0;
     } catch (Exception e) {
       JawsLogger.error("Failed to get user count for role {}: {}", roleId, e.getMessage());
       return 0;
@@ -450,7 +451,7 @@ public class AuthRepo {
       }
 
       // Delete the role
-      int result = db.executeSql("DELETE FROM ROLE WHERE id = ?", roleId);
+      int result = db.execute("DELETE FROM ROLE WHERE id = ?", roleId);
 
       if (result > 0) {
         JawsLogger.info("Role {} ({}) deleted successfully", roleId, role.get().name());
@@ -476,7 +477,7 @@ public class AuthRepo {
     }
 
     try {
-      int result = db.executeSql("DELETE FROM USER_ROLE WHERE id = ?", userRoleId);
+      int result = db.execute("DELETE FROM USER_ROLE WHERE id = ?", userRoleId);
 
       if (result > 0) {
         JawsLogger.info("User role assignment {} removed successfully", userRoleId);

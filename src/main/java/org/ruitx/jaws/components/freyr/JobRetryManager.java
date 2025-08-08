@@ -1,15 +1,17 @@
 package org.ruitx.jaws.components.freyr;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
 /**
  * JobRetryManager - Handles job retry logic with error classification
  */
 public class JobRetryManager {
-    
+
   // Default fallback values (used when JobErrorClassifier doesn't provide specific values)
   private static final long DEFAULT_BASE_DELAY_MS = 1000L; // 1 second base delay
   private static final long DEFAULT_MAX_DELAY_MS = 300000L; // 5 minutes maximum delay
@@ -129,7 +131,7 @@ public class JobRetryManager {
       long nextRetryAt = now + delayMs;
 
       // Update job in database with retry information
-      int updated = mimir.executeSql("""
+      int updated = mimir.execute("""
               UPDATE JOBS SET 
                   status = ?,
                   current_retries = current_retries + 1,
@@ -167,7 +169,7 @@ public class JobRetryManager {
     try {
       long now = Instant.now().toEpochMilli();
 
-      int updated = mimir.executeSql("""
+      int updated = mimir.execute("""
               UPDATE JOBS SET 
                   status = ?,
                   completed_at = ?,
@@ -197,9 +199,9 @@ public class JobRetryManager {
    */
   public int getCurrentRetryCount(String jobId) {
     try {
-      var row = mimir.getRow("SELECT current_retries FROM JOBS WHERE id = ?", jobId);
-      if (row != null) {
-        return row.getInt("current_retries").orElse(0);
+      Optional<Row> row = mimir.getRow("SELECT current_retries FROM JOBS WHERE id = ?", jobId);
+      if (row.isPresent()) {
+        return row.get().getInt("current_retries").orElse(0);
       }
     } catch (Exception e) {
       Logger.error("Failed to get retry count for job {}: {}", jobId, e.getMessage());
@@ -212,14 +214,14 @@ public class JobRetryManager {
    */
   public boolean isRetryReady(String jobId) {
     try {
-      var row = mimir.getRow("""
+      Optional<Row> row = mimir.getRow("""
           SELECT next_retry_at, status 
           FROM JOBS 
           WHERE id = ? AND status = ?
           """, jobId, Freyr.JobStatus.RETRY_SCHEDULED.name());
 
-      if (row != null) {
-        long nextRetryAt = row.getLong("next_retry_at").orElse(0L);
+      if (row.isPresent()) {
+        long nextRetryAt = row.get().getLong("next_retry_at").orElse(0L);
         long now = Instant.now().toEpochMilli();
         return now >= nextRetryAt;
       }
@@ -235,20 +237,25 @@ public class JobRetryManager {
   public RetryStatistics getRetryStatistics() {
     try {
       // Count jobs by status
-      var retryScheduledRow = mimir.getRow("SELECT COUNT(*) as count FROM JOBS WHERE status = ?",
+      Optional<Row> retryScheduledRow = mimir.getRow(
+          "SELECT COUNT(*) as count FROM JOBS WHERE status = ?",
           Freyr.JobStatus.RETRY_SCHEDULED.name());
-      var failedRow = mimir.getRow("SELECT COUNT(*) as count FROM JOBS WHERE status = ?",
+      Optional<Row> failedRow = mimir.getRow("SELECT COUNT(*) as count FROM JOBS WHERE status = ?",
           Freyr.JobStatus.FAILED.name());
 
       // Count total retry attempts
-      var totalRetriesRow = mimir.getRow(
+      Optional<Row> totalRetriesRow = mimir.getRow(
           "SELECT SUM(current_retries) as total FROM JOBS WHERE current_retries > 0");
 
-      int retryScheduled =
-          retryScheduledRow != null ? retryScheduledRow.getInt("count").orElse(0) : 0;
-      int permanentlyFailed = failedRow != null ? failedRow.getInt("count").orElse(0) : 0;
-      int totalRetryAttempts =
-          totalRetriesRow != null ? totalRetriesRow.getLong("total").orElse(0L).intValue() : 0;
+      int retryScheduled = retryScheduledRow.isPresent()
+          ? retryScheduledRow.get().getInt("count").orElse(0)
+          : 0;
+      int permanentlyFailed = failedRow.isPresent()
+          ? failedRow.get().getInt("count").orElse(0)
+          : 0;
+      int totalRetryAttempts = totalRetriesRow.isPresent()
+          ? totalRetriesRow.get().getLong("total").orElse(0L).intValue()
+          : 0;
 
       return new RetryStatistics(retryScheduled, permanentlyFailed, totalRetryAttempts);
 

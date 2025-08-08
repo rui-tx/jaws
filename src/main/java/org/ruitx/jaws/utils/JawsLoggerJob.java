@@ -46,7 +46,7 @@ public class JawsLoggerJob extends BaseJob {
       try {
         for (Map<String, Object> logEntryMap : logEntryMaps) {
           try {
-            logsDb.executeSql(
+            logsDb.execute(
                 "INSERT INTO LOG_ENTRIES (timestamp, level, logger, thread, message, exception, method, line, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (Long) logEntryMap.get("timestamp"),
                 (String) logEntryMap.get("level"),

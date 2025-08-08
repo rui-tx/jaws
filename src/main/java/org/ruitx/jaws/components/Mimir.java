@@ -3,7 +3,6 @@ package org.ruitx.jaws.components;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 
-import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
@@ -12,12 +11,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,7 +38,6 @@ import org.ruitx.jaws.interfaces.SqlFunction;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
-import org.ruitx.jaws.utils.JawsUtils;
 import org.sqlite.SQLiteDataSource;
 import org.tinylog.Logger;
 
@@ -70,7 +66,6 @@ public class Mimir {
   private final AtomicBoolean initialized = new AtomicBoolean(false);
   private final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
   private String schemaPath;
-  private boolean shouldCreateDefaultUser;
   private DataSource dataSource;
   private File db;
 
@@ -78,7 +73,7 @@ public class Mimir {
    * Default constructor -  Uses the default database path and schema from ApplicationConfig.
    */
   public Mimir() {
-    this(DATABASE_PATH, DATABASE_SCHEMA_PATH, true);
+    this(DATABASE_PATH, DATABASE_SCHEMA_PATH);
   }
 
   /**
@@ -87,30 +82,18 @@ public class Mimir {
    * @param databasePath Path to the database file
    */
   public Mimir(String databasePath) {
-    this(databasePath, null, false);
+    this(databasePath, null);
   }
 
   /**
-   * Constructor for custom database with optional schema.
+   * Full constructor
    *
    * @param databasePath Path to the database file
    * @param schemaPath   Path to the schema file (null to skip schema loading)
    */
   public Mimir(String databasePath, String schemaPath) {
-    this(databasePath, schemaPath, false);
-  }
-
-  /**
-   * Full constructor with all options.
-   *
-   * @param databasePath            Path to the database file
-   * @param schemaPath              Path to the schema file (null to skip schema loading)
-   * @param shouldCreateDefaultUser Whether to create the default admin user
-   */
-  public Mimir(String databasePath, String schemaPath, boolean shouldCreateDefaultUser) {
     this.db = new File(databasePath);
     this.schemaPath = schemaPath;
-    this.shouldCreateDefaultUser = shouldCreateDefaultUser;
     initializeDataSource();
   }
 
@@ -206,7 +189,6 @@ public class Mimir {
     currentTtlMs.remove();
   }
 
-
   /**
    * Initializes the JDBC data source for the embedded SQLite database.  This method is idempotent
    * and thread-safe, and is called automatically by the first call to
@@ -221,16 +203,7 @@ public class Mimir {
     }
   }
 
-  /**
-   * Initialize the database. This method is called automatically by the first call to
-   * {@link #getRows(String)} or {@link #executeSql(String, Object[])}.
-   *
-   * <p>If a database path is provided, the database file will be created if it does not exist. If
-   * a schema path is also provided and the database is empty, the schema will be loaded into the
-   * database. Finally, the database is marked as initialized.
-   *
-   * @param databasePath The path to the database file (optional)
-   */
+
   public void initializeDatabase(String databasePath) {
     if (databasePath != null && !databasePath.isEmpty()) {
       this.db = new File(databasePath);
@@ -276,7 +249,7 @@ public class Mimir {
    */
   private boolean isDatabaseEmpty() {
     try {
-      List<Row> tables = getRows(
+      List<Row> tables = query(
           "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
       return tables.isEmpty();
     } catch (Exception e) {
@@ -302,62 +275,30 @@ public class Mimir {
    * and executes its SQL statements.
    */
   private void loadSchema() {
-    try (Connection conn = getConnection()) {
+    try {
       String sql = Files.readString(Path.of(schemaPath));
-      executeSqlStatements(conn, sql);
-      // Only create default admin user if configured to do so
-      if (shouldCreateDefaultUser) {
-        createDefaultAdminUser();
+      beginTransaction();
+      try {
+        for (String statement : sql.split(";")) {
+          String s = statement.trim();
+          if (!s.isEmpty()) {
+            execute(s);
+          }
+        }
+        commitTransaction();
+        Logger.info("Database initialized with schema: {}", schemaPath);
+      } catch (Exception ex) {
+        try {
+          rollbackTransaction();
+        } catch (SQLException ignore) {
+          // ignore rollback errors
+        }
+        throw ex;
       }
-      Logger.info("Database initialized with schema: {}", schemaPath);
     } catch (SQLException | IOException e) {
       Logger.error("Error initializing database: " + e.getMessage());
       throw new RuntimeException("Failed to initialize database", e);
     }
-  }
-
-  /**
-   * Create a default admin user if the database is initialized with schema. This method is called
-   * after loading the schema to ensure the admin user exists.
-   */
-  private void createDefaultAdminUser() {
-    Optional<String> password = JawsUtils.newPassword();
-    String email = "admin@jaws.local";
-    String firstName = "John";
-    String lastName = "Doe";
-    String hashedPassword =
-        BCrypt.withDefaults().hashToString(12, password.orElse("Lee7Pa$$w00rd").toCharArray());
-
-    // Insert the admin user
-    executeSql(
-        "INSERT INTO USER (user, password_hash, email, first_name, last_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        "admin",
-        hashedPassword,
-        email,
-        firstName,
-        lastName,
-        Date.from(Instant.now())
-    );
-
-    // Assign admin role to the newly created admin user
-    // Get the admin role ID and user ID, then create the assignment
-    Row adminUser = getRow("SELECT id FROM USER WHERE user = 'admin'");
-    Row adminRole = getRow("SELECT id FROM ROLE WHERE name = 'admin'");
-
-    if (adminUser != null && adminRole != null) {
-      executeSql("INSERT INTO USER_ROLE (user_id, role_id, assigned_at) VALUES (?, ?, ?)",
-          adminUser.getInt("id").orElse(0),
-          adminRole.getInt("id").orElse(0),
-          Instant.now().getEpochSecond()
-      );
-      Logger.info("Admin role assigned to default admin user");
-    } else {
-      Logger.warn("Failed to assign admin role to default admin user - role or user not found");
-    }
-
-    Logger.info("A new admin user has been created with username 'admin' and password '"
-        + (password.orElse("Lee7Pa$$w00rd")) + "'");
-    Logger.info("Please save this in a safe place, it will not be shown again.");
   }
 
   /**
@@ -393,7 +334,6 @@ public class Mimir {
     Connection conn = dataSource.getConnection();
     conn.setAutoCommit(false);
     transactionConnection.set(conn);
-    // Track tables touched inside this transaction
     txModifiedTables.set(new HashSet<>());
   }
 
@@ -404,15 +344,13 @@ public class Mimir {
    */
   public void commitTransaction() throws SQLException {
     Connection conn = transactionConnection.get();
-    if (conn == null) {
-      throw new SQLException("No transaction in progress");
-    }
-    try {
+    try (conn) {
+      if (conn == null) {
+        throw new SQLException("No transaction in progress");
+      }
       conn.commit();
-      // Selective invalidation based on tables actually modified in this transaction
       invalidateTables(txModifiedTables.get());
     } finally {
-      conn.close();
       transactionConnection.remove();
       txModifiedTables.remove();
     }
@@ -425,293 +363,41 @@ public class Mimir {
    */
   public void rollbackTransaction() throws SQLException {
     Connection conn = transactionConnection.get();
-    if (conn == null) {
-      throw new SQLException("No transaction in progress");
-    }
-    try {
+    try (conn) {
+      if (conn == null) {
+        throw new SQLException("No transaction in progress");
+      }
       conn.rollback();
-      // Still invalidate modified tables to avoid serving stale data
       invalidateTables(txModifiedTables.get());
     } finally {
-      conn.close();
       transactionConnection.remove();
       txModifiedTables.remove();
     }
   }
 
-  /**
-   * Execute a SQL query and return the first row.
-   *
-   * @param sql SQL query string
-   * @return First row result or null if no rows
-   */
-  public Row getRow(String sql) {
-    List<Row> rows = getRows(sql);
-    return (rows != null && !rows.isEmpty()) ? rows.get(0) : null;
+  public List<Row> query(String sql, Object... params) {
+    return query(sql, this::list, params);
   }
 
-  /**
-   * Execute a SQL query and return the first row.
-   *
-   * @param sql    SQL query string
-   * @param params Parameters for the prepared statement
-   * @return First row result or null if no rows
-   */
-  public Row getRow(String sql, Object... params) {
-    List<Row> rows = getRows(sql, params);
-    return (rows != null && !rows.isEmpty()) ? rows.get(0) : null;
+  public Optional<Row> queryOne(String sql, Object... params) {
+    List<Row> rows = query(sql, params);
+    return (rows != null && !rows.isEmpty()) ? Optional.of(rows.getFirst()) : Optional.empty();
   }
 
-  /**
-   * Execute a SQL query and return a list of rows.
-   *
-   * @param sql SQL query string
-   * @return List of Row objects
-   */
-  public List<Row> getRows(String sql) {
-    return executeQuery(sql, this::list);
+  public Optional<Row> getRow(String sql, Object... params) {
+    return queryOne(sql, params);
   }
 
-  /**
-   * Execute a SQL query and return a list of rows.
-   *
-   * @param sql    SQL query string
-   * @param params Parameters for the prepared statement
-   * @return List of Row objects
-   */
   public List<Row> getRows(String sql, Object... params) {
-    return executeQuery(sql, this::list, params);
+    return query(sql, params);
   }
 
-  /**
-   * Execute a SQL statement with parameters (like INSERT, UPDATE, DELETE).
-   *
-   * @param sql    SQL statement string
-   * @param params Parameters for the prepared statement
-   * @return The number of affected rows
-   */
-  public int executeSql(String sql, Object... params) {
-    Connection conn = null;
-    boolean isTransactionConnection = false;
-
-    try {
-      conn = getConnection();
-      // Check if this is a transaction-managed connection
-      isTransactionConnection = (transactionConnection.get() == conn);
-
-      PreparedStatement stmt = null;
-
-      try {
-        // Parameter count check (simple heuristic)
-        int expectedParams = sql.length() - sql.replace("?", "").length();
-        if (expectedParams != params.length) {
-          Logger.warn("Parameter count mismatch! SQL: {} expects {} params, but got {}", sql,
-              expectedParams, params.length);
-        }
-
-        Logger.trace("Executing SQL: {}\nParams: {}", sql, Arrays.toString(params));
-
-        stmt = conn.prepareStatement(sql);
-        for (int i = 0; i < params.length; i++) {
-          stmt.setObject(i + 1, params[i]);
-        }
-
-        int affected = stmt.executeUpdate();
-
-        // Track modified tables if inside a transaction; else invalidate immediately
-        Set<String> modified = extractTablesFromWrite(sql);
-        if (isTransactionConnection) {
-          txModifiedTables.get().addAll(modified);
-        } else {
-          invalidateTables(modified);
-        }
-        return affected;
-      } finally {
-        if (stmt != null) {
-          try {
-            stmt.close();
-          } catch (SQLException e) {
-            Logger.error("Error closing statement: " + e.getMessage());
-          }
-        }
-      }
-    } catch (SQLException e) {
-      Logger.error("Error executing prepared update: {}\nSQL: {}\nParams: {}",
-          e.getMessage(), sql, Arrays.toString(params));
-      Logger.error("Stack trace: {}", e.getStackTrace());
-      throw new RuntimeException("Database update failed", e);
-    } finally {
-      // Only close if not a transaction connection
-      if (conn != null && !isTransactionConnection) {
-        try {
-          conn.close();
-        } catch (SQLException e) {
-          Logger.error("Error closing connection: " + e.getMessage());
-        }
-      }
-    }
-  }
-
-  /**
-   * Execute a SQL statement that doesn't return data (like UPDATE, DELETE, etc.).
-   *
-   * @param sql SQL statement string
-   * @return true if executed successfully, false otherwise
-   */
-  public boolean executeSql(String sql) {
-    Connection conn = null;
-    boolean isTransactionConnection = false;
-
-    try {
-      conn = getConnection();
-      // Check if this is a transaction-managed connection
-      isTransactionConnection = (transactionConnection.get() == conn);
-
-      Statement stmt = null;
-
-      try {
-        stmt = conn.createStatement();
-        boolean result = stmt.execute(sql);
-
-        // Track modified tables if inside a transaction; else invalidate immediately
-        Set<String> modified = extractTablesFromWrite(sql);
-        if (isTransactionConnection) {
-          txModifiedTables.get().addAll(modified);
-        } else {
-          invalidateTables(modified);
-        }
-        Logger.trace("SQL executed: {}, result: {}", sql, result);
-        return result;
-      } finally {
-        if (stmt != null) {
-          try {
-            stmt.close();
-          } catch (SQLException e) {
-            Logger.error("Error closing statement: " + e.getMessage());
-          }
-        }
-      }
-    } catch (SQLException e) {
-      Logger.error("Error executing SQL: {}", e.getMessage());
-      throw new RuntimeException("Database update failed", e);
-    } finally {
-      // Only close if not a transaction connection
-      if (conn != null && !isTransactionConnection) {
-        try {
-          conn.close();
-        } catch (SQLException e) {
-          Logger.error("Error closing connection: " + e.getMessage());
-        }
-      }
-    }
-  }
-
-  /**
-   * Executes a query and applies a transformation function on the result set.
-   *
-   * @param sql    SQL query string
-   * @param action Transformation function to apply on the ResultSet
-   * @param <T>    The return type of the transformation
-   * @return Transformed result from the query
-   */
-  public <T> T executeQuery(String sql, SqlFunction<T> action) {
+  // Centralized query with caching
+  public <T> T query(String sql, SqlFunction<T> mapper, Object... params) {
     ensureCache();
-    boolean skipCache = !ApplicationConfig.MIMIR_CACHE_ENABLED
-        || transactionConnection.get() != null
-        || !isCacheAllowedForCurrentThread();
-    if (skipCache) {
-      Logger.trace("Mimir cache BYPASS for SQL: {}", sql);
-    }
-    SqlCacheKey cacheKey = null;
-    if (!skipCache) {
-      cacheKey = new SqlCacheKey(sql);
-      @SuppressWarnings("unchecked")
-      T cached = (T) queryCache.getIfPresent(cacheKey);
-      if (cached != null) {
-        Logger.debug("Mimir cache HIT for SQL: {}", sql);
-        return cached;
-      }
-      Logger.debug("Mimir cache MISS for SQL: {}", sql);
-    }
-
-    Connection conn = null;
-    boolean isTransactionConnection = false;
-
-    try {
-      conn = getConnection();
-      // Check if this is a transaction-managed connection
-      isTransactionConnection = (transactionConnection.get() == conn);
-
-      Statement stmt = null;
-      ResultSet rs = null;
-
-      try {
-        stmt = conn.createStatement();
-        rs = stmt.executeQuery(sql);
-        T result = action.apply(rs);
-        if (!skipCache) {
-          long ttlMs = Optional.ofNullable(currentTtlMs.get()).orElse(-1L);
-          if (ttlMs > 0) {
-            keyToTtl.put(cacheKey, TimeUnit.MILLISECONDS.toNanos(ttlMs));
-          }
-          queryCache.put(cacheKey, result);
-          // Register key under current tables for selective invalidation
-          Set<String> tbls = currentTables.get();
-          if (tbls != null && !tbls.isEmpty()) {
-            for (String tbl : tbls) {
-              tableToKeys.computeIfAbsent(tbl.toUpperCase(), k -> ConcurrentHashMap.newKeySet())
-                  .add(cacheKey);
-            }
-          }
-          Logger.debug("Mimir cache PUT for SQL: {} (ttlMs={})", sql, ttlMs);
-        }
-        return result;
-      } finally {
-        // Close resources in reverse order
-        if (rs != null) {
-          try {
-            rs.close();
-          } catch (SQLException e) {
-            Logger.error("Error closing result set: " + e.getMessage());
-          }
-        }
-        if (stmt != null) {
-          try {
-            stmt.close();
-          } catch (SQLException e) {
-            Logger.error("Error closing statement: " + e.getMessage());
-          }
-        }
-      }
-    } catch (SQLException e) {
-      Logger.error("Error executing SQL: " + e.getMessage());
-      throw new RuntimeException("Database query failed", e);
-    } finally {
-      // Only close if not a transaction connection
-      if (conn != null && !isTransactionConnection) {
-        try {
-          conn.close();
-        } catch (SQLException e) {
-          Logger.error("Error closing connection: " + e.getMessage());
-        }
-      }
-    }
-  }
-
-  /**
-   * Executes a query with parameters and applies a transformation function on the result set.
-   *
-   * @param sql    SQL query string
-   * @param action Transformation function to apply on the ResultSet
-   * @param params Parameters for the prepared statement
-   * @param <T>    The return type of the transformation
-   * @return Transformed result from the query
-   */
-  public <T> T executeQuery(String sql, SqlFunction<T> action, Object... params) {
-    ensureCache();
-    boolean skipCache = !ApplicationConfig.MIMIR_CACHE_ENABLED
-        || transactionConnection.get() != null
-        || !isCacheAllowedForCurrentThread();
+    boolean skipCache =
+        !ApplicationConfig.MIMIR_CACHE_ENABLED || transactionConnection.get() != null
+            || !isCacheAllowedForCurrentThread();
 
     if (skipCache) {
       Logger.trace("Mimir cache BYPASS for SQL: {}", sql);
@@ -719,37 +405,33 @@ public class Mimir {
     SqlCacheKey cacheKey = null;
     if (!skipCache) {
       cacheKey = new SqlCacheKey(sql, params);
-      @SuppressWarnings("unchecked")
-      T cached = (T) queryCache.getIfPresent(cacheKey);
+      @SuppressWarnings("unchecked") T cached = (T) queryCache.getIfPresent(cacheKey);
       if (cached != null) {
         Logger.debug("Mimir cache HIT for SQL: {}", sql);
         return cached;
       }
       Logger.debug("Mimir cache MISS for SQL: {}", sql);
     }
+
     Connection conn = null;
-    boolean isTransactionConnection = false;
+    boolean isTxConn = false;
 
     try {
       conn = getConnection();
-      // Check if this connection is from a transaction
-      isTransactionConnection = (transactionConnection.get() == conn);
+      isTxConn = (transactionConnection.get() == conn);
 
       try (PreparedStatement stmt = conn.prepareStatement(sql)) {
         for (int i = 0; i < params.length; i++) {
           stmt.setObject(i + 1, params[i]);
         }
-
         try (ResultSet rs = stmt.executeQuery()) {
-          T result = action.apply(rs);
+          T result = mapper.apply(rs);
           if (!skipCache) {
             long ttlMs = Optional.ofNullable(currentTtlMs.get()).orElse(-1L);
             if (ttlMs > 0) {
               keyToTtl.put(cacheKey, TimeUnit.MILLISECONDS.toNanos(ttlMs));
             }
             queryCache.put(cacheKey, result);
-
-            // Register key under current tables for selective invalidation
             Set<String> tbls = currentTables.get();
             if (tbls != null && !tbls.isEmpty()) {
               for (String tbl : tbls) {
@@ -762,12 +444,12 @@ public class Mimir {
           return result;
         }
       }
+
     } catch (SQLException e) {
-      Logger.error("Error executing prepared query: " + e.getMessage());
+      Logger.error("Error executing prepared query: {}", e.getMessage());
       throw new RuntimeException("Database query failed", e);
     } finally {
-      // Only close the connection if it's not managed by a transaction
-      if (conn != null && !isTransactionConnection) {
+      if (conn != null && !isTxConn) {
         try {
           conn.close();
         } catch (SQLException e) {
@@ -777,58 +459,90 @@ public class Mimir {
     }
   }
 
-  /**
-   * Execute an INSERT statement and return the inserted row(s).
-   *
-   * @param sql    SQL statement string
-   * @param params Parameters for the prepared statement
-   * @return List of inserted Row objects
-   */
-  public List<Row> executeInsert(String sql, Object... params) {
+  public int execute(String sql, Object... params) {
     Connection conn = null;
-    boolean isTransactionConnection = false;
-
+    boolean isTxConn = false;
     try {
       conn = getConnection();
-      // Check if this is a transaction-managed connection
-      isTransactionConnection = (transactionConnection.get() == conn);
+      isTxConn = (transactionConnection.get() == conn);
+
+      try (PreparedStatement stmt = conn.prepareStatement(sql)) { // Simple param count heuristic
+        int expectedParams = sql.length() - sql.replace("?", "").length();
+        if (expectedParams != params.length) {
+          Logger.warn("Parameter count mismatch! SQL: {} expects {} but got {}", sql,
+              expectedParams, params.length);
+        }
+
+        Logger.trace("Executing SQL: {}\nParams: {}", sql, Arrays.toString(params));
+
+        for (int i = 0; i < params.length; i++) {
+          stmt.setObject(i + 1, params[i]);
+        }
+
+        int affected = stmt.executeUpdate();
+
+        Set<String> modified = extractTablesFromWrite(sql);
+        if (isTxConn) {
+          txModifiedTables.get().addAll(modified);
+        } else {
+          invalidateTables(modified);
+        }
+        return affected;
+      }
+    } catch (SQLException e) {
+      Logger.error("Error executing prepared update: {}\nSQL: {}\nParams: {}", e.getMessage(), sql,
+          Arrays.toString(params));
+      throw new RuntimeException("Database update failed", e);
+    } finally {
+      if (conn != null && !isTxConn) {
+        try {
+          conn.close();
+        } catch (SQLException e) {
+          Logger.error("Error closing connection: " + e.getMessage());
+        }
+      }
+    }
+  }
+
+  // INSERT returning rowid
+  public long insert(String sql, Object... params) {
+    Connection conn = null;
+    boolean isTxConn = false;
+    try {
+      conn = getConnection();
+      isTxConn = (transactionConnection.get() == conn);
 
       try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
         for (int i = 0; i < params.length; i++) {
           stmt.setObject(i + 1, params[i]);
         }
+        int affected = stmt.executeUpdate();
 
-        int affectedRows = stmt.executeUpdate();
-        java.util.Set<String> modified = extractTablesFromWrite(sql);
-        if (isTransactionConnection) {
+        Set<String> modified = extractTablesFromWrite(sql);
+        if (isTxConn) {
           txModifiedTables.get().addAll(modified);
         } else {
           invalidateTables(modified);
         }
 
-        if (affectedRows == 0) {
-          return List.of();
+        if (affected == 0) {
+          return 0L;
         }
-
-        try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-          if (generatedKeys.next()) {
-            long id = generatedKeys.getLong(1);
-            Optional<String> tableName = extractInsertTableName(sql);
-            if (tableName.isEmpty()) {
-              Logger.error("Failed to extract table name from INSERT statement: {}", sql);
-              return List.of();
-            }
-            return getRows("SELECT * FROM " + tableName.get() + " WHERE rowid = ?", id);
+        try (ResultSet keys = stmt.getGeneratedKeys()) {
+          if (keys.next()) {
+            return keys.getLong(1);
           }
+          // Fallback to SQLite last_insert_rowid() if driver doesn't return keys
+          return queryOne("SELECT last_insert_rowid() AS id")
+              .flatMap(r -> r.getLong("id"))
+              .orElse(0L);
         }
-        return List.of();
       }
     } catch (SQLException e) {
       Logger.error("Error executing insert: {}", e.getMessage());
       throw new RuntimeException("Database insert failed", e);
     } finally {
-      // Only close if not a transaction connection
-      if (conn != null && !isTransactionConnection) {
+      if (conn != null && !isTxConn) {
         try {
           conn.close();
         } catch (SQLException e) {
@@ -838,41 +552,16 @@ public class Mimir {
     }
   }
 
-  /**
-   * Extracts the table name from an SQL INSERT statement. Only handles simple INSERT INTO
-   * statements without schema qualifiers.
-   *
-   * @param sql the SQL INSERT statement
-   * @return Optional containing the table name, or empty if not found or invalid SQL
-   * @throws NullPointerException if sql is null
-   */
-  private Optional<String> extractInsertTableName(String sql) {
-    Objects.requireNonNull(sql, "SQL statement cannot be null");
-    String insertIntoKeyword = "INSERT INTO ";
-    String upperCaseSql = sql.toUpperCase();
-    int insertKeywordIndex = upperCaseSql.indexOf(insertIntoKeyword);
-
-    if (insertKeywordIndex == -1) {
+  // INSERT and fetch full row by rowid (explicit table name)
+  public Optional<Row> insertAndFetch(String table, String sql, Object... params) {
+    long id = insert(sql, params);
+    if (id <= 0) {
       return Optional.empty();
     }
-
-    int tableNameStart = insertKeywordIndex + insertIntoKeyword.length();
-    int tableNameEnd = upperCaseSql.indexOf(" ", tableNameStart);
-
-    if (tableNameEnd == -1) {
-      return Optional.empty();
-    }
-
-    return Optional.of(sql.substring(tableNameStart, tableNameEnd));
+    return queryOne("SELECT * FROM " + table + " WHERE rowid = ?", id);
   }
 
-  /**
-   * Converts the ResultSet into a list of Row objects.
-   *
-   * @param resultSet The ResultSet from the SQL query
-   * @return List of Row objects
-   * @throws SQLException If an error occurs while processing the ResultSet
-   */
+
   private List<Row> list(ResultSet resultSet) throws SQLException {
     List<Map<String, Object>> result = new ArrayList<>();
     int columnCount = resultSet.getMetaData().getColumnCount();
@@ -886,40 +575,9 @@ public class Mimir {
       }
       result.add(row);
     }
-
-    // Transform each Map into a Row
     return result.stream().map(Row::new).toList();
   }
-
-  /**
-   * Execute multiple SQL statements from a single string. This method splits the string by
-   * semicolons and executes each statement.
-   *
-   * @param conn Connection to the database
-   * @param sql  SQL statements separated by semicolons
-   * @throws SQLException If an error occurs while executing the statements
-   */
-  private void executeSqlStatements(Connection conn, String sql) throws SQLException {
-    for (String statement : sql.split(";")) {
-      executeStatement(conn, statement.trim());
-    }
-  }
-
-  /**
-   * Execute a single SQL statement. This method is used internally to execute each statement from a
-   * batch.
-   *
-   * @param conn      Connection to the database
-   * @param statement The SQL statement to execute
-   * @throws SQLException If an error occurs while executing the statement
-   */
-  private void executeStatement(Connection conn, String statement) throws SQLException {
-    if (!statement.isEmpty()) {
-      try (Statement stmt = conn.createStatement()) {
-        stmt.execute(statement);
-      }
-    }
-  }
+  
 
   /**
    * Execute a paginated query and return a Page of Row objects. This method automatically adds
@@ -955,7 +613,7 @@ public class Mimir {
     }
 
     String paginatedSql = buildPaginatedSql(sql, pageRequest);
-    List<Row> rows = getRows(paginatedSql, params);
+    List<Row> rows = query(paginatedSql, params);
     List<T> content = rows.stream()
         .map(mapper)
         .toList();
@@ -1008,8 +666,9 @@ public class Mimir {
    */
   private long getCountFromQuery(String sql, Object... params) {
     String countSql = convertToCountQuery(sql);
-    Row countRow = getRow(countSql, params);
-    return countRow != null ? countRow.getLong("count").orElse(0L) : 0L;
+    return queryOne(countSql, params)
+        .flatMap(r -> r.getLong("count"))
+        .orElse(0L);
   }
 
   /**
@@ -1216,6 +875,11 @@ public class Mimir {
     s = s.replaceAll("(?i)\\s+LIMIT\\s+\\d+(\\s+OFFSET\\s+\\d+)?\\s*$", "");
     return s;
   }
+
+  // Queries: list and single
+
+  // Execute DML/DDL: affected rows
+
 
   /**
    * Key used for caching query results in Caffeine.

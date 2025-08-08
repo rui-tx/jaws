@@ -48,11 +48,11 @@ public class JawsLogger {
       tempDb.initializeDatabase("src/main/resources/logs.db");
 
       // Enable WAL mode for better concurrency
-      tempDb.executeSql("PRAGMA journal_mode=WAL");
-      tempDb.executeSql("PRAGMA synchronous=NORMAL"); // Better performance than FULL
-      tempDb.executeSql("PRAGMA cache_size=10000"); // Increase cache size
-      tempDb.executeSql("PRAGMA temp_store=memory"); // Store temp tables in memory
-      tempDb.executeSql("PRAGMA busy_timeout=5000"); // 5 second timeout for BUSY errors
+      tempDb.execute("PRAGMA journal_mode=WAL");
+      tempDb.execute("PRAGMA synchronous=NORMAL"); // Better performance than FULL
+      tempDb.execute("PRAGMA cache_size=10000"); // Increase cache size
+      tempDb.execute("PRAGMA temp_store=memory"); // Store temp tables in memory
+      tempDb.execute("PRAGMA busy_timeout=5000"); // 5 second timeout for BUSY errors
 
       tempDbAvailable = true;
       Logger.info("JawsLogger: Database logging initialized successfully");
@@ -555,7 +555,7 @@ public class JawsLogger {
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         for (LogEntry entry : batch) {
-          logsDb.executeSql(
+          logsDb.execute(
               "INSERT INTO LOG_ENTRIES (timestamp, level, logger, thread, message, exception, method, line) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
               entry.getTimestamp(),
               entry.getLevel(),

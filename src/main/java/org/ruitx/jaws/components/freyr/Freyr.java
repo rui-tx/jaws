@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -140,9 +141,9 @@ public class Freyr implements Runnable {
    */
   public JobStatus getJobStatus(String jobId) {
     try {
-      Row row = mimir.getRow("SELECT status FROM JOBS WHERE id = ?", jobId);
-      if (row != null) {
-        return row.getString("status")
+      Optional<Row> row = mimir.getRow("SELECT status FROM JOBS WHERE id = ?", jobId);
+      if (row.isPresent()) {
+        return row.get().getString("status")
             .map(JobStatus::valueOf)
             .orElse(null);
       }
@@ -163,20 +164,20 @@ public class Freyr implements Runnable {
    */
   public JobResult getJobResult(String jobId) {
     try {
-      Row row = mimir.getRow(
+      Optional<Row> row = mimir.getRow(
           "SELECT * FROM JOB_RESULTS WHERE job_id = ? AND expires_at > ?",
           jobId, Instant.now().toEpochMilli());
 
-      if (row != null) {
+      if (row.isPresent()) {
         Map<String, String> headers = parseHeaders(
-            row.getString("headers").orElse(null));
+            row.get().getString("headers").orElse(null));
         return new JobResult(
-            row.getString("job_id").orElse(jobId),
-            row.getInt("status_code").orElse(500),
+            row.get().getString("job_id").orElse(jobId),
+            row.get().getInt("status_code").orElse(500),
             headers,
-            row.getString("body").orElse(""),
-            row.getString("content_type").orElse("application/json"),
-            row.getLong("expires_at").orElse(0L)
+            row.get().getString("body").orElse(""),
+            row.get().getString("content_type").orElse("application/json"),
+            row.get().getLong("expires_at").orElse(0L)
         );
       }
       return null;
@@ -372,7 +373,7 @@ public class Freyr implements Runnable {
     try {
       String payloadJson = Odin.getMapper().writeValueAsString(job.getPayload());
 
-      mimir.executeSql(
+      mimir.execute(
           "INSERT INTO JOBS (id, type, payload, priority, max_retries, current_retries, timeout_ms, execution_mode, status, created_at, client_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           job.getId(),
           job.getType(),
@@ -525,12 +526,12 @@ public class Freyr implements Runnable {
       long now = Instant.now().toEpochMilli();
 
       // Cleanup expired results
-      int expiredResults = mimir.executeSql(
+      int expiredResults = mimir.execute(
           "DELETE FROM JOB_RESULTS WHERE expires_at < ?", now);
 
       // Cleanup old completed/failed jobs (older than 24 hours)
       long dayAgo = now - 86400000;
-      int oldJobs = mimir.executeSql(
+      int oldJobs = mimir.execute(
           "DELETE FROM JOBS WHERE status IN ('COMPLETED', 'FAILED') AND completed_at < ?", dayAgo);
 
       if (expiredResults > 0 || oldJobs > 0) {
@@ -718,7 +719,7 @@ public class Freyr implements Runnable {
     private void updateJobStatus(String jobId, JobStatus status, String errorMessage,
         Long startedAt, Long completedAt) {
       try {
-        mimir.executeSql(
+        mimir.execute(
             "UPDATE JOBS SET status = ?, error_message = ?, started_at = ?, completed_at = ? WHERE id = ?",
             status.name(), errorMessage, startedAt, completedAt, jobId);
       } catch (Exception e) {

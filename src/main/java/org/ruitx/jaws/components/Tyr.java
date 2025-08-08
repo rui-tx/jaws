@@ -62,7 +62,7 @@ public class Tyr {
         .compact();
 
     Mimir db = new Mimir();
-    db.executeSql("""
+    db.execute("""
             INSERT INTO USER_SESSION (
                 user_id, refresh_token, access_token, user_agent, ip_address, 
                 created_at, expires_at, last_used_at
@@ -107,7 +107,7 @@ public class Tyr {
       Row sessionRow = db.getRow(
           "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
           refreshToken
-      );
+      ).get();
 
       Optional<UserSession> session = UserSession.fromRow(sessionRow);
       if (session.isEmpty()) {
@@ -118,7 +118,7 @@ public class Tyr {
       UserSession s = session.get();
       if (!s.userAgent().equals(userAgent) || !s.ipAddress().equals(ipAddress)) {
         // Potential security breach - invalidate session
-        db.executeSql(
+        db.execute(
             "UPDATE USER_SESSION SET is_active = 0 WHERE refresh_token = ?",
             refreshToken
         );
@@ -131,7 +131,7 @@ public class Tyr {
       TokenPair newTokens = createTokenPair(userId, userRoles, userAgent, ipAddress);
 
       // Invalidate old session
-      db.executeSql(
+      db.execute(
           "UPDATE USER_SESSION SET is_active = 0 WHERE refresh_token = ?",
           refreshToken
       );

@@ -24,7 +24,7 @@ public class JobResultStore {
         headersJson = Odin.getMapper().writeValueAsString(result.getHeaders());
       }
 
-      mimir.executeSql(
+      mimir.execute(
           "INSERT OR REPLACE INTO JOB_RESULTS (id, job_id, status_code, headers, body, content_type, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
           UUID.randomUUID().toString(),
           result.getJobId(),

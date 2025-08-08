@@ -144,8 +144,7 @@ public class SequentialJobQueue {
      * the 'running' flag is true.
      *
      * <p>It handles interruptions by setting the interrupt flag and breaking the loop, and logs
-     * any
-     * unexpected exceptions that occur during job processing.
+     * any unexpected exceptions that occur during job processing.
      */
     @Override
     public void run() {
@@ -268,7 +267,7 @@ public class SequentialJobQueue {
 
         params[idx] = jobId;
 
-        mimir.executeSql(sql.toString(), params);
+        mimir.execute(sql.toString(), params);
 
       } catch (Exception e) {
         Logger.error("Failed to update job status for sequential job {}: {}", jobId,

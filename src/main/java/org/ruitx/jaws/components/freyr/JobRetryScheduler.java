@@ -245,7 +245,7 @@ public class JobRetryScheduler {
 
       // Update the job status back to PENDING and reset for retry
       long now = Instant.now().toEpochMilli();
-      int updated = mimir.executeSql("""
+      int updated = mimir.execute("""
               UPDATE JOBS SET 
                   status = ?,
                   error_message = NULL,
