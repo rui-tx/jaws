@@ -39,8 +39,13 @@ public class AuthService {
   private final AuthRepo authRepo;
 
   public AuthService() {
-    this.authRepo = new AuthRepo();
+    this(new AuthRepo());
   }
+
+  public AuthService(AuthRepo authRepo) {
+    this.authRepo = authRepo;
+  }
+
 
   /**
    * Creates a new user. It assigns the default "user" role to the new user.

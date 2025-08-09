@@ -37,7 +37,7 @@ public class Freyr implements Runnable {
   private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
   private static final Object instanceLock = new Object();
   private static Freyr instance;
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getMimir("db");
   private final JobRegistry jobRegistry;
   private final ExecutorService workerPool;
   private final PriorityBlockingQueue<JobInstance> jobQueue;

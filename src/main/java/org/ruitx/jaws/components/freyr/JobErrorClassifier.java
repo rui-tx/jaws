@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
@@ -16,7 +17,7 @@ import org.tinylog.Logger;
  */
 public class JobErrorClassifier {
 
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getMimir("db");
 
   /**
    * Job-specific error classification We can add job-specific error classification here
@@ -531,4 +532,4 @@ public class JobErrorClassifier {
   //         Logger.warn("Failed to record error classification: {}", e.getMessage());
   //     }
   // }
-} 
+}

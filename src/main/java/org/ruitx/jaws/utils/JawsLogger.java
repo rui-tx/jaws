@@ -17,6 +17,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.tinylog.Logger;
 
@@ -26,8 +27,9 @@ import org.tinylog.Logger;
  */
 public class JawsLogger {
 
-  private static final Mimir logsDb;
-  private static final boolean dbAvailable;
+  private static volatile Mimir logsDb;
+  private static volatile boolean dbAvailable;
+  private static volatile boolean schedulerStarted = false;
 
   // Batch processing components
   private static final BlockingQueue<LogEntry> logBuffer = new LinkedBlockingQueue<>(
@@ -38,46 +40,10 @@ public class JawsLogger {
   private static volatile boolean batchingEnabled = true;
 
   static {
-    Mimir tempDb = null;
-    boolean tempDbAvailable = false;
+    // Try initial bind; if not available yet, we will retry lazily on first use
+    tryBindLogsDb();
 
-    try {
-      tempDb = new Mimir(
-          "src/main/resources/logs.db",
-          "src/main/resources/sql/logs_schema.sql");
-      tempDb.initializeDatabase("src/main/resources/logs.db");
-
-      // Enable WAL mode for better concurrency
-      tempDb.execute("PRAGMA journal_mode=WAL");
-      tempDb.execute("PRAGMA synchronous=NORMAL"); // Better performance than FULL
-      tempDb.execute("PRAGMA cache_size=10000"); // Increase cache size
-      tempDb.execute("PRAGMA temp_store=memory"); // Store temp tables in memory
-      tempDb.execute("PRAGMA busy_timeout=5000"); // 5 second timeout for BUSY errors
-
-      tempDbAvailable = true;
-      Logger.info("JawsLogger: Database logging initialized successfully");
-    } catch (Exception e) {
-      Logger.warn(
-          "JawsLogger: Failed to initialize database logging, falling back to console only: {}",
-          e.getMessage());
-    }
-
-    logsDb = tempDb;
-    dbAvailable = tempDbAvailable;
-
-    // Start the batch scheduler for time-based flushing
-    if (dbAvailable) {
-      batchScheduler.scheduleAtFixedRate(
-          JawsLogger::flushBufferIfNeeded,
-          FLUSH_INTERVAL_MS,
-          FLUSH_INTERVAL_MS,
-          TimeUnit.MILLISECONDS);
-
-      Logger.info("JawsLogger: Batch logging enabled (batch_size={}, flush_interval={}ms)",
-          BATCH_SIZE, FLUSH_INTERVAL_MS);
-    }
-
-    // Shutdown hook to flush remaining logs
+    // Shutdown hook to flush remaining logs (DB managed by Odin)
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       batchingEnabled = false;
       flushBufferForce();
@@ -316,6 +282,9 @@ public class JawsLogger {
    * Check if database logging is available
    */
   public static boolean isDatabaseLoggingAvailable() {
+    if (!dbAvailable) {
+      tryBindLogsDb();
+    }
     return dbAvailable;
   }
 
@@ -323,6 +292,9 @@ public class JawsLogger {
    * Get the logs database path
    */
   public static String getLogsDatabasePath() {
+    if (!dbAvailable) {
+      tryBindLogsDb();
+    }
     return dbAvailable ? logsDb.getDatabasePath() : null;
   }
 
@@ -388,6 +360,9 @@ public class JawsLogger {
       String message,
       Throwable exception,
       String traceId) {
+    if (!dbAvailable) {
+      tryBindLogsDb();
+    }
     if (!dbAvailable || !batchingEnabled) {
       return; // Skip queuing if database unavailable or batching disabled
     }
@@ -548,6 +523,9 @@ public class JawsLogger {
    */
   private static void writeBatchDirectly(List<LogEntry> batch) {
     if (logsDb == null) {
+      tryBindLogsDb();
+    }
+    if (logsDb == null) {
       return;
     }
 
@@ -688,4 +666,41 @@ public class JawsLogger {
       this.lineNumber = lineNumber;
     }
   }
-} 
+
+  // Attempt to bind the logs DB from Odin. Safe to call multiple times.
+  private static void tryBindLogsDb() {
+    if (logsDb != null) {
+      return;
+    }
+    try {
+      // Avoid throwing; use Optional-based lookup
+      org.ruitx.jaws.components.Odin.findMimir("logs").ifPresent(db -> {
+        logsDb = db;
+        dbAvailable = true;
+        startSchedulerIfNeeded();
+        Logger.info("JawsLogger: Database logging initialized using registry alias 'logs'");
+      });
+      if (logsDb == null) {
+        Logger.warn("JawsLogger: No 'logs' database registered yet, console-only logging");
+      }
+    } catch (Throwable t) {
+      Logger.warn("JawsLogger: Failed to bind 'logs' database: {}", t.getMessage());
+    }
+  }
+
+  private static synchronized void startSchedulerIfNeeded() {
+    if (schedulerStarted) {
+      return;
+    }
+    if (dbAvailable) {
+      batchScheduler.scheduleAtFixedRate(
+          JawsLogger::flushBufferIfNeeded,
+          FLUSH_INTERVAL_MS,
+          FLUSH_INTERVAL_MS,
+          TimeUnit.MILLISECONDS);
+      schedulerStarted = true;
+      Logger.info("JawsLogger: Batch logging enabled (batch_size={}, flush_interval={}ms)",
+          BATCH_SIZE, FLUSH_INTERVAL_MS);
+    }
+  }
+}

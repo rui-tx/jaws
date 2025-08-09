@@ -3,6 +3,7 @@ package org.ruitx.jaws.utils;
 import java.util.List;
 import java.util.Map;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.freyr.BaseJob;
 import org.ruitx.jaws.components.freyr.ExecutionMode;
 import org.tinylog.Logger;
@@ -34,11 +35,9 @@ public class JawsLoggerJob extends BaseJob {
       return;
     }
 
-    // Get dedicated logs database
-    Mimir logsDb = null;
+    // Get logs database from Odin registry
     try {
-      logsDb = new Mimir("src/main/resources/logs.db", "src/main/resources/sql/logs_schema.sql");
-      logsDb.initializeDatabase("src/main/resources/logs.db");
+      Mimir logsDb = Odin.getMimir("logs");
 
       // Process all log entries in a single transaction for maximum performance
       logsDb.beginTransaction();
@@ -78,14 +77,6 @@ public class JawsLoggerJob extends BaseJob {
     } catch (Exception e) {
       Logger.error("BatchLogWriterJob failed: {}", e.getMessage(), e);
       throw e; // Re-throw to trigger retry mechanism
-    } finally {
-      if (logsDb != null) {
-        try {
-          logsDb.close();
-        } catch (Exception e) {
-          Logger.warn("Failed to close logs database connection: {}", e.getMessage());
-        }
-      }
     }
   }
-} 
+}

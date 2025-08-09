@@ -23,7 +23,7 @@ public class CircuitBreaker {
   // Instance fields
   private final String serviceName;
   private final Configuration config;
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getMimir("db");
   // State management
   private final AtomicReference<State> state = new AtomicReference<>(State.CLOSED);
   private final AtomicLong lastStateChangeTime = new AtomicLong(System.currentTimeMillis());
@@ -573,4 +573,4 @@ public class CircuitBreaker {
       size = 0;
     }
   }
-} 
+}

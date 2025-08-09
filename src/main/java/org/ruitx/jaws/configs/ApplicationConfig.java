@@ -47,6 +47,13 @@ public class ApplicationConfig {
   public static final boolean DEFAULT_MIMIR_CACHE_ENABLED = true;
   public static final int DEFAULT_MIMIR_CACHE_MAX_SIZE = 10000;
 
+  // Mimir/Hikari (connection pools)
+  public static final int DEFAULT_MIMIR_READER_POOL_SIZE = 16;
+  public static final int DEFAULT_MIMIR_BUSY_TIMEOUT_MS = 5000;
+  public static final boolean DEFAULT_MIMIR_ENABLE_WAL = true;
+  // NORMAL is a good trade-off for WAL
+  public static final String DEFAULT_MIMIR_SYNCHRONOUS_MODE = "NORMAL";
+
   // Static fields for configuration
   public static final String URL;
   public static final int PORT;
@@ -78,6 +85,12 @@ public class ApplicationConfig {
   // Cache (Mimir)
   public static final boolean MIMIR_CACHE_ENABLED;
   public static final int MIMIR_CACHE_MAX_SIZE;
+
+  // Mimir/Hikari (connection pools)
+  public static final int MIMIR_READER_POOL_SIZE;
+  public static final int MIMIR_BUSY_TIMEOUT_MS;
+  public static final boolean MIMIR_ENABLE_WAL;
+  public static final String MIMIR_SYNCHRONOUS_MODE;
 
   private static final Properties properties = new Properties();
 
@@ -123,6 +136,12 @@ public class ApplicationConfig {
     MIMIR_CACHE_ENABLED = getMimirCacheEnabledValue();
     MIMIR_CACHE_MAX_SIZE = getMimirCacheMaxSizeValue();
 
+    // Initialize Mimir/Hikari configuration
+    MIMIR_READER_POOL_SIZE = getMimirReaderPoolSizeValue();
+    MIMIR_BUSY_TIMEOUT_MS = getMimirBusyTimeoutValue();
+    MIMIR_ENABLE_WAL = getMimirEnableWalValue();
+    MIMIR_SYNCHRONOUS_MODE = getMimirSynchronousModeValue();
+
     JawsLogger.info("JAWS Configuration");
     JawsLogger.info("--------------------------------");
     JawsLogger.info("URL: " + URL);
@@ -147,6 +166,10 @@ public class ApplicationConfig {
     JawsLogger.info("RATE_LIMIT_WINDOW_MS: " + RATE_LIMIT_WINDOW_MS);
     JawsLogger.info("MIMIR_CACHE_ENABLED: " + MIMIR_CACHE_ENABLED);
     JawsLogger.info("MIMIR_CACHE_MAX_SIZE: " + MIMIR_CACHE_MAX_SIZE);
+    JawsLogger.info("MIMIR_READER_POOL_SIZE: " + MIMIR_READER_POOL_SIZE);
+    JawsLogger.info("MIMIR_BUSY_TIMEOUT_MS: " + MIMIR_BUSY_TIMEOUT_MS);
+    JawsLogger.info("MIMIR_ENABLE_WAL: " + MIMIR_ENABLE_WAL);
+    JawsLogger.info("MIMIR_SYNCHRONOUS_MODE: " + MIMIR_SYNCHRONOUS_MODE);
     JawsLogger.info("--------------------------------");
   }
 
@@ -494,5 +517,71 @@ public class ApplicationConfig {
 
     // Finally, uses the default value
     return defaultValue;
+  }
+
+  // --- Mimir/Hikari getters ---
+
+  private static int getMimirReaderPoolSizeValue() {
+    String envValue = System.getenv("MIMIR_READER_POOL_SIZE");
+    if (envValue != null) {
+      try {
+        return Integer.parseInt(envValue);
+      } catch (NumberFormatException e) {
+        JawsLogger.warn("Invalid MIMIR_READER_POOL_SIZE env var: " + envValue);
+      }
+    }
+    String propValue = properties.getProperty("mimir.reader.pool.size");
+    if (propValue != null) {
+      try {
+        return Integer.parseInt(propValue);
+      } catch (NumberFormatException e) {
+        JawsLogger.warn("Invalid mimir.reader.pool.size in properties: " + propValue);
+      }
+    }
+    return DEFAULT_MIMIR_READER_POOL_SIZE;
+  }
+
+  private static int getMimirBusyTimeoutValue() {
+    String envValue = System.getenv("MIMIR_BUSY_TIMEOUT_MS");
+    if (envValue != null) {
+      try {
+        return Integer.parseInt(envValue);
+      } catch (NumberFormatException e) {
+        JawsLogger.warn("Invalid MIMIR_BUSY_TIMEOUT_MS env var: " + envValue);
+      }
+    }
+    String propValue = properties.getProperty("mimir.busy.timeout.ms");
+    if (propValue != null) {
+      try {
+        return Integer.parseInt(propValue);
+      } catch (NumberFormatException e) {
+        JawsLogger.warn("Invalid mimir.busy.timeout.ms in properties: " + propValue);
+      }
+    }
+    return DEFAULT_MIMIR_BUSY_TIMEOUT_MS;
+  }
+
+  private static boolean getMimirEnableWalValue() {
+    String envValue = System.getenv("MIMIR_ENABLE_WAL");
+    if (envValue != null) {
+      return Boolean.parseBoolean(envValue);
+    }
+    String propValue = properties.getProperty("mimir.enable.wal");
+    if (propValue != null) {
+      return Boolean.parseBoolean(propValue);
+    }
+    return DEFAULT_MIMIR_ENABLE_WAL;
+  }
+
+  private static String getMimirSynchronousModeValue() {
+    String envValue = System.getenv("MIMIR_SYNCHRONOUS_MODE");
+    if (envValue != null && !envValue.isEmpty()) {
+      return envValue;
+    }
+    String propValue = properties.getProperty("mimir.synchronous.mode");
+    if (propValue != null && !propValue.isEmpty()) {
+      return propValue;
+    }
+    return DEFAULT_MIMIR_SYNCHRONOUS_MODE;
   }
 }

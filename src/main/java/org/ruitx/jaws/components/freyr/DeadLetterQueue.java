@@ -21,7 +21,7 @@ import org.tinylog.Logger;
  */
 public class DeadLetterQueue {
 
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getMimir("db");
   private final JobRegistry jobRegistry;
 
   public DeadLetterQueue() {
@@ -519,4 +519,4 @@ public class DeadLetterQueue {
       return oldestEntryTimestamp;
     }
   }
-} 
+}

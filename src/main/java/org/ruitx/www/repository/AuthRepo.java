@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.interfaces.Cacheable;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.JawsLogger;
@@ -19,7 +20,15 @@ public class AuthRepo {
   private final Mimir db;
 
   public AuthRepo() {
-    this.db = new Mimir();
+    this(Odin.getMimir());
+  }
+  
+  public AuthRepo(Mimir db) {
+    this.db = db;
+  }
+
+  public AuthRepo(String dbAlias) {
+    this(Odin.getMimir(dbAlias));
   }
 
   public Optional<Integer> createUser(String username,

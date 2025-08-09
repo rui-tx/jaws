@@ -1,20 +1,26 @@
 package org.ruitx.jaws.components;
 
-import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_PATH;
 import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
+import org.ruitx.jaws.db.DatabaseConfig;
+import org.ruitx.jaws.db.Verdandi;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.www.service.AuthService;
+import org.tinylog.Logger;
 
 /**
  * <p>Odin is the main class that starts the Jaws server.</p>
@@ -33,7 +39,24 @@ import org.ruitx.www.service.AuthService;
 public final class Odin {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
+  // Registry of named DB connectors and Mimir instances
+  private static final Map<String, Verdandi> CONNECTORS = new ConcurrentHashMap<>();
+  private static final Map<String, Mimir> MIMIRS = new ConcurrentHashMap<>();
   private static Yggdrasill yggdrasill;
+
+  // Ensure default databases are registered as soon as Odin is first referenced,
+  // so that components with static initializers (e.g., JawsLogger) can resolve
+  // the 'logs' database during their own class initialization.
+  static {
+    try {
+      registerDefaultDatabases();
+    } catch (Throwable t) {
+      // Use Tinylog directly to avoid circular init through JawsLogger
+      Logger.warn(
+          "Odin static init: failed to register default databases: {}",
+          t.getMessage());
+    }
+  }
 
   private Odin() {
   }
@@ -57,7 +80,19 @@ public final class Odin {
   private static void startComponents() {
     ExecutorService executor = Executors.newCachedThreadPool();
 
-    createMimir();
+    // In case classloading order prevented static init or tests reset state
+    if (!hasDatabase("db")) {
+      registerDefaultDatabases();
+    }
+    // If only primary DB got registered earlier and logs failed, ensure logs is registered now
+    if (!hasDatabase("logs")) {
+      try {
+        registerDatabase("logs", buildLogsDbConfig());
+        Logger.info("Odin: registered 'logs' database after startup guard");
+      } catch (Exception e) {
+        Logger.warn("Odin: failed to register 'logs' database in startup guard: {}", e.getMessage());
+      }
+    }
     createNjord();
     createFreyr();
 
@@ -73,10 +108,80 @@ public final class Odin {
     createHel(executor);
   }
 
-  // Mimir is a utility class that initializes the database
-  private static void createMimir() {
-    Mimir mimir = new Mimir();
-    mimir.initializeDatabase(DATABASE_PATH);
+  // Register default databases: primary "db" and optional "logs"
+  private static void registerDefaultDatabases() {
+    // Primary application database registered as alias "db"
+    DatabaseConfig appDb = new DatabaseConfig(
+        ApplicationConfig.DATABASE_PATH,
+        Optional.ofNullable(ApplicationConfig.DATABASE_SCHEMA_PATH),
+        ApplicationConfig.MIMIR_READER_POOL_SIZE,
+        ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
+        ApplicationConfig.MIMIR_ENABLE_WAL,
+        ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
+        Optional.empty(),
+        Optional.of("jaws-writer"),
+        Optional.of("jaws-reader")
+    );
+    registerDatabase("db", appDb);
+
+    // Logs database (use existing paths for now; can be moved to ApplicationConfig later)
+    registerDatabase("logs", buildLogsDbConfig());
+  }
+
+  // Build logs database config with absolute paths to avoid CWD issues during early class init
+  private static DatabaseConfig buildLogsDbConfig() {
+    String logsDbPath = java.nio.file.Paths.get("src/main/resources/logs.db").toAbsolutePath().toString();
+    String logsSchemaPath = java.nio.file.Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString();
+    return new org.ruitx.jaws.db.DatabaseConfig(
+        logsDbPath,
+        Optional.of(logsSchemaPath),
+        Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
+        ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
+        true,
+        ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
+        Optional.empty(),
+        Optional.of("jaws-logs-writer"),
+        Optional.of("jaws-logs-reader")
+    );
+  }
+
+  // Public API: register a database by name
+  public static synchronized void registerDatabase(String name, DatabaseConfig cfg) {
+    if (name == null || name.isBlank()) {
+      throw new IllegalArgumentException("Database name must not be blank");
+    }
+    if (CONNECTORS.containsKey(name) || MIMIRS.containsKey(name)) {
+      throw new IllegalStateException("Database alias already registered: " + name);
+    }
+    try {
+      Verdandi v = new Verdandi(cfg);
+      v.initialize();
+      CONNECTORS.put(name, v);
+      MIMIRS.put(name, new Mimir(v));
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to register database '" + name + "'", e);
+    }
+  }
+
+  // Lookup helpers
+  public static Optional<Mimir> findMimir(String name) {
+    return Optional.ofNullable(MIMIRS.get(name));
+  }
+
+  public static boolean hasDatabase(String name) {
+    return MIMIRS.containsKey(name);
+  }
+
+  public static Set<String> listDatabases() {
+    return MIMIRS.keySet();
+  }
+
+  public static Mimir getMimir(String name) {
+    Mimir db = MIMIRS.get(name);
+    if (db == null) {
+      throw new IllegalStateException("Database not registered: " + name);
+    }
+    return db;
   }
 
   // Njord is a dynamic router that routes requests to controllers
@@ -144,6 +249,14 @@ public final class Odin {
         yggdrasill.shutdown();
       }
 
+      // Close all DB connectors
+      CONNECTORS.values().forEach(v -> {
+        try {
+          v.close();
+        } catch (Exception ignore) {
+        }
+      });
+
       // Stop other services
       try {
         executor.shutdown();
@@ -166,5 +279,12 @@ public final class Odin {
    */
   public static Yggdrasill getYggdrasill() {
     return yggdrasill;
+  }
+
+  /**
+   * Access the primary Mimir instance (alias "db").
+   */
+  public static Mimir getMimir() {
+    return getMimir("db");
   }
 }

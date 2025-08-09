@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
@@ -18,7 +19,7 @@ public class JobRetryManager {
   private static final double DEFAULT_JITTER_FACTOR = 0.25; // ±25% jitter
   private static final int DEFAULT_EXPONENTIAL_BASE = 4; // 4x multiplier per retry
 
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getMimir("db");
   private final JobErrorClassifier errorClassifier = new JobErrorClassifier();
 
   /**
@@ -340,4 +341,4 @@ public class JobRetryManager {
       return totalRetryAttempts;
     }
   }
-} 
+}

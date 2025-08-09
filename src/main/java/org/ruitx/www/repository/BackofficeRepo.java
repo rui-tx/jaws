@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.interfaces.Cacheable;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
@@ -20,8 +21,8 @@ public class BackofficeRepo {
   private final Mimir logsDb;
 
   public BackofficeRepo() {
-    this.db = new Mimir();
-    this.logsDb = new Mimir("src/main/resources/logs.db");
+    this.db = Odin.getMimir("db");
+    this.logsDb = Odin.getMimir("logs");
   }
 
   /**

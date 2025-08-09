@@ -6,6 +6,8 @@ import static org.ruitx.jaws.configs.ApplicationConfig.DATABASE_SCHEMA_PATH;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,17 +30,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
-import javax.sql.DataSource;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.update.Update;
 import org.ruitx.jaws.configs.ApplicationConfig;
+import org.ruitx.jaws.db.DbConnector;
 import org.ruitx.jaws.interfaces.SqlFunction;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
-import org.sqlite.SQLiteDataSource;
 import org.tinylog.Logger;
 
 /**
@@ -51,23 +52,29 @@ import org.tinylog.Logger;
 public class Mimir {
 
   // Per-key custom TTL in nanoseconds
-  private static final ConcurrentHashMap<SqlCacheKey, Long> keyToTtl = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<SqlCacheKey, Long> keyToTtl =
+      new ConcurrentHashMap<>();
   // Reverse index lookup table -> cache keys
-  private static final ConcurrentHashMap<String, Set<SqlCacheKey>> tableToKeys = new ConcurrentHashMap<>();
-  // Thread-local storage for current tables and TTL
+  private static final ConcurrentHashMap<String, Set<SqlCacheKey>> tableToKeys =
+      new ConcurrentHashMap<>();
+  // Storage for current tables and TTL
   private static final ThreadLocal<Set<String>> currentTables = new ThreadLocal<>();
   private static final ThreadLocal<Long> currentTtlMs = new ThreadLocal<>();
-  // Thread-local storage for transaction modified tables
-  private static final ThreadLocal<Set<String>> txModifiedTables = ThreadLocal.withInitial(
-      HashSet::new);
+  // Storage for transaction modified tables
+  private static final ThreadLocal<Set<String>> txModifiedTables =
+      ThreadLocal.withInitial(HashSet::new);
   // Cache for SQL queries
   private static volatile Cache<SqlCacheKey, Object> queryCache;
   private static volatile ThreadLocal<Boolean> allowCacheFlag;
   private final AtomicBoolean initialized = new AtomicBoolean(false);
   private final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
   private String schemaPath;
-  private DataSource dataSource;
+  // Legacy local pools (used only if no external connector is provided)
+  private HikariDataSource writerDs;
+  private HikariDataSource readerDs;
   private File db;
+  // Preferred external connector (when non-null, Mimir will delegate all connections)
+  private final DbConnector connector;
 
   /**
    * Default constructor -  Uses the default database path and schema from ApplicationConfig.
@@ -94,13 +101,76 @@ public class Mimir {
   public Mimir(String databasePath, String schemaPath) {
     this.db = new File(databasePath);
     this.schemaPath = schemaPath;
-    initializeDataSource();
+    this.connector = null; // legacy path
+    // Delay pool initialization until initializeDatabase(), after file creation
   }
 
   /**
-   * Ensure the cache is initialized. This method is called before any cache operations to ensure
-   * the cache is ready.
+   * Preferred constructor: use an external DbConnector (e.g., Verdandi) for all DB access.
    */
+  public Mimir(DbConnector connector) {
+    this.connector = Objects.requireNonNull(connector, "DbConnector must not be null");
+    this.db = null;
+    this.schemaPath = null;
+    this.writerDs = null;
+    this.readerDs = null;
+  }
+
+  // region Cache
+
+  public static void enableCacheForCurrentThread() {
+    ensureCache();
+    allowCacheFlag.set(true);
+  }
+
+  public static void disableCacheForCurrentThread() {
+    ensureCache();
+    allowCacheFlag.set(false);
+  }
+
+  public static boolean isCacheAllowedForCurrentThread() {
+    ensureCache();
+    return allowCacheFlag.get();
+  }
+
+  public static List<Map<String, Object>> snapshotCache() {
+    ensureCache();
+    java.util.List<Map<String, Object>> entries = new ArrayList<>();
+    queryCache.asMap().forEach((key, value) -> {
+      java.util.Map<String, Object> entry = new HashMap<>();
+      entry.put("sql", key.sql);
+      entry.put("params", key.params);
+      entry.put("value", value);
+      entry.put("ttlNanos", keyToTtl.getOrDefault(key, Long.MAX_VALUE));
+      entries.add(java.util.Map.copyOf(entry));
+    });
+    return List.copyOf(entries);
+  }
+
+  public static void flushCache() {
+    ensureCache();
+    queryCache.invalidateAll();
+    keyToTtl.clear();
+    tableToKeys.clear();
+    Logger.debug("Mimir cache flushed via flushCache() helper");
+  }
+
+  public static void setCurrentTables(Set<String> tables) {
+    currentTables.set(tables);
+  }
+
+  public static void clearCurrentTables() {
+    currentTables.remove();
+  }
+
+  public static void setCurrentTtl(long ttlMs) {
+    currentTtlMs.set(ttlMs);
+  }
+
+  public static void clearCurrentTtl() {
+    currentTtlMs.remove();
+  }
+
   private static synchronized void ensureCache() {
     if (queryCache == null) {
       allowCacheFlag = ThreadLocal.withInitial(() -> false);
@@ -128,65 +198,55 @@ public class Mimir {
     }
   }
 
-  public static void enableCacheForCurrentThread() {
+  /**
+   * Invalidate all cache entries. Called after write operations.
+   */
+  private void invalidateCache() {
     ensureCache();
-    allowCacheFlag.set(true);
+    if (queryCache.estimatedSize() > 0) {
+      queryCache.invalidateAll();
+      Logger.debug("Mimir cache INVALIDATED (all)");
+    }
   }
 
-  public static void disableCacheForCurrentThread() {
+  private void invalidateTables(Set<String> tables) {
     ensureCache();
-    allowCacheFlag.set(false);
+    if (tables == null || tables.isEmpty()) {
+      invalidateCache();
+      return;
+    }
+    for (String table : tables) {
+      Set<SqlCacheKey> keys = tableToKeys.remove(table.toUpperCase());
+      if (keys != null) {
+        queryCache.invalidateAll(keys);
+      }
+    }
+    Logger.debug("Mimir cache INVALIDATED for tables: {}", tables);
   }
 
-  public static boolean isCacheAllowedForCurrentThread() {
-    ensureCache();
-    return allowCacheFlag.get();
+  // endregion
+
+  // region Initialization
+
+  /**
+   * Get the database file path for this Mimir instance.
+   *
+   * @return The database file path
+   */
+  public String getDatabasePath() {
+    return db.getAbsolutePath();
   }
 
   /**
-   * Returns an immutable snapshot of the current SQL query cache. Each entry contains the original
-   * SQL, the bound parameters, the cached value, and the TTL remaining in nanoseconds. Intended
-   * strictly for diagnostics and should be exposed only through secured debug endpoints.
+   * Check if this Mimir instance is initialized.
+   *
+   * @return true if initialized, false otherwise
    */
-  public static List<Map<String, Object>> snapshotCache() {
-    ensureCache();
-    java.util.List<Map<String, Object>> entries = new ArrayList<>();
-    queryCache.asMap().forEach((key, value) -> {
-      java.util.Map<String, Object> entry = new HashMap<>();
-      entry.put("sql", key.sql);
-      entry.put("params", key.params);
-      entry.put("value", value);
-      entry.put("ttlNanos", keyToTtl.getOrDefault(key, Long.MAX_VALUE));
-      entries.add(java.util.Map.copyOf(entry));
-    });
-    return List.copyOf(entries);
-  }
-
-  /**
-   * Flushes the entire query cache and associated metadata.  Intended for admin/diagnostic use.
-   */
-  public static void flushCache() {
-    ensureCache();
-    queryCache.invalidateAll();
-    keyToTtl.clear();
-    tableToKeys.clear();
-    Logger.debug("Mimir cache flushed via flushCache() helper");
-  }
-
-  public static void setCurrentTables(Set<String> tables) {
-    currentTables.set(tables);
-  }
-
-  public static void clearCurrentTables() {
-    currentTables.remove();
-  }
-
-  public static void setCurrentTtl(long ttlMs) {
-    currentTtlMs.set(ttlMs);
-  }
-
-  public static void clearCurrentTtl() {
-    currentTtlMs.remove();
+  public boolean isInitialized() {
+    if (connector != null) {
+      return connector.isReady();
+    }
+    return initialized.get();
   }
 
   /**
@@ -195,24 +255,83 @@ public class Mimir {
    * {@link #initializeDatabase(String)}.
    */
   private synchronized void initializeDataSource() {
+    if (connector != null) {
+      // External connector manages pools; nothing to do here
+      return;
+    }
     if (!initialized.get()) {
-      SQLiteDataSource ds = new SQLiteDataSource();
-      ds.setUrl("jdbc:sqlite:" + db.getAbsolutePath());
-      dataSource = ds;
+      // Writer (single connection)
+      HikariConfig writeCfg = new HikariConfig();
+      writeCfg.setJdbcUrl("jdbc:sqlite:file:" + db.getAbsolutePath() + "?uri=true");
+      writeCfg.setPoolName("jaws-writer");
+      writeCfg.setMaximumPoolSize(1);
+      writeCfg.setMinimumIdle(1);
+      writeCfg.setConnectionInitSql("PRAGMA foreign_keys=ON; PRAGMA busy_timeout="
+          + ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS + ";");
+      writerDs = new HikariDataSource(writeCfg);
+
+      // Apply database-wide PRAGMAs via writer
+      try (Connection c = writerDs.getConnection()) {
+        if (ApplicationConfig.MIMIR_ENABLE_WAL) {
+          try (Statement st = c.createStatement()) {
+            st.execute("PRAGMA journal_mode=WAL");
+          }
+        }
+        try (Statement st = c.createStatement()) {
+          st.execute("PRAGMA synchronous=" + ApplicationConfig.MIMIR_SYNCHRONOUS_MODE);
+        }
+        try (Statement st = c.createStatement()) {
+          st.execute("PRAGMA wal_autocheckpoint=1000");
+        }
+      } catch (SQLException e) {
+        Logger.warn("Error applying PRAGMA settings: {}", e.getMessage());
+      }
+
+      // Reader (read-only pool)
+      HikariConfig readCfg = new HikariConfig();
+      readCfg.setJdbcUrl("jdbc:sqlite:file:" + db.getAbsolutePath() + "?mode=ro&uri=true");
+      readCfg.setPoolName("jaws-reader");
+      readCfg.setMaximumPoolSize(ApplicationConfig.MIMIR_READER_POOL_SIZE);
+      readCfg.setMinimumIdle(Math.max(1, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2));
+      readCfg.setConnectionInitSql("PRAGMA foreign_keys=ON; PRAGMA busy_timeout="
+          + ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS + ";");
+      //readCfg.setReadOnly(true);
+      readerDs = new HikariDataSource(readCfg);
+
       initialized.set(true);
     }
   }
 
-
   public void initializeDatabase(String databasePath) {
-    if (databasePath != null && !databasePath.isEmpty()) {
-      this.db = new File(databasePath);
-      // Reset initialization to allow re-initialization with new path
-      initialized.set(false);
-      initializeDataSource();
+    if (connector != null) {
+      try {
+        connector.initialize();
+      } catch (Exception e) {
+        throw new RuntimeException("Failed to initialize database connector", e);
+      }
+      Logger.trace("Database is ready via external connector");
+      return;
     }
 
+    if (databasePath != null && !databasePath.isEmpty()) {
+      File newDb = new File(databasePath);
+      if (!newDb.getAbsolutePath().equals(this.db.getAbsolutePath())) {
+        // Path changed: close existing pools and re-init
+        this.db = newDb;
+        if (initialized.get()) {
+          close();
+        }
+        initialized.set(false);
+      }
+    }
+
+    // Ensure the DB file exists BEFORE initializing pools (reader runs in mode=ro)
     createDatabaseFile();
+
+    // Now initialize data sources (writer/reader) if not already initialized
+    if (!initialized.get()) {
+      initializeDataSource();
+    }
 
     // If schema is specified and database was created empty, load the schema
     if (schemaPath != null && isDatabaseEmpty()) {
@@ -249,9 +368,13 @@ public class Mimir {
    */
   private boolean isDatabaseEmpty() {
     try {
-      List<Row> tables = query(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
-      return tables.isEmpty();
+      // Use writer connection explicitly to ensure we inspect the writable DB
+      try (Connection conn = writerDs != null ? writerDs.getConnection() : getConnection();
+          PreparedStatement ps = conn.prepareStatement(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+          ResultSet rs = ps.executeQuery()) {
+        return !rs.next();
+      }
     } catch (Exception e) {
       Logger.warn("Error checking if database is empty: {}", e.getMessage());
       return true; // Assume empty if we can't check
@@ -301,6 +424,10 @@ public class Mimir {
     }
   }
 
+  // endregion
+
+  // region Transactions
+
   /**
    * Get a connection from the data source. If we're in a transaction, return the transaction
    * connection. Otherwise, get a new connection from the data source.
@@ -309,17 +436,19 @@ public class Mimir {
    * @throws SQLException If the connection fails
    */
   public Connection getConnection() throws SQLException {
-    // If we're in a transaction, return the transaction connection
+    // If we're in a transaction, return the transaction (writer) connection
     Connection conn = transactionConnection.get();
     if (conn != null) {
       return conn;
     }
-
-    // Otherwise get a new connection
-    if (dataSource == null) {
-      throw new SQLException("DataSource not initialized");
+    if (connector != null) {
+      return connector.getWriterConnection();
     }
-    return dataSource.getConnection();
+    if (writerDs == null) {
+      throw new SQLException("Writer DataSource not initialized");
+    }
+    // Default to writer if called generically
+    return writerDs.getConnection();
   }
 
   /**
@@ -331,7 +460,11 @@ public class Mimir {
     if (transactionConnection.get() != null) {
       throw new SQLException("Transaction already in progress");
     }
-    Connection conn = dataSource.getConnection();
+    Connection conn = (connector != null) ? connector.getWriterConnection() :
+        (writerDs != null ? writerDs.getConnection() : null);
+    if (conn == null) {
+      throw new SQLException("Writer DataSource not initialized");
+    }
     conn.setAutoCommit(false);
     transactionConnection.set(conn);
     txModifiedTables.set(new HashSet<>());
@@ -375,13 +508,17 @@ public class Mimir {
     }
   }
 
+  // endregion
+
+  // region Query, Execution and Insert
+
   public List<Row> query(String sql, Object... params) {
     return query(sql, this::list, params);
   }
 
   public Optional<Row> queryOne(String sql, Object... params) {
     List<Row> rows = query(sql, params);
-    return (rows != null && !rows.isEmpty()) ? Optional.of(rows.getFirst()) : Optional.empty();
+    return (rows != null && !rows.isEmpty()) ? Optional.of(rows.get(0)) : Optional.empty();
   }
 
   public Optional<Row> getRow(String sql, Object... params) {
@@ -392,7 +529,7 @@ public class Mimir {
     return query(sql, params);
   }
 
-  // Centralized query with caching
+  // main query method
   public <T> T query(String sql, SqlFunction<T> mapper, Object... params) {
     ensureCache();
     boolean skipCache =
@@ -417,8 +554,22 @@ public class Mimir {
     boolean isTxConn = false;
 
     try {
-      conn = getConnection();
-      isTxConn = (transactionConnection.get() == conn);
+      // Use transaction connection if present, otherwise a reader connection
+      Connection txConnRef = transactionConnection.get();
+      if (txConnRef != null) {
+        conn = txConnRef;
+        isTxConn = true;
+      } else {
+        if (connector != null) {
+          conn = connector.getReaderConnection();
+        } else {
+          if (readerDs == null) {
+            throw new SQLException("Reader DataSource not initialized");
+          }
+          conn = readerDs.getConnection();
+        }
+        isTxConn = false;
+      }
 
       try (PreparedStatement stmt = conn.prepareStatement(sql)) {
         for (int i = 0; i < params.length; i++) {
@@ -459,6 +610,7 @@ public class Mimir {
     }
   }
 
+  // main execute method
   public int execute(String sql, Object... params) {
     Connection conn = null;
     boolean isTxConn = false;
@@ -479,7 +631,41 @@ public class Mimir {
           stmt.setObject(i + 1, params[i]);
         }
 
-        int affected = stmt.executeUpdate();
+        // Use execute() to support statements that may return a ResultSet (e.g., PRAGMA)
+        int affectedTotal = 0;
+        boolean hasResult = stmt.execute();
+        // If the first result is an update count, capture it
+        int updateCount = stmt.getUpdateCount();
+        if (updateCount != -1) {
+          affectedTotal += updateCount;
+        }
+        // If the first result is a ResultSet, consume and close it
+        if (hasResult) {
+          try (ResultSet rs = stmt.getResultSet()) {
+            // consume result set (no-op)
+            while (rs.next()) {
+              // intentionally ignore rows
+            }
+          }
+        }
+        // Consume any subsequent results to be safe
+        while (true) {
+          hasResult = stmt.getMoreResults();
+          updateCount = stmt.getUpdateCount();
+          if (updateCount == -1 && !hasResult) {
+            break;
+          }
+          if (updateCount != -1) {
+            affectedTotal += updateCount;
+          }
+          if (hasResult) {
+            try (ResultSet rs = stmt.getResultSet()) {
+              while (rs.next()) {
+                // intentionally ignore rows
+              }
+            }
+          }
+        }
 
         Set<String> modified = extractTablesFromWrite(sql);
         if (isTxConn) {
@@ -487,7 +673,7 @@ public class Mimir {
         } else {
           invalidateTables(modified);
         }
-        return affected;
+        return affectedTotal;
       }
     } catch (SQLException e) {
       Logger.error("Error executing prepared update: {}\nSQL: {}\nParams: {}", e.getMessage(), sql,
@@ -561,7 +747,6 @@ public class Mimir {
     return queryOne("SELECT * FROM " + table + " WHERE rowid = ?", id);
   }
 
-
   private List<Row> list(ResultSet resultSet) throws SQLException {
     List<Map<String, Object>> result = new ArrayList<>();
     int columnCount = resultSet.getMetaData().getColumnCount();
@@ -577,7 +762,10 @@ public class Mimir {
     }
     return result.stream().map(Row::new).toList();
   }
-  
+
+  // endregion
+
+  // region Pagination
 
   /**
    * Execute a paginated query and return a Page of Row objects. This method automatically adds
@@ -711,6 +899,55 @@ public class Mimir {
     return sql.toUpperCase().contains("ORDER BY");
   }
 
+  // endregion
+
+  /**
+   * Cleanup resources when this Mimir instance is no longer needed. This is optional as SQLite
+   * handles cleanup automatically on JVM exit, but good practice for long-running applications with
+   * dynamic database usage.
+   */
+  public void close() {
+    try {
+      // Clean up any ongoing transactions for this instance
+      Connection txConn = transactionConnection.get();
+      if (txConn != null) {
+        try {
+          txConn.rollback(); // Rollback any uncommitted transaction
+        } catch (SQLException e) {
+          Logger.warn("Error rolling back transaction during cleanup: {}", e.getMessage());
+        }
+        txConn.close();
+        transactionConnection.remove();
+      }
+
+      // External connector manages its own lifecycle
+      if (connector != null) {
+        return;
+      }
+
+      // Close Hikari pools
+      if (readerDs != null) {
+        try {
+          readerDs.close();
+        } catch (Exception ignore) {
+        }
+        readerDs = null;
+      }
+      if (writerDs != null) {
+        try {
+          writerDs.close();
+        } catch (Exception ignore) {
+        }
+        writerDs = null;
+      }
+
+      initialized.set(false);
+      Logger.debug("Mimir instance cleanup completed for: {}", db.getAbsolutePath());
+    } catch (SQLException e) {
+      Logger.warn("Error during Mimir cleanup: {}", e.getMessage());
+    }
+  }
+
   /**
    * Basic SQL column name sanitization to prevent injection. Only allows alphanumeric characters,
    * underscores, and dots.
@@ -748,77 +985,6 @@ public class Mimir {
         Logger.error("Failed to delete test database: " + db.getAbsolutePath());
       }
     }
-  }
-
-  /**
-   * Cleanup resources when this Mimir instance is no longer needed. This is optional as SQLite
-   * handles cleanup automatically on JVM exit, but good practice for long-running applications with
-   * dynamic database usage.
-   */
-  public void close() {
-    try {
-      // Clean up any ongoing transactions for this instance
-      Connection txConn = transactionConnection.get();
-      if (txConn != null) {
-        try {
-          txConn.rollback(); // Rollback any uncommitted transaction
-        } catch (SQLException e) {
-          Logger.warn("Error rolling back transaction during cleanup: {}", e.getMessage());
-        }
-        txConn.close();
-        transactionConnection.remove();
-      }
-
-      // SQLiteDataSource doesn't need explicit cleanup, but reset state
-      initialized.set(false);
-      Logger.debug("Mimir instance cleanup completed for: {}", db.getAbsolutePath());
-    } catch (SQLException e) {
-      Logger.warn("Error during Mimir cleanup: {}", e.getMessage());
-    }
-  }
-
-  /**
-   * Get the database file path for this Mimir instance.
-   *
-   * @return The database file path
-   */
-  public String getDatabasePath() {
-    return db.getAbsolutePath();
-  }
-
-  /**
-   * Check if this Mimir instance is initialized.
-   *
-   * @return true if initialized, false otherwise
-   */
-  public boolean isInitialized() {
-    return initialized.get();
-  }
-
-  /**
-   * Invalidate all cache entries. Called after write operations.
-   */
-  private void invalidateCache() {
-    ensureCache();
-    if (queryCache.estimatedSize() > 0) {
-      queryCache.invalidateAll();
-      Logger.debug("Mimir cache INVALIDATED (all)");
-    }
-  }
-
-  private void invalidateTables(Set<String> tables) {
-    ensureCache();
-    if (tables == null || tables.isEmpty()) {
-      invalidateCache();
-      return;
-    }
-    for (String table : tables) {
-      Set<SqlCacheKey> keys = tableToKeys.remove(table.toUpperCase());
-      if (keys != null) {
-        queryCache.invalidateAll(keys);
-      }
-    }
-    Logger.debug("Mimir cache INVALIDATED for tables: {}", tables);
   }
 
   private Set<String> extractTablesFromWrite(String sql) {
@@ -879,7 +1045,6 @@ public class Mimir {
   // Queries: list and single
 
   // Execute DML/DDL: affected rows
-
 
   /**
    * Key used for caching query results in Caffeine.
