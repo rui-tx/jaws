@@ -18,6 +18,7 @@ import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.db.mapping.UserSessionMapper;
 import org.ruitx.www.model.auth.UserSession;
 
 /**
@@ -109,7 +110,7 @@ public class Tyr {
           refreshToken
       ).get();
 
-      Optional<UserSession> session = UserSession.fromRow(sessionRow);
+      Optional<UserSession> session = Optional.ofNullable(UserSessionMapper.INSTANCE.map(sessionRow));
       if (session.isEmpty()) {
         return Optional.empty();
       }

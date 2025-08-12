@@ -7,21 +7,25 @@ import java.util.Map;
 import java.util.Optional;
 import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.db.mapping.LogEntryMapper;
+import org.ruitx.jaws.db.mapping.UserMapper;
+import org.ruitx.jaws.db.mapping.UserSessionMapper;
+import org.ruitx.jaws.db.repo.BaseRepo;
 import org.ruitx.jaws.interfaces.Cacheable;
 import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.utils.LogEntry;
 import org.ruitx.www.model.auth.User;
 import org.ruitx.www.model.auth.UserSession;
 import org.tinylog.Logger;
 
-public class BackofficeRepo {
+public class BackofficeRepo extends BaseRepo {
 
-  private final Mimir db;
   private final Mimir logsDb;
 
   public BackofficeRepo() {
-    this.db = Odin.getDB("db");
+    super(Odin.getDB("db"));
     this.logsDb = Odin.getDB("logs");
   }
 
@@ -32,11 +36,7 @@ public class BackofficeRepo {
    */
   @Cacheable(tables = {"USER"})
   public List<User> getAllUsers() {
-    List<Row> rows = db.getRows("SELECT * FROM USER ORDER BY created_at DESC");
-    return rows.stream()
-        .map(User::fromRow)
-        .flatMap(Optional::stream)
-        .toList();
+    return getAll("SELECT * FROM USER ORDER BY created_at DESC", UserMapper.INSTANCE);
   }
 
   /**
@@ -46,11 +46,9 @@ public class BackofficeRepo {
    */
   @Cacheable(tables = {"USER_SESSION"})
   public List<UserSession> getAllUserSessions() {
-    List<Row> rows = db.getRows("SELECT * FROM USER_SESSION ORDER BY created_at DESC");
-    return rows.stream()
-        .map(UserSession::fromRow)
-        .flatMap(Optional::stream)
-        .toList();
+    return getAll(
+        "SELECT * FROM USER_SESSION ORDER BY created_at DESC",
+        UserSessionMapper.INSTANCE);
   }
 
   /**
@@ -61,27 +59,25 @@ public class BackofficeRepo {
    */
   public Page<Map<String, String>> getPaginatedLogs(PageRequest pageRequest) {
     try {
-      String baseSql =
-          "SELECT id, timestamp, level, message, logger as source FROM LOG_ENTRIES ORDER BY timestamp DESC";
-      Page<Row> rowPage = logsDb.getPage(
-          baseSql,
-          pageRequest
-      );
+      String sql =
+          "SELECT id, timestamp, level, message, logger FROM LOG_ENTRIES ORDER BY timestamp DESC";
+      Page<LogEntry> entryPage = logsDb.getPage(sql, pageRequest, LogEntryMapper.INSTANCE::map);
 
-      List<Map<String, String>> logEntries = rowPage.getContent().stream()
-          .map(row -> {
-            Map<String, String> logEntry = new HashMap<>();
-            logEntry.put("id", row.get("id").toString());
-            logEntry.put("timestamp", formatTimestamp(row.get("timestamp")));
-            logEntry.put("level", row.get("level").toString());
-            logEntry.put("message", row.get("message").toString());
-            logEntry.put("source",
-                row.get("source") != null ? row.get("source").toString() : "System");
-            return logEntry;
+      List<Map<String, String>> logEntries = entryPage.getContent().stream()
+          .map(entry -> {
+            Map<String, String> log = new HashMap<>();
+            if (entry.getId() != null) {
+              log.put("id", entry.getId().toString());
+            }
+            log.put("timestamp", formatTimestamp(entry.getTimestamp()));
+            log.put("level", entry.getLevel() != null ? entry.getLevel() : "");
+            log.put("message", entry.getMessage() != null ? entry.getMessage() : "");
+            log.put("source", entry.getLogger() != null ? entry.getLogger() : "System");
+            return log;
           })
           .toList();
 
-      return new Page<>(logEntries, pageRequest, rowPage.getTotalElements());
+      return new Page<>(logEntries, pageRequest, entryPage.getTotalElements());
 
     } catch (Exception e) {
       Logger.error(e.getMessage(), e);

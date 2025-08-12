@@ -2,8 +2,6 @@ package org.ruitx.www.model.auth;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Optional;
-import org.ruitx.jaws.types.Row;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UserRole(
@@ -21,32 +19,6 @@ public record UserRole(
    */
   public static Builder builder() {
     return new Builder();
-  }
-
-  /**
-   * Creates a UserRole instance from a database row.
-   *
-   * @param row the database row containing user role data
-   * @return an Optional containing the UserRole if all required fields are present, empty otherwise
-   */
-  public static Optional<UserRole> fromRow(Row row) {
-    Optional<Integer> id = row.getInt("id");
-    Optional<Integer> userId = row.getInt("user_id");
-    Optional<Integer> roleId = row.getInt("role_id");
-    Optional<Long> assignedAt = row.getUnixTimestamp("assigned_at");
-    Optional<Integer> assignedBy = row.getInt("assigned_by");
-
-    if (id.isEmpty() || userId.isEmpty() || roleId.isEmpty() || assignedAt.isEmpty()) {
-      return Optional.empty(); // Essential fields must be present
-    }
-
-    return Optional.of(UserRole.builder()
-        .id(id.get())
-        .userId(userId.get())
-        .roleId(roleId.get())
-        .assignedAt(assignedAt.get())
-        .assignedBy(assignedBy.orElse(null))
-        .build());
   }
 
   public static final class Builder {

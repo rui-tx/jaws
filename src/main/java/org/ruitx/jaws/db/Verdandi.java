@@ -35,38 +35,42 @@ public class Verdandi implements DbConnector {
 
     // writer pool
     HikariConfig w = new HikariConfig();
-    String abs = new File(cfg.databasePath).getAbsolutePath();
+    String abs = new File(cfg.databasePath()).getAbsolutePath();
     w.setJdbcUrl("jdbc:sqlite:file:" + abs + "?uri=true");
-    w.setPoolName(cfg.writerPoolName.orElse("jaws-writer"));
+    w.setPoolName(cfg.writerPoolName() != null ? cfg.writerPoolName() : "jaws-writer");
     w.setMaximumPoolSize(1);
     w.setMinimumIdle(1);
     // PRAGMAs; WAL + sync on writer
     StringBuilder init = new StringBuilder();
     init.append("PRAGMA foreign_keys=ON; ");
-    init.append("PRAGMA busy_timeout=").append(cfg.busyTimeoutMs).append("; ");
-    if (cfg.enableWal) {
+    init.append("PRAGMA busy_timeout=").append(cfg.busyTimeoutMs()).append("; ");
+    if (cfg.enableWal()) {
       init.append("PRAGMA journal_mode=WAL; ");
       init.append("PRAGMA wal_autocheckpoint=1000; ");
     }
-    init.append("PRAGMA synchronous=").append(cfg.synchronousMode).append(";");
+    init.append("PRAGMA synchronous=").append(cfg.synchronousMode()).append(";");
     w.setConnectionInitSql(init.toString());
-    cfg.leakDetectionThresholdMs.ifPresent(w::setLeakDetectionThreshold);
+    if (cfg.leakDetectionThresholdMs() != null) {
+      w.setLeakDetectionThreshold(cfg.leakDetectionThresholdMs());
+    }
     writerDs = new HikariDataSource(w);
 
     // reader pool (read-only URL; do not call setReadOnly(true))
     HikariConfig r = new HikariConfig();
     r.setJdbcUrl("jdbc:sqlite:file:" + abs + "?mode=ro&uri=true");
-    r.setPoolName(cfg.readerPoolName.orElse("jaws-reader"));
-    r.setMaximumPoolSize(cfg.readerPoolSize);
-    r.setMinimumIdle(Math.max(1, cfg.readerPoolSize / 2));
+    r.setPoolName(cfg.readerPoolName() != null ? cfg.readerPoolName() : "jaws-reader");
+    r.setMaximumPoolSize(cfg.readerPoolSize());
+    r.setMinimumIdle(Math.max(1, cfg.readerPoolSize() / 2));
     r.setConnectionInitSql(
-        "PRAGMA foreign_keys=ON; PRAGMA busy_timeout=" + cfg.busyTimeoutMs + ";");
-    cfg.leakDetectionThresholdMs.ifPresent(r::setLeakDetectionThreshold);
+        "PRAGMA foreign_keys=ON; PRAGMA busy_timeout=" + cfg.busyTimeoutMs() + ";");
+    if (cfg.leakDetectionThresholdMs() != null) {
+      r.setLeakDetectionThreshold(cfg.leakDetectionThresholdMs());
+    }
     readerDs = new HikariDataSource(r);
 
     // schema
-    if (cfg.schemaPath.isPresent() && isDatabaseEmptyInternal()) {
-      applySchema(cfg.schemaPath.get());
+    if (cfg.schemaPath() != null && isDatabaseEmptyInternal()) {
+      applySchema(cfg.schemaPath());
     }
 
     ready.set(true);
@@ -145,7 +149,7 @@ public class Verdandi implements DbConnector {
   }
 
   private void ensureDbFileExists() throws Exception {
-    File f = new File(cfg.databasePath);
+    File f = new File(cfg.databasePath());
     File parent = f.getParentFile();
     if (parent != null && !parent.exists()) {
       if (!parent.mkdirs() && !parent.exists()) {

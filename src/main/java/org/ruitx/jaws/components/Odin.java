@@ -4,6 +4,7 @@ import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,9 @@ import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
 import org.ruitx.jaws.db.DatabaseConfig;
+import org.ruitx.jaws.db.DatabaseSeeder;
 import org.ruitx.jaws.db.Verdandi;
+import org.ruitx.jaws.db.seeders.AdminBootstrapSeeder;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.www.service.AuthService;
 import org.tinylog.Logger;
@@ -42,17 +45,7 @@ public final class Odin {
   private static final Map<String, Verdandi> DB_CONNECTORS = new ConcurrentHashMap<>();
   private static final Map<String, Mimir> DBS = new ConcurrentHashMap<>();
   private static Yggdrasill YGGDRASILL;
-  private static Boolean DBS_READY = false;
-
-  static {
-    try {
-      registerDefaultDatabases();
-    } catch (Throwable t) {
-      Logger.warn(
-          "Odin static init: failed to register default databases: {}",
-          t.getMessage());
-    }
-  }
+  // Startup strictly enforces DB readiness before any other components start
 
   private Odin() {
   }
@@ -100,28 +93,43 @@ public final class Odin {
   private static void startComponents() {
     ExecutorService executor = Executors.newCachedThreadPool();
 
-//    // In case classloading order prevented static init or tests reset state
-//    if (!hasDatabase("db")) {
-//      registerDefaultDatabases();
-//    }
-//    // If only primary DB got registered earlier and logs failed, ensure logs is registered now
-//    if (!hasDatabase("logs")) {
-//      try {
-//        registerDatabase("logs", buildLogsDbConfig());
-//        Logger.info("Odin: registered 'logs' database after startup guard");
-//      } catch (Exception e) {
-//        Logger.warn("Odin: failed to register 'logs' database in startup guard: {}",
-//            e.getMessage());
-//      }
-//    }
+    // Enforce DB readiness with timeout before starting any other component
+    try {
+      long timeoutMs = ApplicationConfig.STARTUP_DB_TIMEOUT_MS;
+      Logger.info("Odin: Initializing databases (timeout: {} ms)", timeoutMs);
+      long startTs = System.currentTimeMillis();
 
-    while (!DBS_READY) {
+      ExecutorService initExec = Executors.newSingleThreadExecutor(
+          r -> new Thread(r, "jaws-db-init"));
       try {
-        Thread.sleep(100);
-        Logger.info("Odin: waiting for databases to be ready");
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
+        java.util.concurrent.Future<?> f = initExec.submit(() -> {
+          Logger.info("Odin: Registering default databases ...");
+          registerDefaultDatabases();
+        });
+        f.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+        long took = System.currentTimeMillis() - startTs;
+        Logger.info("Odin: Databases initialized successfully in {} ms", took);
+      } finally {
+        initExec.shutdownNow();
       }
+    } catch (java.util.concurrent.TimeoutException te) {
+      Logger.error("Odin: Database initialization timed out. Shutting down.");
+      // Hard exit as per policy
+      System.exit(1);
+      return;
+    } catch (Exception e) {
+      Logger.error("Odin: Database initialization failed: {}", e.getMessage());
+      System.exit(1);
+      return;
+    }
+
+    // At this point, both 'db' and 'logs' are registered and ready. Bootstrap logger.
+    try {
+      JawsLogger.bootstrap(getDB("logs"));
+    } catch (Throwable t) {
+      Logger.error("Odin: Failed to bootstrap JawsLogger with 'logs' DB: {}", t.getMessage());
+      System.exit(1);
+      return;
     }
 
     createNjord();
@@ -191,31 +199,34 @@ public final class Odin {
   }
 
   private static void registerDefaultDatabases() {
+    Logger.info("Odin: Registering database alias 'db'");
+    List<DatabaseSeeder> dbSeeders = new ArrayList<>();
+    dbSeeders.add(new AdminBootstrapSeeder());
     registerDatabase("db", new DatabaseConfig(
         ApplicationConfig.DATABASE_PATH,
-        Optional.ofNullable(ApplicationConfig.DATABASE_SCHEMA_PATH),
+        ApplicationConfig.DATABASE_SCHEMA_PATH,
         ApplicationConfig.MIMIR_READER_POOL_SIZE,
         ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
         ApplicationConfig.MIMIR_ENABLE_WAL,
         ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
-        Optional.empty(),
-        Optional.of("jaws-writer"),
-        Optional.of("jaws-reader")));
+        null,
+        "jaws-writer",
+        "jaws-reader",
+        dbSeeders));
 
+    Logger.info("Odin: Registering database alias 'logs'");
     registerDatabase("logs", new DatabaseConfig(
         Paths.get("src/main/resources/logs.db").toAbsolutePath().toString(),
-        Optional.of(Paths.get("src/main/resources/sql/logs_schema.sql")
-            .toAbsolutePath().toString()),
+        Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
         Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
         ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
         true,
         ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
-        Optional.empty(),
-        Optional.of("jaws-logs-writer"),
-        Optional.of("jaws-logs-reader")
+        null,
+        "jaws-logs-writer",
+        "jaws-logs-reader",
+        null
     ));
-
-    DBS_READY = true;
   }
 
   public static synchronized void registerDatabase(String name, DatabaseConfig cfg) {
@@ -227,16 +238,52 @@ public final class Odin {
     }
     try {
       Verdandi v = new Verdandi(cfg);
+      Logger.info("Odin: Initializing database '{}' ...", name);
       v.initialize();
 
-      // block until ready
-      while (!v.isReady()) {
-        Thread.sleep(100);
+      // Ensure readiness flag is true after initialize()
+      if (!v.isReady()) {
+        throw new IllegalStateException("Database did not report ready after initialization");
+      }
+
+      // Create Mimir instance backed by this connector
+      Mimir mimir = new Mimir(v);
+
+      // Execute optional seeders synchronously (fail-fast)
+      if (cfg.seeders() != null) {
+        for (DatabaseSeeder seeder : cfg.seeders()) {
+          long st = System.currentTimeMillis();
+          Logger.info("Odin: Running seeder '{}' for database '{}' ...", seeder.name(), name);
+          try {
+            mimir.beginTransaction();
+            try {
+              seeder.run(mimir);
+              mimir.commitTransaction();
+            } catch (Exception se) {
+              try {
+                mimir.rollbackTransaction();
+              } catch (Exception ignore) {
+              }
+              throw se;
+            }
+          } catch (Exception ex) {
+            Logger.error("Odin: Seeder '{}' failed for database '{}': {}", seeder.name(), name,
+                ex.getMessage());
+            throw new RuntimeException(
+                "Seeder '" + seeder.name() + "' failed for database '" + name + "'", ex);
+          } finally {
+            Logger.info("Odin: Seeder '{}' for database '{}' completed in {} ms", seeder.name(),
+                name,
+                (System.currentTimeMillis() - st));
+          }
+        }
       }
 
       DB_CONNECTORS.put(name, v);
-      DBS.put(name, new Mimir(v));
+      DBS.put(name, mimir);
+      Logger.info("Odin: Database '{}' is ready", name);
     } catch (Exception e) {
+      Logger.error("Odin: Failed to register database '{}': {}", name, e.getMessage());
       throw new RuntimeException("Failed to register database '" + name + "'", e);
     }
   }

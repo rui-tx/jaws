@@ -2,8 +2,6 @@ package org.ruitx.www.model.auth;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Optional;
-import org.ruitx.jaws.types.Row;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record Role(
@@ -21,32 +19,6 @@ public record Role(
    */
   public static Builder builder() {
     return new Builder();
-  }
-
-  /**
-   * Creates a Role instance from a database row.
-   *
-   * @param row the database row containing role data
-   * @return an Optional containing the Role if all required fields are present, empty otherwise
-   */
-  public static Optional<Role> fromRow(Row row) {
-    Optional<Integer> id = row.getInt("id");
-    Optional<String> name = row.getString("name");
-    Optional<String> description = row.getString("description");
-    Optional<Long> createdAt = row.getUnixTimestamp("created_at");
-    Optional<Long> updatedAt = row.getUnixTimestamp("updated_at");
-
-    if (id.isEmpty() || name.isEmpty() || createdAt.isEmpty()) {
-      return Optional.empty(); // Essential fields must be present
-    }
-
-    return Optional.of(Role.builder()
-        .id(id.get())
-        .name(name.get())
-        .description(description.orElse(null))
-        .createdAt(createdAt.get())
-        .updatedAt(updatedAt.orElse(null))
-        .build());
   }
 
   public static final class Builder {

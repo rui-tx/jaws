@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 import org.ruitx.jaws.components.Tyr;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.tinylog.Logger;
 
 /**
  * ApplicationConfig is a utility class that provides configuration settings for the JAWS
@@ -38,6 +38,8 @@ public class ApplicationConfig {
   public static final int DEFAULT_BATCH_SIZE = 1000;
   public static final long DEFAULT_FLUSH_INTERVAL_MS = 5000;
   public static final int DEFAULT_BUFFER_CAPACITY = 10000;
+  // Startup barrier
+  public static final long DEFAULT_STARTUP_DB_TIMEOUT_MS = 30000; // 30 seconds
 
   // RateLimiter
   public static final int DEFAULT_RATE_LIMIT_MAX_REQUESTS = 100;
@@ -77,6 +79,7 @@ public class ApplicationConfig {
   public static final int BATCH_SIZE;
   public static final long FLUSH_INTERVAL_MS;
   public static final int BUFFER_CAPACITY;
+  public static final long STARTUP_DB_TIMEOUT_MS;
 
   // RateLimiter
   public static final int RATE_LIMIT_MAX_REQUESTS;
@@ -100,7 +103,7 @@ public class ApplicationConfig {
         new FileInputStream("src/main/resources/application.properties")) {
       properties.load(fis);
     } catch (IOException e) {
-      JawsLogger.warn(
+      Logger.warn(
           "Could not load application.properties, will use environment variables or defaults");
     }
 
@@ -127,6 +130,7 @@ public class ApplicationConfig {
     BATCH_SIZE = getBatchSizeValue();
     FLUSH_INTERVAL_MS = getFlushIntervalMsValue();
     BUFFER_CAPACITY = getBufferCapacityValue();
+    STARTUP_DB_TIMEOUT_MS = getStartupDbTimeoutMsValue();
 
     // Initialize RateLimiter configuration
     RATE_LIMIT_MAX_REQUESTS = getRateLimitMaxRequestsValue();
@@ -142,35 +146,35 @@ public class ApplicationConfig {
     MIMIR_ENABLE_WAL = getMimirEnableWalValue();
     MIMIR_SYNCHRONOUS_MODE = getMimirSynchronousModeValue();
 
-    JawsLogger.info("JAWS Configuration");
-    JawsLogger.info("--------------------------------");
-    JawsLogger.info("URL: " + URL);
-    JawsLogger.info("PORT: " + PORT);
-    JawsLogger.info("WWW_PATH: " + WWW_PATH);
-    JawsLogger.info("WWW_BLOCKED_PATTERNS: " + WWW_BLOCKED_PATTERNS);
-    JawsLogger.info("CUSTOM_PAGE_PATH_401: " + CUSTOM_PAGE_PATH_401);
-    JawsLogger.info("CUSTOM_PAGE_PATH_404: " + CUSTOM_PAGE_PATH_404);
-    JawsLogger.info("DATABASE_PATH: " + DATABASE_PATH);
-    JawsLogger.info("DATABASE_SCHEMA_PATH: " + DATABASE_SCHEMA_PATH);
-    JawsLogger.info("JWT_SECRET: [REDACTED]");
-    JawsLogger.info("HERMOD_DEVELOPMENT_MODE: " + HERMOD_DEVELOPMENT_MODE);
-    JawsLogger.info("HERMOD_TEMPLATE_CACHE_TTL: " + HERMOD_TEMPLATE_CACHE_TTL);
-    JawsLogger.info("WORKER_THREADS: " + WORKER_THREADS);
-    JawsLogger.info("QUEUE_CAPACITY: " + QUEUE_CAPACITY);
-    JawsLogger.info("CLEANUP_INTERVAL_MS: " + CLEANUP_INTERVAL_MS);
-    JawsLogger.info("DB_LEVEL: " + DB_LEVEL);
-    JawsLogger.info("BATCH_SIZE: " + BATCH_SIZE);
-    JawsLogger.info("FLUSH_INTERVAL_MS: " + FLUSH_INTERVAL_MS);
-    JawsLogger.info("BUFFER_CAPACITY: " + BUFFER_CAPACITY);
-    JawsLogger.info("RATE_LIMIT_MAX_REQUESTS: " + RATE_LIMIT_MAX_REQUESTS);
-    JawsLogger.info("RATE_LIMIT_WINDOW_MS: " + RATE_LIMIT_WINDOW_MS);
-    JawsLogger.info("MIMIR_CACHE_ENABLED: " + MIMIR_CACHE_ENABLED);
-    JawsLogger.info("MIMIR_CACHE_MAX_SIZE: " + MIMIR_CACHE_MAX_SIZE);
-    JawsLogger.info("MIMIR_READER_POOL_SIZE: " + MIMIR_READER_POOL_SIZE);
-    JawsLogger.info("MIMIR_BUSY_TIMEOUT_MS: " + MIMIR_BUSY_TIMEOUT_MS);
-    JawsLogger.info("MIMIR_ENABLE_WAL: " + MIMIR_ENABLE_WAL);
-    JawsLogger.info("MIMIR_SYNCHRONOUS_MODE: " + MIMIR_SYNCHRONOUS_MODE);
-    JawsLogger.info("--------------------------------");
+    Logger.info("JAWS Configuration");
+    Logger.info("--------------------------------");
+    Logger.info("URL: " + URL);
+    Logger.info("PORT: " + PORT);
+    Logger.info("WWW_PATH: " + WWW_PATH);
+    Logger.info("WWW_BLOCKED_PATTERNS: " + WWW_BLOCKED_PATTERNS);
+    Logger.info("CUSTOM_PAGE_PATH_401: " + CUSTOM_PAGE_PATH_401);
+    Logger.info("CUSTOM_PAGE_PATH_404: " + CUSTOM_PAGE_PATH_404);
+    Logger.info("DATABASE_PATH: " + DATABASE_PATH);
+    Logger.info("DATABASE_SCHEMA_PATH: " + DATABASE_SCHEMA_PATH);
+    Logger.info("JWT_SECRET: [REDACTED]");
+    Logger.info("HERMOD_DEVELOPMENT_MODE: " + HERMOD_DEVELOPMENT_MODE);
+    Logger.info("HERMOD_TEMPLATE_CACHE_TTL: " + HERMOD_TEMPLATE_CACHE_TTL);
+    Logger.info("WORKER_THREADS: " + WORKER_THREADS);
+    Logger.info("QUEUE_CAPACITY: " + QUEUE_CAPACITY);
+    Logger.info("CLEANUP_INTERVAL_MS: " + CLEANUP_INTERVAL_MS);
+    Logger.info("DB_LEVEL: " + DB_LEVEL);
+    Logger.info("BATCH_SIZE: " + BATCH_SIZE);
+    Logger.info("FLUSH_INTERVAL_MS: " + FLUSH_INTERVAL_MS);
+    Logger.info("BUFFER_CAPACITY: " + BUFFER_CAPACITY);
+    Logger.info("RATE_LIMIT_MAX_REQUESTS: " + RATE_LIMIT_MAX_REQUESTS);
+    Logger.info("RATE_LIMIT_WINDOW_MS: " + RATE_LIMIT_WINDOW_MS);
+    Logger.info("MIMIR_CACHE_ENABLED: " + MIMIR_CACHE_ENABLED);
+    Logger.info("MIMIR_CACHE_MAX_SIZE: " + MIMIR_CACHE_MAX_SIZE);
+    Logger.info("MIMIR_READER_POOL_SIZE: " + MIMIR_READER_POOL_SIZE);
+    Logger.info("MIMIR_BUSY_TIMEOUT_MS: " + MIMIR_BUSY_TIMEOUT_MS);
+    Logger.info("MIMIR_ENABLE_WAL: " + MIMIR_ENABLE_WAL);
+    Logger.info("MIMIR_SYNCHRONOUS_MODE: " + MIMIR_SYNCHRONOUS_MODE);
+    Logger.info("--------------------------------");
   }
 
   private ApplicationConfig() {
@@ -182,7 +186,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid PORT environment variable value: " + envValue);
+        Logger.warn("Invalid PORT environment variable value: " + envValue);
       }
     }
 
@@ -191,7 +195,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid port in properties file: " + propValue);
+        Logger.warn("Invalid port in properties file: " + propValue);
       }
     }
 
@@ -237,10 +241,10 @@ public class ApplicationConfig {
         "jwt.secret",
         null);
     if (jwtSecret == null || jwtSecret.isEmpty()) {
-      JawsLogger.warn("JWT Token not found, generating a new one");
+      Logger.warn("JWT Token not found, generating a new one");
       String jwtToken = Tyr.createSecreteKey();
-      JawsLogger.info("JWT Token: " + jwtToken);
-      JawsLogger.warn("Please save this token in a safe place, it will not be shown again");
+      Logger.info("JWT Token: " + jwtToken);
+      Logger.warn("Please save this token in a safe place, it will not be shown again");
       return jwtToken;
     }
     return jwtSecret;
@@ -268,7 +272,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid WORKER_THREADS environment variable value: " + envValue);
+        Logger.warn("Invalid WORKER_THREADS environment variable value: " + envValue);
       }
     }
 
@@ -277,7 +281,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid freyr.queue.workers in properties file: " + propValue);
+        Logger.warn("Invalid freyr.queue.workers in properties file: " + propValue);
       }
     }
 
@@ -290,7 +294,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid QUEUE_CAPACITY environment variable value: " + envValue);
+        Logger.warn("Invalid QUEUE_CAPACITY environment variable value: " + envValue);
       }
     }
 
@@ -299,7 +303,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid freyr.queue.size in properties file: " + propValue);
+        Logger.warn("Invalid freyr.queue.size in properties file: " + propValue);
       }
     }
 
@@ -312,7 +316,7 @@ public class ApplicationConfig {
       try {
         return Long.parseLong(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid CLEANUP_INTERVAL_MS environment variable value: " + envValue);
+        Logger.warn("Invalid CLEANUP_INTERVAL_MS environment variable value: " + envValue);
       }
     }
 
@@ -321,7 +325,7 @@ public class ApplicationConfig {
       try {
         return Long.parseLong(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid freyr.queue.interval_cleanup in properties file: " + propValue);
+        Logger.warn("Invalid freyr.queue.interval_cleanup in properties file: " + propValue);
       }
     }
 
@@ -348,7 +352,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid BATCH_SIZE environment variable value: " + envValue);
+        Logger.warn("Invalid BATCH_SIZE environment variable value: " + envValue);
       }
     }
 
@@ -357,7 +361,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid jawslogger.batchsize in properties file: " + propValue);
+        Logger.warn("Invalid jawslogger.batchsize in properties file: " + propValue);
       }
     }
 
@@ -370,7 +374,7 @@ public class ApplicationConfig {
       try {
         return Long.parseLong(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid FLUSH_INTERVAL_MS environment variable value: " + envValue);
+        Logger.warn("Invalid FLUSH_INTERVAL_MS environment variable value: " + envValue);
       }
     }
 
@@ -379,11 +383,33 @@ public class ApplicationConfig {
       try {
         return Long.parseLong(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid jawslogger.flush_interval in properties file: " + propValue);
+        Logger.warn("Invalid jawslogger.flush_interval in properties file: " + propValue);
       }
     }
 
     return DEFAULT_FLUSH_INTERVAL_MS;
+  }
+
+  private static long getStartupDbTimeoutMsValue() {
+    String envValue = System.getenv("STARTUP_DB_TIMEOUT_MS");
+    if (envValue != null) {
+      try {
+        return Long.parseLong(envValue);
+      } catch (NumberFormatException e) {
+        Logger.warn("Invalid STARTUP_DB_TIMEOUT_MS environment variable value: " + envValue);
+      }
+    }
+
+    String propValue = properties.getProperty("startup.db.timeout.ms");
+    if (propValue != null) {
+      try {
+        return Long.parseLong(propValue);
+      } catch (NumberFormatException e) {
+        Logger.warn("Invalid startup.db.timeout.ms in properties file: " + propValue);
+      }
+    }
+
+    return DEFAULT_STARTUP_DB_TIMEOUT_MS;
   }
 
   private static int getBufferCapacityValue() {
@@ -392,7 +418,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid BUFFER_CAPACITY environment variable value: " + envValue);
+        Logger.warn("Invalid BUFFER_CAPACITY environment variable value: " + envValue);
       }
     }
 
@@ -401,7 +427,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid jawsLogger.buffer_capacity in properties file: " + propValue);
+        Logger.warn("Invalid jawsLogger.buffer_capacity in properties file: " + propValue);
       }
     }
 
@@ -414,7 +440,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid RATE_LIMIT_MAX_REQUESTS environment variable value: " + envValue);
+        Logger.warn("Invalid RATE_LIMIT_MAX_REQUESTS environment variable value: " + envValue);
       }
     }
 
@@ -423,7 +449,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid ratelimiter.max.requests in properties file: " + propValue);
+        Logger.warn("Invalid ratelimiter.max.requests in properties file: " + propValue);
       }
     }
 
@@ -436,7 +462,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid RATE_LIMIT_WINDOW_MS environment variable value: " + envValue);
+        Logger.warn("Invalid RATE_LIMIT_WINDOW_MS environment variable value: " + envValue);
       }
     }
 
@@ -445,7 +471,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid ratelimiter.window.ms in properties file: " + propValue);
+        Logger.warn("Invalid ratelimiter.window.ms in properties file: " + propValue);
       }
     }
 
@@ -470,7 +496,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid MIMIR_CACHE_MAX_SIZE env var: " + envValue);
+        Logger.warn("Invalid MIMIR_CACHE_MAX_SIZE env var: " + envValue);
       }
     }
     String propValue = properties.getProperty("mimir.cache.maxSize");
@@ -478,7 +504,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid mimir.cache.maxSize in properties: " + propValue);
+        Logger.warn("Invalid mimir.cache.maxSize in properties: " + propValue);
       }
     }
     return DEFAULT_MIMIR_CACHE_MAX_SIZE;
@@ -527,7 +553,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid MIMIR_READER_POOL_SIZE env var: " + envValue);
+        Logger.warn("Invalid MIMIR_READER_POOL_SIZE env var: " + envValue);
       }
     }
     String propValue = properties.getProperty("mimir.reader.pool.size");
@@ -535,7 +561,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid mimir.reader.pool.size in properties: " + propValue);
+        Logger.warn("Invalid mimir.reader.pool.size in properties: " + propValue);
       }
     }
     return DEFAULT_MIMIR_READER_POOL_SIZE;
@@ -547,7 +573,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(envValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid MIMIR_BUSY_TIMEOUT_MS env var: " + envValue);
+        Logger.warn("Invalid MIMIR_BUSY_TIMEOUT_MS env var: " + envValue);
       }
     }
     String propValue = properties.getProperty("mimir.busy.timeout.ms");
@@ -555,7 +581,7 @@ public class ApplicationConfig {
       try {
         return Integer.parseInt(propValue);
       } catch (NumberFormatException e) {
-        JawsLogger.warn("Invalid mimir.busy.timeout.ms in properties: " + propValue);
+        Logger.warn("Invalid mimir.busy.timeout.ms in properties: " + propValue);
       }
     }
     return DEFAULT_MIMIR_BUSY_TIMEOUT_MS;

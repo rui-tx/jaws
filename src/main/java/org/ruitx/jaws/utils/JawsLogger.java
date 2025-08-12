@@ -35,13 +35,11 @@ public class JawsLogger {
       r -> new Thread(r, "jaws-logger-batch-scheduler"));
   private static volatile Mimir logsDb;
   private static volatile boolean dbAvailable;
+  private static volatile boolean initialized = false;
   private static volatile boolean schedulerStarted = false;
   private static volatile boolean batchingEnabled = true;
 
   static {
-    // Try initial bind; if not available yet, we will retry lazily on first use
-    tryBindLogsDb();
-
     // Shutdown hook to flush remaining logs (DB managed by Odin)
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       batchingEnabled = false;
@@ -281,9 +279,6 @@ public class JawsLogger {
    * Check if database logging is available
    */
   public static boolean isDatabaseLoggingAvailable() {
-    if (!dbAvailable) {
-      tryBindLogsDb();
-    }
     return dbAvailable;
   }
 
@@ -291,9 +286,6 @@ public class JawsLogger {
    * Get the logs database path
    */
   public static String getLogsDatabasePath() {
-    if (!dbAvailable) {
-      tryBindLogsDb();
-    }
     return dbAvailable ? logsDb.getDatabasePath() : null;
   }
 
@@ -359,8 +351,8 @@ public class JawsLogger {
       String message,
       Throwable exception,
       String traceId) {
-    if (!dbAvailable) {
-      tryBindLogsDb();
+    if (!initialized) {
+      throw new IllegalStateException("JawsLogger used before initialization");
     }
     if (!dbAvailable || !batchingEnabled) {
       return; // Skip queuing if database unavailable or batching disabled
@@ -522,9 +514,6 @@ public class JawsLogger {
    */
   private static void writeBatchDirectly(List<LogEntry> batch) {
     if (logsDb == null) {
-      tryBindLogsDb();
-    }
-    if (logsDb == null) {
       return;
     }
 
@@ -650,31 +639,19 @@ public class JawsLogger {
     }
   }
 
-  // Attempt to bind the logs DB from Odin. Safe to call multiple times.
-  private static void tryBindLogsDb() {
-    if (logsDb != null) {
+  // Bootstrap must be called by Odin after DBs are ready
+  public static synchronized void bootstrap(Mimir logsDatabase) {
+    if (initialized) {
       return;
     }
-
-    try {
-
-      while (!Odin.getDB("logs").isInitialized()) {
-        Logger.info("JawsLogger: Waiting for 'logs' database to be initialized");
-        Thread.sleep(100);
-      }
-
-      Odin.findDb("logs").ifPresent(db -> {
-        logsDb = db;
-        dbAvailable = true;
-        startSchedulerIfNeeded();
-        Logger.info("JawsLogger: Database logging initialized using registry alias 'logs'");
-      });
-      if (logsDb == null) {
-        Logger.warn("JawsLogger: No 'logs' database registered yet, console-only logging");
-      }
-    } catch (Throwable t) {
-      Logger.warn("JawsLogger: Failed to bind 'logs' database: {}", t.getMessage());
+    if (logsDatabase == null) {
+      throw new IllegalArgumentException("logsDatabase must not be null");
     }
+    logsDb = logsDatabase;
+    dbAvailable = true;
+    startSchedulerIfNeeded();
+    initialized = true;
+    Logger.info("JawsLogger: Database logging initialized");
   }
 
   private static synchronized void startSchedulerIfNeeded() {

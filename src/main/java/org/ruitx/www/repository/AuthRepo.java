@@ -10,21 +10,24 @@ import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.interfaces.Cacheable;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.db.mapping.UserMapper;
+import org.ruitx.jaws.db.mapping.RoleMapper;
+import org.ruitx.jaws.db.mapping.UserRoleMapper;
+import org.ruitx.jaws.db.mapping.UserSessionMapper;
 import org.ruitx.www.model.auth.Role;
 import org.ruitx.www.model.auth.User;
 import org.ruitx.www.model.auth.UserRole;
 import org.ruitx.www.model.auth.UserSession;
+import org.ruitx.jaws.db.repo.BaseRepo;
 
-public class AuthRepo {
-
-  private final Mimir db;
+public class AuthRepo extends BaseRepo {
 
   public AuthRepo() {
     this(Odin.getDB());
   }
 
   public AuthRepo(Mimir db) {
-    this.db = db;
+    super(db);
   }
 
   public AuthRepo(String dbAlias) {
@@ -83,11 +86,11 @@ public class AuthRepo {
 
   @Cacheable(tables = {"USER_SESSION"})
   public Optional<UserSession> findActiveSessionByRefreshToken(String refreshToken) {
-    Row result = db.getRow(
+    return getOne(
         "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
+        UserSessionMapper.INSTANCE,
         refreshToken
-    ).get();
-    return UserSession.fromRow(result);
+    );
   }
 
   public void deactivateSession(String refreshToken) {
@@ -114,20 +117,20 @@ public class AuthRepo {
 
   @Cacheable(tables = {"USER"})
   public Optional<User> getUserByUsername(String username) {
-    Optional<Row> row = db.getRow("SELECT * FROM USER WHERE user = ?", username);
-    if (row.isEmpty()) {
-      return Optional.empty();
-    }
-    return User.fromRow(row.get());
+    return getOne(
+        "SELECT * FROM USER WHERE user = ?",
+        UserMapper.INSTANCE,
+        username
+    );
   }
 
   @Cacheable(tables = {"USER"})
   public Optional<User> getUserById(Long id) {
-    Optional<Row> row = db.getRow("SELECT * FROM USER WHERE id = ?", id);
-    if (row.isEmpty()) {
-      return Optional.empty();
-    }
-    return User.fromRow(row.get());
+    return getOne(
+        "SELECT * FROM USER WHERE id = ?",
+        UserMapper.INSTANCE,
+        id
+    );
   }
 
   public Optional<User> getUserById(Integer id) {
@@ -136,11 +139,10 @@ public class AuthRepo {
 
   @Cacheable(tables = {"USER"})
   public List<User> getAllUsers() {
-    List<Row> rows = db.getRows("SELECT * FROM USER ORDER BY created_at DESC");
-    return rows.stream()
-        .map(User::fromRow)
-        .flatMap(Optional::stream)
-        .toList();
+    return getAll(
+        "SELECT * FROM USER ORDER BY created_at DESC",
+        UserMapper.INSTANCE
+    );
   }
 
   // schedule method
@@ -161,27 +163,17 @@ public class AuthRepo {
     if (userId == null) {
       return new ArrayList<>();
     }
-
-    try {
-      List<Row> rows = db.getRows(
-          """
-              SELECT r.name 
-              FROM USER_ROLE ur 
-              JOIN ROLE r ON ur.role_id = r.id 
-              WHERE ur.user_id = ?
-              ORDER BY r.name
-              """,
-          userId
-      );
-
-      return rows.stream()
-          .map(row -> row.getString("name").orElse(""))
-          .filter(name -> !name.isEmpty())
-          .toList();
-    } catch (Exception e) {
-      JawsLogger.error("Failed to get user roles for user {}: {}", userId, e.getMessage());
-      return new ArrayList<>();
-    }
+    return getAll(
+        """
+            SELECT r.name 
+            FROM USER_ROLE ur 
+            JOIN ROLE r ON ur.role_id = r.id 
+            WHERE ur.user_id = ?
+            ORDER BY r.name
+            """,
+        r -> r.getString("name").orElse(""),
+        userId
+    ).stream().filter(name -> !name.isEmpty()).toList();
   }
 
   /**
@@ -196,23 +188,16 @@ public class AuthRepo {
     if (userId == null || roleName == null || roleName.trim().isEmpty()) {
       return false;
     }
-
-    try {
-      Optional<Row> row = db.getRow(
-          """
-              SELECT COUNT(*) as count 
-              FROM USER_ROLE ur 
-              JOIN ROLE r ON ur.role_id = r.id 
-              WHERE ur.user_id = ? AND r.name = ?
-              """,
-          userId, roleName.trim()
-      );
-
-      return row.isPresent() && row.get().getInt("count").orElse(0) > 0;
-    } catch (Exception e) {
-      JawsLogger.error("Failed to check role {} for user {}: {}", roleName, userId, e.getMessage());
-      return false;
-    }
+    return getOne(
+        """
+            SELECT COUNT(*) as count 
+            FROM USER_ROLE ur 
+            JOIN ROLE r ON ur.role_id = r.id 
+            WHERE ur.user_id = ? AND r.name = ?
+            """,
+        r -> r.getInt("count").orElse(0) > 0,
+        userId, roleName.trim()
+    ).orElse(false);
   }
 
   /**
@@ -222,16 +207,10 @@ public class AuthRepo {
    */
   @Cacheable(tables = {"ROLE"})
   public List<Role> getAllRoles() {
-    try {
-      List<Row> rows = db.getRows("SELECT * FROM ROLE ORDER BY name");
-      return rows.stream()
-          .map(Role::fromRow)
-          .flatMap(Optional::stream)
-          .toList();
-    } catch (Exception e) {
-      JawsLogger.error("Failed to get all roles: {}", e.getMessage());
-      return new ArrayList<>();
-    }
+    return getAll(
+        "SELECT * FROM ROLE ORDER BY name",
+        RoleMapper.INSTANCE
+    );
   }
 
   /**
@@ -245,14 +224,11 @@ public class AuthRepo {
     if (roleName == null || roleName.trim().isEmpty()) {
       return Optional.empty();
     }
-
-    try {
-      Optional<Row> row = db.getRow("SELECT * FROM ROLE WHERE name = ?", roleName.trim());
-      return row.isPresent() ? Role.fromRow(row.get()) : Optional.empty();
-    } catch (Exception e) {
-      JawsLogger.error("Failed to get role by name {}: {}", roleName, e.getMessage());
-      return Optional.empty();
-    }
+    return getOne(
+        "SELECT * FROM ROLE WHERE name = ?",
+        RoleMapper.INSTANCE,
+        roleName.trim()
+    );
   }
 
   /**
@@ -266,14 +242,11 @@ public class AuthRepo {
     if (roleId == null) {
       return Optional.empty();
     }
-
-    try {
-      Optional<Row> row = db.getRow("SELECT * FROM ROLE WHERE id = ?", roleId);
-      return row.isPresent() ? Role.fromRow(row.get()) : Optional.empty();
-    } catch (Exception e) {
-      JawsLogger.error("Failed to get role by ID {}: {}", roleId, e.getMessage());
-      return Optional.empty();
-    }
+    return getOne(
+        "SELECT * FROM ROLE WHERE id = ?",
+        RoleMapper.INSTANCE,
+        roleId
+    );
   }
 
   /**
@@ -401,16 +374,10 @@ public class AuthRepo {
    */
   @Cacheable(tables = {"USER_ROLE"}, ttl = 60000)
   public List<UserRole> getAllUserRoles() {
-    try {
-      List<Row> rows = db.getRows("SELECT * FROM USER_ROLE ORDER BY assigned_at DESC");
-      return rows.stream()
-          .map(UserRole::fromRow)
-          .flatMap(Optional::stream)
-          .toList();
-    } catch (Exception e) {
-      JawsLogger.error("Failed to get all user roles: {}", e.getMessage());
-      return new ArrayList<>();
-    }
+    return getAll(
+        "SELECT * FROM USER_ROLE ORDER BY assigned_at DESC",
+        UserRoleMapper.INSTANCE
+    );
   }
 
   /**
@@ -424,15 +391,11 @@ public class AuthRepo {
     if (roleId == null) {
       return 0;
     }
-
-    try {
-      Optional<Row> row = db.getRow("SELECT COUNT(*) as count FROM USER_ROLE WHERE role_id = ?",
-          roleId);
-      return row.isPresent() ? row.get().getInt("count").orElse(0) : 0;
-    } catch (Exception e) {
-      JawsLogger.error("Failed to get user count for role {}: {}", roleId, e.getMessage());
-      return 0;
-    }
+    return getOne(
+        "SELECT COUNT(*) as count FROM USER_ROLE WHERE role_id = ?",
+        r -> r.getInt("count").orElse(0),
+        roleId
+    ).orElse(0);
   }
 
   /**

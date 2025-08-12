@@ -5,6 +5,7 @@ package org.ruitx.jaws.utils;
  */
 public class LogEntry {
 
+  private final Integer id;
   private final long timestamp;
   private final String level;
   private final String logger;
@@ -29,6 +30,12 @@ public class LogEntry {
    */
   public LogEntry(long timestamp, String level, String logger, String thread,
       String message, String exception, String method, int lineNumber, String traceId) {
+    this(null, timestamp, level, logger, thread, message, exception, method, lineNumber, traceId);
+  }
+
+  public LogEntry(Integer id, long timestamp, String level, String logger, String thread,
+      String message, String exception, String method, int lineNumber, String traceId) {
+    this.id = id;
     this.timestamp = timestamp;
     this.level = level;
     this.logger = logger;
@@ -41,6 +48,11 @@ public class LogEntry {
   }
 
   // Getters
+
+  public Integer getId() {
+    return id;
+  }
+
   public long getTimestamp() {
     return timestamp;
   }
