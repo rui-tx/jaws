@@ -21,8 +21,8 @@ public class BackofficeRepo {
   private final Mimir logsDb;
 
   public BackofficeRepo() {
-    this.db = Odin.getMimir("db");
-    this.logsDb = Odin.getMimir("logs");
+    this.db = Odin.getDB("db");
+    this.logsDb = Odin.getDB("logs");
   }
 
   /**

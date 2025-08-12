@@ -12,7 +12,7 @@ import org.tinylog.Logger;
  */
 public class JobResultStore {
 
-  private static final Mimir mimir = Odin.getMimir("db");
+  private static final Mimir mimir = Odin.getDB("db");
 
   /**
    * Store a job result

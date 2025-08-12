@@ -20,15 +20,15 @@ public class AuthRepo {
   private final Mimir db;
 
   public AuthRepo() {
-    this(Odin.getMimir());
+    this(Odin.getDB());
   }
-  
+
   public AuthRepo(Mimir db) {
     this.db = db;
   }
 
   public AuthRepo(String dbAlias) {
-    this(Odin.getMimir(dbAlias));
+    this(Odin.getDB(dbAlias));
   }
 
   public Optional<Integer> createUser(String username,

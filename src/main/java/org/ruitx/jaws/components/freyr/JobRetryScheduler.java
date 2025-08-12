@@ -26,7 +26,7 @@ public class JobRetryScheduler {
   private static final long DEFAULT_CHECK_INTERVAL_MS = 30000L; // 30 seconds
   private static final int DEFAULT_BATCH_SIZE = 50; // Process up to 50 retries at once
 
-  private final Mimir mimir = Odin.getMimir("db");
+  private final Mimir mimir = Odin.getDB("db");
   private final JobRegistry jobRegistry;
   private final JobRetryManager retryManager = new JobRetryManager();
   private final DeadLetterQueue deadLetterQueue;

@@ -21,7 +21,7 @@ import org.tinylog.Logger;
  */
 public class DeadLetterQueue {
 
-  private final Mimir mimir = Odin.getMimir("db");
+  private final Mimir mimir = Odin.getDB("db");
   private final JobRegistry jobRegistry;
 
   public DeadLetterQueue() {

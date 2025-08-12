@@ -23,7 +23,7 @@ public class SequentialJobQueue {
 
   private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
 
-  private final Mimir mimir = Odin.getMimir("db");
+  private final Mimir mimir = Odin.getDB("db");
   private final BlockingQueue<Job> sequentialQueue;
   private final ExecutorService singleWorker;
   private final JobRetryManager retryManager;

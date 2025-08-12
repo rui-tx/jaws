@@ -19,7 +19,7 @@ public class JobRetryManager {
   private static final double DEFAULT_JITTER_FACTOR = 0.25; // ±25% jitter
   private static final int DEFAULT_EXPONENTIAL_BASE = 4; // 4x multiplier per retry
 
-  private final Mimir mimir = Odin.getMimir("db");
+  private final Mimir mimir = Odin.getDB("db");
   private final JobErrorClassifier errorClassifier = new JobErrorClassifier();
 
   /**

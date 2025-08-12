@@ -27,16 +27,15 @@ import org.tinylog.Logger;
  */
 public class JawsLogger {
 
-  private static volatile Mimir logsDb;
-  private static volatile boolean dbAvailable;
-  private static volatile boolean schedulerStarted = false;
-
   // Batch processing components
   private static final BlockingQueue<LogEntry> logBuffer = new LinkedBlockingQueue<>(
       BUFFER_CAPACITY);
   private static final AtomicInteger bufferSize = new AtomicInteger(0);
   private static final ScheduledExecutorService batchScheduler = Executors.newSingleThreadScheduledExecutor(
       r -> new Thread(r, "jaws-logger-batch-scheduler"));
+  private static volatile Mimir logsDb;
+  private static volatile boolean dbAvailable;
+  private static volatile boolean schedulerStarted = false;
   private static volatile boolean batchingEnabled = true;
 
   static {
@@ -651,30 +650,20 @@ public class JawsLogger {
     }
   }
 
-  /**
-   * Helper class to store caller information
-   */
-  private static class CallerInfo {
-
-    final String className;
-    final String methodName;
-    final int lineNumber;
-
-    CallerInfo(String className, String methodName, int lineNumber) {
-      this.className = className;
-      this.methodName = methodName;
-      this.lineNumber = lineNumber;
-    }
-  }
-
   // Attempt to bind the logs DB from Odin. Safe to call multiple times.
   private static void tryBindLogsDb() {
     if (logsDb != null) {
       return;
     }
+
     try {
-      // Avoid throwing; use Optional-based lookup
-      org.ruitx.jaws.components.Odin.findMimir("logs").ifPresent(db -> {
+
+      while (!Odin.getDB("logs").isInitialized()) {
+        Logger.info("JawsLogger: Waiting for 'logs' database to be initialized");
+        Thread.sleep(100);
+      }
+
+      Odin.findDb("logs").ifPresent(db -> {
         logsDb = db;
         dbAvailable = true;
         startSchedulerIfNeeded();
@@ -701,6 +690,22 @@ public class JawsLogger {
       schedulerStarted = true;
       Logger.info("JawsLogger: Batch logging enabled (batch_size={}, flush_interval={}ms)",
           BATCH_SIZE, FLUSH_INTERVAL_MS);
+    }
+  }
+
+  /**
+   * Helper class to store caller information
+   */
+  private static class CallerInfo {
+
+    final String className;
+    final String methodName;
+    final int lineNumber;
+
+    CallerInfo(String className, String methodName, int lineNumber) {
+      this.className = className;
+      this.methodName = methodName;
+      this.lineNumber = lineNumber;
     }
   }
 }

@@ -37,7 +37,7 @@ public class JawsLoggerJob extends BaseJob {
 
     // Get logs database from Odin registry
     try {
-      Mimir logsDb = Odin.getMimir("logs");
+      Mimir logsDb = Odin.getDB("logs");
 
       // Process all log entries in a single transaction for maximum performance
       logsDb.beginTransaction();

@@ -16,7 +16,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.crypto.SecretKey;
-import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.www.model.auth.UserSession;
@@ -62,7 +61,7 @@ public class Tyr {
         .signWith(key)
         .compact();
 
-    Mimir db = Odin.getMimir("db");
+    Mimir db = Odin.getDB("db");
     db.execute("""
             INSERT INTO USER_SESSION (
                 user_id, refresh_token, access_token, user_agent, ip_address, 
@@ -104,7 +103,7 @@ public class Tyr {
           .getPayload();
 
       // Get session from database
-      Mimir db = Odin.getMimir("db");
+      Mimir db = Odin.getDB("db");
       Row sessionRow = db.getRow(
           "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
           refreshToken
