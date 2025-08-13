@@ -2,9 +2,9 @@ package org.ruitx.jaws.configs;
 
 import java.util.List;
 import org.ruitx.www.controller.APIController;
-import org.ruitx.www.controller.AuthController;
-import org.ruitx.www.controller.BackofficeController;
-import org.ruitx.www.controller.CacheController;
+import org.ruitx.www.base.controller.AuthController;
+import org.ruitx.www.base.controller.BackofficeController;
+import org.ruitx.www.base.controller.CacheController;
 
 /**
  * Configuration class for dynamic routes in the application. This class holds a list of route

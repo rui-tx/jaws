@@ -400,12 +400,12 @@ public class ApplicationConfig {
       }
     }
 
-    String propValue = properties.getProperty("startup.db.timeout.ms");
+    String propValue = properties.getProperty("startup.mimir.timeout.ms");
     if (propValue != null) {
       try {
         return Long.parseLong(propValue);
       } catch (NumberFormatException e) {
-        Logger.warn("Invalid startup.db.timeout.ms in properties file: " + propValue);
+        Logger.warn("Invalid startup.mimir.timeout.ms in properties file: " + propValue);
       }
     }
 

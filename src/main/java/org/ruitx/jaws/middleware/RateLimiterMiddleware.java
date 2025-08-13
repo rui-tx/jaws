@@ -8,7 +8,7 @@ import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * RateLimiterMiddleware prevents clients from making too many requests in a short time period.

@@ -13,11 +13,11 @@ import org.ruitx.jaws.exceptions.OperationException;
 import org.ruitx.jaws.exceptions.ValidationException;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @Aspect
 public class ExceptionAspect {
-    
+
   // Pointcut to match any method in controllers
   @Pointcut("execution(* org.ruitx.www.controller..*(..))")
   public void controllerMethods() {

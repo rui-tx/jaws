@@ -6,8 +6,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.tinylog.Logger;
 
 /**
@@ -23,7 +23,7 @@ public class CircuitBreaker {
   // Instance fields
   private final String serviceName;
   private final Configuration config;
-  private final Mimir mimir = Odin.getDB("db");
+  private final Mimir mimir = Odin.getDB();
   // State management
   private final AtomicReference<State> state = new AtomicReference<>(State.CLOSED);
   private final AtomicLong lastStateChangeTime = new AtomicLong(System.currentTimeMillis());

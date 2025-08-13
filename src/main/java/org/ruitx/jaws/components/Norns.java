@@ -3,7 +3,7 @@ package org.ruitx.jaws.components;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * Norns is a service that manages scheduled tasks like a cron job.

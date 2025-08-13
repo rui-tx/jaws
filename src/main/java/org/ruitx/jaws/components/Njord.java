@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.strings.RequestType;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * Njord is a singleton class responsible for managing the routing of HTTP requests to their

@@ -11,8 +11,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.interfaces.Job;
 import org.tinylog.Logger;
 
@@ -23,7 +23,7 @@ public class SequentialJobQueue {
 
   private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
 
-  private final Mimir mimir = Odin.getDB("db");
+  private final Mimir mimir = Odin.getDB();
   private final BlockingQueue<Job> sequentialQueue;
   private final ExecutorService singleWorker;
   private final JobRetryManager retryManager;

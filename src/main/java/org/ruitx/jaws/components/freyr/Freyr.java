@@ -17,8 +17,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Page;
@@ -37,7 +37,7 @@ public class Freyr implements Runnable {
   private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
   private static final Object instanceLock = new Object();
   private static Freyr instance;
-  private final Mimir mimir = Odin.getDB("db");
+  private final Mimir mimir = Odin.getDB();
   private final JobRegistry jobRegistry;
   private final ExecutorService workerPool;
   private final PriorityBlockingQueue<JobInstance> jobQueue;

@@ -7,8 +7,8 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
@@ -17,7 +17,7 @@ import org.tinylog.Logger;
  */
 public class JobErrorClassifier {
 
-  private final Mimir mimir = Odin.getDB("db");
+  private final Mimir mimir = Odin.getDB();
 
   /**
    * Job-specific error classification We can add job-specific error classification here

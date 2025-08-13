@@ -8,10 +8,10 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.interfaces.IsolationLevel;
 import org.ruitx.jaws.interfaces.Transactional;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * TransactionAspect - Manages database transactions for methods annotated with @Transactional.

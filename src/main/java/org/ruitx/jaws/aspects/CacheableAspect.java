@@ -4,7 +4,7 @@ import java.util.Set;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.interfaces.Cacheable;
 import org.tinylog.Logger;
 

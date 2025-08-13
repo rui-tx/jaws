@@ -15,14 +15,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.ruitx.jaws.components.freyr.Freyr;
+import org.ruitx.jaws.components.mimir.DatabaseConfig;
+import org.ruitx.jaws.components.mimir.DatabaseSeeder;
+import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.components.mimir.Verdandi;
+import org.ruitx.jaws.components.mimir.seeders.AdminBootstrapSeeder;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.configs.MiddlewareConfig;
-import org.ruitx.jaws.db.DatabaseConfig;
-import org.ruitx.jaws.db.DatabaseSeeder;
-import org.ruitx.jaws.db.Verdandi;
-import org.ruitx.jaws.db.seeders.AdminBootstrapSeeder;
-import org.ruitx.jaws.utils.JawsLogger;
-import org.ruitx.www.service.AuthService;
+import org.ruitx.jaws.utils.logger.JawsLogger;
+import org.ruitx.www.base.service.AuthService;
 import org.tinylog.Logger;
 
 /**
@@ -41,11 +42,12 @@ import org.tinylog.Logger;
  */
 public final class Odin {
 
+  public static final String DB_NAME = "db";
+  public static final String LOGS_DB_NAME = "logs";
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final Map<String, Verdandi> DB_CONNECTORS = new ConcurrentHashMap<>();
   private static final Map<String, Mimir> DBS = new ConcurrentHashMap<>();
   private static Yggdrasill YGGDRASILL;
-  // Startup strictly enforces DB readiness before any other components start
 
   private Odin() {
   }
@@ -60,7 +62,7 @@ public final class Odin {
   }
 
   public static Mimir getDB() {
-    return getDB("db");
+    return getDB(DB_NAME);
   }
 
   public static Optional<Mimir> findDb(String name) {
@@ -100,7 +102,7 @@ public final class Odin {
       long startTs = System.currentTimeMillis();
 
       ExecutorService initExec = Executors.newSingleThreadExecutor(
-          r -> new Thread(r, "jaws-db-init"));
+          r -> new Thread(r, "jaws-mimir-init"));
       try {
         java.util.concurrent.Future<?> f = initExec.submit(() -> {
           Logger.info("Odin: Registering default databases ...");
@@ -125,9 +127,12 @@ public final class Odin {
 
     // At this point, both 'db' and 'logs' are registered and ready. Bootstrap logger.
     try {
-      JawsLogger.bootstrap(getDB("logs"));
+      JawsLogger.bootstrap(getDB(LOGS_DB_NAME));
     } catch (Throwable t) {
-      Logger.error("Odin: Failed to bootstrap JawsLogger with 'logs' DB: {}", t.getMessage());
+      Logger.error(
+          "Odin: Failed to bootstrap JawsLogger with {} DB: {}",
+          LOGS_DB_NAME,
+          t.getMessage());
       System.exit(1);
       return;
     }
@@ -199,10 +204,10 @@ public final class Odin {
   }
 
   private static void registerDefaultDatabases() {
-    Logger.info("Odin: Registering database alias 'db'");
+    Logger.info("Odin: Registering database alias {}", DB_NAME);
     List<DatabaseSeeder> dbSeeders = new ArrayList<>();
     dbSeeders.add(new AdminBootstrapSeeder());
-    registerDatabase("db", new DatabaseConfig(
+    registerDatabase(DB_NAME, new DatabaseConfig(
         ApplicationConfig.DATABASE_PATH,
         ApplicationConfig.DATABASE_SCHEMA_PATH,
         ApplicationConfig.MIMIR_READER_POOL_SIZE,
@@ -214,8 +219,8 @@ public final class Odin {
         "jaws-reader",
         dbSeeders));
 
-    Logger.info("Odin: Registering database alias 'logs'");
-    registerDatabase("logs", new DatabaseConfig(
+    Logger.info("Odin: Registering database alias {}", LOGS_DB_NAME);
+    registerDatabase(LOGS_DB_NAME, new DatabaseConfig(
         Paths.get("src/main/resources/logs.db").toAbsolutePath().toString(),
         Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
         Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),

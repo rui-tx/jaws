@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
@@ -21,7 +21,7 @@ import org.tinylog.Logger;
  */
 public class DeadLetterQueue {
 
-  private final Mimir mimir = Odin.getDB("db");
+  private final Mimir mimir = Odin.getDB();
   private final JobRegistry jobRegistry;
 
   public DeadLetterQueue() {

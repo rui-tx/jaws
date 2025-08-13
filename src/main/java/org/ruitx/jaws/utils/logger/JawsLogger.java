@@ -1,0 +1,687 @@
+package org.ruitx.jaws.utils.logger;
+
+import static org.ruitx.jaws.configs.ApplicationConfig.BATCH_SIZE;
+import static org.ruitx.jaws.configs.ApplicationConfig.BUFFER_CAPACITY;
+import static org.ruitx.jaws.configs.ApplicationConfig.DB_LEVEL;
+import static org.ruitx.jaws.configs.ApplicationConfig.FLUSH_INTERVAL_MS;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.components.freyr.Freyr;
+import org.tinylog.Logger;
+
+/**
+ * JawsLogger - Log utility with asynchronous batch database logging Wraps TinyLog's Logger class
+ * and adds high-performance database logging capabilities through Freyr job system.
+ */
+public class JawsLogger {
+
+  // Batch processing components
+  private static final BlockingQueue<LogEntry> logBuffer = new LinkedBlockingQueue<>(
+      BUFFER_CAPACITY);
+  private static final AtomicInteger bufferSize = new AtomicInteger(0);
+  private static final ScheduledExecutorService batchScheduler = Executors.newSingleThreadScheduledExecutor(
+      r -> new Thread(r, "jaws-logger-batch-scheduler"));
+  private static volatile Mimir logsDb;
+  private static volatile boolean dbAvailable;
+  private static volatile boolean initialized = false;
+  private static volatile boolean schedulerStarted = false;
+  private static volatile boolean batchingEnabled = true;
+
+  static {
+    // Shutdown hook to flush remaining logs (DB managed by Odin)
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      batchingEnabled = false;
+      flushBufferForce();
+      batchScheduler.shutdown();
+      try {
+        if (!batchScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+          batchScheduler.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        batchScheduler.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+    }));
+  }
+
+  // ============================================================================
+  // TRACE LEVEL METHODS
+  // ============================================================================
+
+  public static void trace(String message) {
+    Logger.trace(message);
+    queueLogEntry("TRACE", message, null, null);
+  }
+
+  public static void trace(String message, Object... arguments) {
+    Logger.trace(message, arguments);
+    queueLogEntry("TRACE", formatMessage(message, arguments), null, null);
+  }
+
+  public static void trace(Throwable exception) {
+    Logger.trace(exception);
+    queueLogEntry("TRACE", exception.getMessage(), exception, null);
+  }
+
+  public static void trace(Throwable exception, String message) {
+    Logger.trace(exception, message);
+    queueLogEntry("TRACE", message, exception, null);
+  }
+
+  public static void trace(Throwable exception, String message, Object... arguments) {
+    Logger.trace(exception, message, arguments);
+    queueLogEntry("TRACE", formatMessage(message, arguments), exception, null);
+  }
+
+  public static void trace(UUID traceId, String message) {
+    Logger.trace(message);
+    queueLogEntry("TRACE", message, null, traceId.toString());
+  }
+
+  public static void trace(UUID traceId, String message, Object... arguments) {
+    Logger.trace(message, arguments);
+    queueLogEntry(
+        "TRACE",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
+  }
+
+  // ============================================================================
+  // DEBUG LEVEL METHODS
+  // ============================================================================
+
+  public static void debug(String message) {
+    Logger.debug(message);
+    queueLogEntry("DEBUG", message, null, null);
+  }
+
+  public static void debug(String message, Object... arguments) {
+    Logger.debug(message, arguments);
+    queueLogEntry("DEBUG", formatMessage(message, arguments), null, null);
+  }
+
+  public static void debug(Throwable exception) {
+    Logger.debug(exception);
+    queueLogEntry("DEBUG", exception.getMessage(), exception, null);
+  }
+
+  public static void debug(Throwable exception, String message) {
+    Logger.debug(exception, message);
+    queueLogEntry("DEBUG", message, exception, null);
+  }
+
+  public static void debug(Throwable exception, String message, Object... arguments) {
+    Logger.debug(exception, message, arguments);
+    queueLogEntry("DEBUG", formatMessage(message, arguments), exception, null);
+  }
+
+  public static void debug(UUID traceId, String message) {
+    Logger.debug(message);
+    queueLogEntry("DEBUG", message, null, traceId.toString());
+  }
+
+  public static void debug(UUID traceId, String message, Object... arguments) {
+    Logger.debug(message, arguments);
+    queueLogEntry(
+        "DEBUG",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
+  }
+
+  // ============================================================================
+  // INFO LEVEL METHODS
+  // ============================================================================
+
+  public static void info(String message) {
+    Logger.info(message);
+    queueLogEntry("INFO", message, null, null);
+  }
+
+  public static void info(String message, Object... arguments) {
+    Logger.info(message, arguments);
+    queueLogEntry("INFO", formatMessage(message, arguments), null, null);
+  }
+
+  public static void info(Throwable exception) {
+    Logger.info(exception);
+    queueLogEntry("INFO", exception.getMessage(), exception, null);
+  }
+
+  public static void info(Throwable exception, String message) {
+    Logger.info(exception, message);
+    queueLogEntry("INFO", message, exception, null);
+  }
+
+  public static void info(Throwable exception, String message, Object... arguments) {
+    Logger.info(exception, message, arguments);
+    queueLogEntry("INFO", formatMessage(message, arguments), exception, null);
+  }
+
+  public static void info(UUID traceId, String message) {
+    Logger.info(message);
+    queueLogEntry("INFO", message, null, traceId.toString());
+  }
+
+  public static void info(UUID traceId, String message, Object... arguments) {
+    Logger.info(message, arguments);
+    queueLogEntry(
+        "INFO",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
+  }
+
+  // ============================================================================
+  // WARN LEVEL METHODS
+  // ============================================================================
+
+  public static void warn(String message) {
+    Logger.warn(message);
+    queueLogEntry("WARN", message, null, null);
+  }
+
+  public static void warn(String message, Object... arguments) {
+    Logger.warn(message, arguments);
+    queueLogEntry("WARN", formatMessage(message, arguments), null, null);
+  }
+
+  public static void warn(Throwable exception) {
+    Logger.warn(exception);
+    queueLogEntry("WARN", exception.getMessage(), exception, null);
+  }
+
+  public static void warn(Throwable exception, String message) {
+    Logger.warn(exception, message);
+    queueLogEntry("WARN", message, exception, null);
+  }
+
+  public static void warn(Throwable exception, String message, Object... arguments) {
+    Logger.warn(exception, message, arguments);
+    queueLogEntry("WARN", formatMessage(message, arguments), exception, null);
+  }
+
+  public static void warn(UUID traceId, String message) {
+    Logger.warn(message);
+    queueLogEntry("WARN", message, null, traceId.toString());
+  }
+
+  public static void warn(UUID traceId, String message, Object... arguments) {
+    Logger.warn(message, arguments);
+    queueLogEntry(
+        "WARN",
+        formatMessage(message, arguments),
+        null,
+        traceId.toString());
+  }
+
+  // ============================================================================
+  // ERROR LEVEL METHODS
+  // ============================================================================
+
+  public static void error(String message) {
+    Logger.error(message);
+    queueLogEntry("ERROR", message, null, null);
+  }
+
+  public static void error(String message, Object... arguments) {
+    Logger.error(message, arguments);
+    queueLogEntry("ERROR", formatMessage(message, arguments), null, null);
+  }
+
+  public static void error(Throwable exception) {
+    Logger.error(exception);
+    queueLogEntry("ERROR", exception.getMessage(), exception, null);
+  }
+
+  public static void error(Throwable exception, String message) {
+    Logger.error(exception, message);
+    queueLogEntry("ERROR", message, exception, null);
+  }
+
+  public static void error(Throwable exception, String message, Object... arguments) {
+    Logger.error(exception, message, arguments);
+    queueLogEntry("ERROR", formatMessage(message, arguments), exception, null);
+  }
+
+  public static void error(UUID traceId, String message) {
+    Logger.error(message);
+    queueLogEntry("ERROR", message, null, traceId.toString());
+  }
+
+  public static void error(UUID traceId, Throwable exception, String message, Object... arguments) {
+    Logger.error(message, arguments);
+    queueLogEntry(
+        "ERROR",
+        formatMessage(message, arguments),
+        exception,
+        traceId.toString());
+  }
+
+  // ============================================================================
+  // UTILITY METHODS
+  // ============================================================================
+
+  /**
+   * Check if database logging is available
+   */
+  public static boolean isDatabaseLoggingAvailable() {
+    return dbAvailable;
+  }
+
+  /**
+   * Get the logs database path
+   */
+  public static String getLogsDatabasePath() {
+    return dbAvailable ? logsDb.getDatabasePath() : null;
+  }
+
+  /**
+   * Force flush any remaining log entries in the buffer Useful for testing or shutdown scenarios
+   */
+  public static void forceFlush() {
+    flushBufferForce();
+  }
+
+  /**
+   * Get current buffer statistics for monitoring
+   */
+  public static Map<String, Object> getBufferStatistics() {
+    Map<String, Object> stats = new HashMap<>();
+    stats.put("bufferSize", bufferSize.get());
+    stats.put("bufferCapacity", BUFFER_CAPACITY);
+    stats.put("batchSize", BATCH_SIZE);
+    stats.put("flushIntervalMs", FLUSH_INTERVAL_MS);
+    stats.put("batchingEnabled", batchingEnabled);
+    stats.put("dbAvailable", dbAvailable);
+    return stats;
+  }
+
+  // ============================================================================
+  // PRIVATE BATCH PROCESSING METHODS
+  // ============================================================================
+
+  /**
+   * Check if a log level should be saved to the database based on configured DB_LEVEL
+   */
+  private static boolean shouldLogToDatabase(String level) {
+    int levelPriority = getLogLevelPriority(level);
+    int configuredPriority = getLogLevelPriority(DB_LEVEL);
+    return levelPriority >= configuredPriority;
+  }
+
+  /**
+   * Get numeric priority for log level (higher number = higher priority)
+   */
+  private static int getLogLevelPriority(String level) {
+    switch (level.toUpperCase()) {
+      case "TRACE":
+        return 1;
+      case "DEBUG":
+        return 2;
+      case "INFO":
+        return 3;
+      case "WARN":
+        return 4;
+      case "ERROR":
+        return 5;
+      default:
+        return 0; // Unknown level gets lowest priority
+    }
+  }
+
+  /**
+   * Queue a log entry for batch processing
+   */
+  private static void queueLogEntry(
+      String level,
+      String message,
+      Throwable exception,
+      String traceId) {
+    if (!initialized) {
+      throw new IllegalStateException("JawsLogger used before initialization");
+    }
+    if (!dbAvailable || !batchingEnabled) {
+      return; // Skip queuing if database unavailable or batching disabled
+    }
+
+    if (!shouldLogToDatabase(level)) {
+      return; // Skip queuing if level is below configured DB_LEVEL
+    }
+
+    try {
+      // Get caller information
+      CallerInfo caller = getCallerInfo();
+      Thread currentThread = Thread.currentThread();
+      String threadName = currentThread.getName();
+
+      String exceptionStr = null;
+      if (exception != null) {
+        exceptionStr = getStackTraceAsString(exception);
+      }
+
+      // Create log entry
+      LogEntry logEntry = new LogEntry(
+          System.currentTimeMillis(),
+          level,
+          caller.className,
+          threadName,
+          message,
+          exceptionStr,
+          caller.methodName,
+          caller.lineNumber,
+          traceId
+      );
+
+      // Try to add to buffer (non-blocking)
+      boolean added = logBuffer.offer(logEntry);
+      if (added) {
+        int currentSize = bufferSize.incrementAndGet();
+
+        // Check if we should flush based on size
+        if (currentSize >= BATCH_SIZE) {
+          flushBuffer();
+        }
+      } else {
+        // Buffer is full - try to flush it first, then drop if still full
+        flushBuffer();
+
+        // Try one more time after flush
+        boolean retryAdded = logBuffer.offer(logEntry);
+        if (!retryAdded) {
+          // Still full - drop this log entry but don't spam warnings
+          if (Math.random() < 0.01) { // Only warn 1% of the time to avoid log spam
+            Logger.warn("JawsLogger: Log buffer consistently full, dropping log entries");
+          }
+        }
+      }
+
+    } catch (Exception e) {
+      // Avoid infinite recursion - don't use JawsLogger here
+      Logger.warn("JawsLogger: Failed to queue log entry: {}", e.getMessage());
+    }
+  }
+
+  /**
+   * Flush the buffer by submitting a batch job (if buffer has entries)
+   */
+  private static void flushBufferIfNeeded() {
+    if (bufferSize.get() > 0) {
+      flushBuffer();
+    }
+  }
+
+  /**
+   * Flush the buffer by submitting a batch job
+   */
+  private static void flushBuffer() {
+    if (!batchingEnabled) {
+      return;
+    }
+
+    List<LogEntry> batch = drainBuffer();
+    if (!batch.isEmpty()) {
+      submitBatchJob(batch);
+    }
+  }
+
+  /**
+   * Force flush the buffer (used during shutdown)
+   */
+  private static void flushBufferForce() {
+    List<LogEntry> batch = drainBuffer();
+    if (!batch.isEmpty()) {
+      // During shutdown, try job submission first, then fallback to direct DB write
+      try {
+        submitBatchJob(batch);
+      } catch (Exception e) {
+        Logger.warn(
+            "JawsLogger: Failed to submit batch job during shutdown, writing directly to DB");
+        writeBatchDirectly(batch);
+      }
+    }
+  }
+
+  /**
+   * Drain the buffer and return all log entries
+   */
+  private static List<LogEntry> drainBuffer() {
+    List<LogEntry> batch = new ArrayList<>();
+    LogEntry entry;
+
+    // Drain all entries from buffer
+    while ((entry = logBuffer.poll()) != null) {
+      batch.add(entry);
+      bufferSize.decrementAndGet();
+    }
+
+    return batch;
+  }
+
+  /**
+   * Submit a batch job to Freyr
+   */
+  private static void submitBatchJob(List<LogEntry> batch) {
+    try {
+      // Convert LogEntry objects to Maps for job payload
+      List<Map<String, Object>> logEntryMaps = new ArrayList<>();
+      for (LogEntry entry : batch) {
+        Map<String, Object> entryMap = new HashMap<>();
+        entryMap.put("timestamp", entry.getTimestamp());
+        entryMap.put("level", entry.getLevel());
+        entryMap.put("logger", entry.getLogger());
+        entryMap.put("thread", entry.getThread());
+        entryMap.put("message", entry.getMessage());
+        entryMap.put("exception", entry.getException());
+        entryMap.put("method", entry.getMethod());
+        entryMap.put("lineNumber", entry.getLineNumber());
+        entryMap.put("traceId", entry.getTraceId());
+        logEntryMaps.add(entryMap);
+      }
+
+      // Create job payload
+      Map<String, Object> payload = new HashMap<>();
+      payload.put("logEntries", logEntryMaps);
+
+      // Submit to Freyr
+      JawsLoggerJob job = new JawsLoggerJob(payload);
+      Freyr.getInstance().submit(job);
+
+      Logger.debug("JawsLogger: Submitted batch job with {} log entries", batch.size());
+
+    } catch (Exception e) {
+      Logger.error("JawsLogger: Failed to submit batch logging job: {}", e.getMessage());
+      // Fallback to direct database write
+      writeBatchDirectly(batch);
+    }
+  }
+
+  /**
+   * Fallback method to write logs directly to database (bypassing job system)
+   */
+  private static void writeBatchDirectly(List<LogEntry> batch) {
+    if (logsDb == null) {
+      return;
+    }
+
+    int maxRetries = 3;
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        for (LogEntry entry : batch) {
+          logsDb.execute(
+              "INSERT INTO LOG_ENTRIES (timestamp, level, logger, thread, message, exception, method, line) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+              entry.getTimestamp(),
+              entry.getLevel(),
+              entry.getLogger(),
+              entry.getThread(),
+              entry.getMessage(),
+              entry.getException(),
+              entry.getMethod(),
+              entry.getLineNumber()
+          );
+        }
+        Logger.debug("JawsLogger: Direct database write completed for {} entries", batch.size());
+        return; // Success - exit retry loop
+
+      } catch (Exception e) {
+        boolean isBusyError = e.getMessage() != null &&
+            (e.getMessage().contains("SQLITE_BUSY") || e.getMessage()
+                .contains("database is locked"));
+
+        if (isBusyError && attempt < maxRetries) {
+          // Exponential backoff: 50ms, 200ms, 800ms
+          long delayMs = 50L * (long) Math.pow(4, attempt);
+          try {
+            Thread.sleep(delayMs);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            Logger.warn("JawsLogger: Retry interrupted, dropping {} log entries", batch.size());
+            return;
+          }
+          Logger.debug("JawsLogger: Database busy, retrying in {}ms (attempt {}/{})", delayMs,
+              attempt + 1, maxRetries);
+        } else {
+          // Final attempt failed or non-retryable error
+          if (isBusyError) {
+            Logger.warn("JawsLogger: Database busy after {} retries, dropping {} log entries",
+                maxRetries, batch.size());
+          } else {
+            Logger.error("JawsLogger: Failed to write logs directly to database: {}",
+                e.getMessage());
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  // ============================================================================
+  // PRIVATE HELPER METHODS (unchanged)
+  // ============================================================================
+
+  /**
+   * Format message with arguments using simple placeholder replacement
+   */
+  private static String formatMessage(String message, Object... arguments) {
+    if (arguments == null || arguments.length == 0) {
+      return message;
+    }
+
+    try {
+      // Simple {} placeholder replacement
+      String result = message;
+      for (Object arg : arguments) {
+        if (result.contains("{}")) {
+          String replacement = arg != null ? arg.toString() : "null";
+          result = result.replaceFirst("\\{\\}", replacement);
+        }
+      }
+      return result;
+    } catch (Exception e) {
+      // If formatting fails, return original message
+      return message + " [formatting failed]";
+    }
+  }
+
+  /**
+   * Get caller information from stack trace
+   */
+  private static CallerInfo getCallerInfo() {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+
+    // Find the first non-JawsLogger caller
+    for (int i = 2; i < stackTrace.length; i++) { // Skip getStackTrace() and getCallerInfo()
+      StackTraceElement element = stackTrace[i];
+      String className = element.getClassName();
+
+      // Skip JawsLogger methods
+      if (!className.equals(JawsLogger.class.getName())) {
+        return new CallerInfo(
+            className,
+            element.getMethodName(),
+            element.getLineNumber()
+        );
+      }
+    }
+
+    // Fallback if no caller found
+    return new CallerInfo("Unknown", "unknown", 0);
+  }
+
+  /**
+   * Convert exception stack trace to string
+   */
+  private static String getStackTraceAsString(Throwable exception) {
+    if (exception == null) {
+      return null;
+    }
+
+    try {
+      java.io.StringWriter sw = new java.io.StringWriter();
+      java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+      exception.printStackTrace(pw);
+      return sw.toString();
+    } catch (Exception e) {
+      return exception.toString();
+    }
+  }
+
+  // Bootstrap must be called by Odin after DBs are ready
+  public static synchronized void bootstrap(Mimir logsDatabase) {
+    if (initialized) {
+      return;
+    }
+    if (logsDatabase == null) {
+      throw new IllegalArgumentException("logsDatabase must not be null");
+    }
+    logsDb = logsDatabase;
+    dbAvailable = true;
+    startSchedulerIfNeeded();
+    initialized = true;
+    Logger.info("JawsLogger: Database logging initialized");
+  }
+
+  private static synchronized void startSchedulerIfNeeded() {
+    if (schedulerStarted) {
+      return;
+    }
+    if (dbAvailable) {
+      batchScheduler.scheduleAtFixedRate(
+          JawsLogger::flushBufferIfNeeded,
+          FLUSH_INTERVAL_MS,
+          FLUSH_INTERVAL_MS,
+          TimeUnit.MILLISECONDS);
+      schedulerStarted = true;
+      Logger.info("JawsLogger: Batch logging enabled (batch_size={}, flush_interval={}ms)",
+          BATCH_SIZE, FLUSH_INTERVAL_MS);
+    }
+  }
+
+  /**
+   * Helper class to store caller information
+   */
+  private static class CallerInfo {
+
+    final String className;
+    final String methodName;
+    final int lineNumber;
+
+    CallerInfo(String className, String methodName, int lineNumber) {
+      this.className = className;
+      this.methodName = methodName;
+      this.lineNumber = lineNumber;
+    }
+  }
+}

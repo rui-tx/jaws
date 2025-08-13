@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
 import org.ruitx.jaws.types.Context;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.jaws.utils.ThymeleafUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.WebContext;

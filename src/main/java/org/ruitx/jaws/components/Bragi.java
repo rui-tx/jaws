@@ -21,7 +21,7 @@ import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.Context;
 import org.ruitx.jaws.types.ParamType;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * Base controller class for all controllers. Contains methods for sending responses to the client.
@@ -315,21 +315,21 @@ public abstract class Bragi {
    */
   protected String get(String name) {
     Yggdrasill.RequestContext context = requestContext.get();
-      if (context == null) {
-          return null;
-      }
+    if (context == null) {
+      return null;
+    }
 
     // Check path parameters first
     String value = context.getPathParams().get(name);
-      if (value != null) {
-          return value;
-      }
+    if (value != null) {
+      return value;
+    }
 
     // Check query parameters
     value = context.getQueryParams().get(name);
-      if (value != null) {
-          return value;
-      }
+    if (value != null) {
+      return value;
+    }
 
     // Check body parameters
     return context.getBodyParams().get(name);
@@ -344,9 +344,9 @@ public abstract class Bragi {
    */
   protected String get(String name, ParamType type) {
     Yggdrasill.RequestContext context = requestContext.get();
-      if (context == null) {
-          return null;
-      }
+    if (context == null) {
+      return null;
+    }
 
     return switch (type) {
       case PATH -> context.getPathParams().get(name);
@@ -385,9 +385,9 @@ public abstract class Bragi {
    */
   protected boolean isMultipartRequest() {
     Yggdrasill.RequestContext context = requestContext.get();
-      if (context == null) {
-          return false;
-      }
+    if (context == null) {
+      return false;
+    }
 
     String contentType = context.getHeader("Content-Type");
     return contentType != null && contentType.contains("multipart/form-data");

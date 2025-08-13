@@ -3,8 +3,8 @@ package org.ruitx.jaws.components.freyr;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.tinylog.Logger;
 
 /**
@@ -12,7 +12,7 @@ import org.tinylog.Logger;
  */
 public class JobResultStore {
 
-  private static final Mimir mimir = Odin.getDB("db");
+  private static final Mimir mimir = Odin.getDB();
 
   /**
    * Store a job result

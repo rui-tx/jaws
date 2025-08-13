@@ -46,7 +46,7 @@ import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.jaws.utils.JawsValidation;
 
 /**

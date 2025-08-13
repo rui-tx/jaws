@@ -8,8 +8,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.interfaces.Job;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
@@ -26,7 +26,7 @@ public class JobRetryScheduler {
   private static final long DEFAULT_CHECK_INTERVAL_MS = 30000L; // 30 seconds
   private static final int DEFAULT_BATCH_SIZE = 50; // Process up to 50 retries at once
 
-  private final Mimir mimir = Odin.getDB("db");
+  private final Mimir mimir = Odin.getDB();
   private final JobRegistry jobRegistry;
   private final JobRetryManager retryManager = new JobRetryManager();
   private final DeadLetterQueue deadLetterQueue;
