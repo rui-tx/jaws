@@ -19,6 +19,8 @@ import org.ruitx.www.base.model.auth.User;
 import org.ruitx.www.base.model.auth.UserRole;
 import org.ruitx.www.base.model.auth.UserSession;
 import org.ruitx.jaws.components.mimir.Repository;
+import org.ruitx.jaws.components.mimir.RowBinder;
+import org.ruitx.www.base.projection.UserSummaryProjection;
 
 public class AuthRepo extends Repository {
 
@@ -143,6 +145,24 @@ public class AuthRepo extends Repository {
         "SELECT * FROM USER ORDER BY created_at DESC",
         UserMapper.INSTANCE
     );
+  }
+
+  /**
+   * Lightweight list of users using RowBinder and a projection record.
+   * Only selects the necessary columns and aliases them to match projection fields.
+   */
+  @Cacheable(tables = {"USER"})
+  public List<UserSummaryProjection> listUserSummaries() {
+    String sql = """
+        SELECT
+          id AS id,
+          user AS user,
+          first_name AS firstName,
+          last_name AS lastName
+        FROM USER
+        ORDER BY created_at DESC
+        """;
+    return getAll(sql, RowBinder.mapper(UserSummaryProjection.class));
   }
 
   // schedule method

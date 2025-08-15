@@ -397,22 +397,85 @@ public APIResponse<List<User>> listUsers() {
 The ```User``` class is the data model for the table ```USER```, and it's responsible for mapping a `Row` to itself.
 Creating the tables is done via the SQL schema file.
 
+#### RowBinder (Projection Mapping)
+
+To reduce boilerplate when mapping query results into simple projection types (records or POJOs), JAWS provides
+`RowBinder`.
+
+- Match columns by alias to projection component/property names (case-insensitive)
+- Use Optional<T> for nullable DB columns (Optional-first style)
+- Supports records and POJOs (public no-arg constructor), with simple type conversions:
+  - Integer <-> Long, Float <-> Double
+  - numeric <-> boolean (0/1)
+  - String parsing for numbers and booleans, and byte[] passthrough
+- Flat projections only — complex mappings should use explicit mappers/services
+
+**Example (record)**
+
+```java
+public record UserSummary(Optional<Long> id, Optional<String> user, Optional<String> firstName) {}
+
+String sql = """
+  SELECT id AS id, user AS user, first_name AS firstName
+  FROM USER
+  ORDER BY created_at DESC
+""";
+
+List<UserSummary> out = repo.getAll(sql, RowBinder.mapper(UserSummary.class));
+```
+
+**Example (POJO)**
+
+```java
+public class UserSummaryPojo {
+  private Optional<Long> id;
+  private Optional<String> user;
+  public UserSummaryPojo() {}
+  public void setId(Optional<Long> id) { this.id = id; }
+  public void setUser(Optional<String> user) { this.user = user; }
+}
+
+List<UserSummaryPojo> out = repo.getAll(sql, RowBinder.mapper(UserSummaryPojo.class));
+```
+
+**Optional handling**
+
+- Optional<T> is populated with Optional.of(convertedValue) or Optional.empty()
+- Inner T is resolved via reflection when available (e.g., Integer -> Long)
+- Raw Optional (no generic parameter) wraps the raw value without conversion
+- Missing required non-Optional reference values will throw
+- Missing primitives default to zero/false
+
+**Aliasing discipline**
+
+Always alias SQL columns to match projection names to avoid surprises, especially in joins:
+
+```sql
+SELECT u.id AS id, u.user AS user, p.first_name AS firstName
+FROM USER u
+JOIN USER_PROFILE p ON p.user_id = u.id
+```
+
 #### Query Caching
 
-Mimir now includes a transparent read-result cache:
+JAWS includes query-level caching. To ensure proper invalidation, annotate repository methods with
+`@Cacheable(tables = {"TABLE1", "TABLE2", ...})` listing all tables that affect the query (including joins).
 
-* Annotate any read-method with `@Cacheable(tables = {"TABLE_NAME"}, ttl = 60000)` to enable caching for that call.
-* Results are stored in a Caffeine cache keyed by the SQL string and its parameters.
-* `ttl` (milliseconds) is optional; omit or set to `-1` to use the global default.
+- Include every table whose changes should invalidate the cache for that query
+- Order does not matter; names are used for invalidation matching
+- Keep TTL appropriate to the data volatility
 
-When an `INSERT`, `UPDATE` or `DELETE` is executed, Mimir extracts the target
-table (using **JSqlParser** with a heuristic fallback) and only invalidates
-cache entries that read from that table. If the table cannot be determined
-we simply leave the cache as-is and rely on TTL expiration.
+```java
+@Cacheable(tables = {"USER"})
+public List<UserSummary> listUsers() {
+  String sql = "SELECT id AS id, user AS user FROM USER ORDER BY created_at DESC";
+  return getAll(sql, RowBinder.mapper(UserSummary.class));
+}
+```
 
 ### Njord
 
-```Njord``` is a dynamic router class that routes requests to controllers. Annotating and method with ```@Route``` will
+This module is a dynamic router class that routes requests to controllers. Annotating and method with ```@Route``` will
 be picked up by ```Njord```. It's is not *completely* dynamic because we need to before hand config the classes that we
 check for these annotations
 

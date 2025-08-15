@@ -1,12 +1,11 @@
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.AfterAll;
-import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
-
 import java.io.File;
 import java.sql.DriverManager;
 import java.util.List;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.types.Row;
 
 public class MimirMultiDatabaseTest {
 
@@ -112,7 +111,7 @@ public class MimirMultiDatabaseTest {
     System.out.println("✅ Logs database initialized with schema");
 
     // Test inserting a log entry
-    int insertCount = logsDb.executeSql(
+    int insertCount = logsDb.execute(
         "INSERT INTO LOG_ENTRIES (timestamp, level, logger, thread, message, method, line) VALUES (?, ?, ?, ?, ?, ?, ?)",
         System.currentTimeMillis(),
         "INFO",
@@ -165,7 +164,7 @@ public class MimirMultiDatabaseTest {
     System.out.println("Logs DB path: " + logsDb.getDatabasePath());
 
     // Test that databases are separate by inserting into logs
-    int logInsertCount = logsDb.executeSql(
+    int logInsertCount = logsDb.execute(
         "INSERT INTO LOG_ENTRIES (timestamp, level, logger, message) VALUES (?, ?, ?, ?)",
         System.currentTimeMillis(),
         "DEBUG",
