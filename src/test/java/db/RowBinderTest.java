@@ -1,3 +1,5 @@
+package db;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -189,13 +191,11 @@ public class RowBinderTest {
   @Test
   @DisplayName("Nested Optional<Optional<T>> is not supported and should throw")
   void nestedOptionalShouldThrow() {
-    record R(Optional<Optional<Long>> v) {}
+    record R(Optional<Optional<Long>> v) {
+
+    }
     Row row = rowOf("v", 1);
     assertThrows(IllegalArgumentException.class, () -> RowBinder.map(row, R.class));
-  }
-
-  public static class RawOptPojo {
-    public Optional value; // raw Optional (no generic)
   }
 
   @Test
@@ -210,7 +210,9 @@ public class RowBinderTest {
   @Test
   @DisplayName("Optional<Double> from String numeric")
   void optionalDoubleFromString() {
-    record DRec(Optional<Double> d) {}
+    record DRec(Optional<Double> d) {
+
+    }
     Row row = rowOf("d", "2.75");
     DRec rec = RowBinder.map(row, DRec.class);
     assertEquals(2.75, rec.d().orElseThrow());
@@ -219,25 +221,14 @@ public class RowBinderTest {
   @Test
   @DisplayName("Record with missing primitive fields should default to zero/false")
   void recordMissingPrimitiveDefaults() {
-    record PrimRec(int i, long l, boolean b) {}
+    record PrimRec(int i, long l, boolean b) {
+
+    }
     Row row = rowOf();
     PrimRec rec = RowBinder.map(row, PrimRec.class);
     assertEquals(0, rec.i());
     assertEquals(0L, rec.l());
     assertFalse(rec.b());
-  }
-
-  public static class PrimPojo {
-    private int i;
-    private long l;
-    private boolean b;
-    public PrimPojo() {}
-    public int getI() { return i; }
-    public void setI(int i) { this.i = i; }
-    public long getL() { return l; }
-    public void setL(long l) { this.l = l; }
-    public boolean isB() { return b; }
-    public void setB(boolean b) { this.b = b; }
   }
 
   @Test
@@ -248,6 +239,45 @@ public class RowBinderTest {
     assertEquals(0, p.getI());
     assertEquals(0L, p.getL());
     assertFalse(p.isB());
+  }
+
+  public static class RawOptPojo {
+
+    public Optional value; // raw Optional (no generic)
+  }
+
+  public static class PrimPojo {
+
+    private int i;
+    private long l;
+    private boolean b;
+
+    public PrimPojo() {
+    }
+
+    public int getI() {
+      return i;
+    }
+
+    public void setI(int i) {
+      this.i = i;
+    }
+
+    public long getL() {
+      return l;
+    }
+
+    public void setL(long l) {
+      this.l = l;
+    }
+
+    public boolean isB() {
+      return b;
+    }
+
+    public void setB(boolean b) {
+      this.b = b;
+    }
   }
 
   public static class BoolPojo {
