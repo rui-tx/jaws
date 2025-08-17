@@ -756,9 +756,9 @@ public class Yggdrasill {
           }
         } catch (IOException ioException) {
           JawsLogger.error("Error sending error response: {}", ioException.getMessage());
-        } finally {
-          currentConnections.decrementAndGet();
         }
+      } finally {
+        currentConnections.decrementAndGet();
       }
     }
 
@@ -1152,6 +1152,8 @@ public class Yggdrasill {
                   context.request,
                   context.response
               );
+              processedHTML += "\n\n"; // Prevent truncation
+
               context.response.getWriter().write(processedHTML);
             } catch (Exception e) {
               JawsLogger.error("Error processing custom 401 template: {}", e.getMessage());
@@ -1291,4 +1293,4 @@ public class Yggdrasill {
           : Paths.get(resourcesPath + endPoint);
     }
   }
-} 
+}
