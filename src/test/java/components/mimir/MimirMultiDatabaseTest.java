@@ -1,11 +1,11 @@
-package db;
+package components.mimir;
 
-import static db.MimirTestUtils.closeAll;
-import static db.MimirTestUtils.create;
-import static db.MimirTestUtils.deleteAllDbs;
-import static db.MimirTestUtils.init;
-import static db.MimirTestUtils.newTempDb;
-import static db.MimirTestUtils.scalarCount;
+import static components.mimir.MimirTestUtils.closeAll;
+import static components.mimir.MimirTestUtils.create;
+import static components.mimir.MimirTestUtils.deleteAllDbs;
+import static components.mimir.MimirTestUtils.init;
+import static components.mimir.MimirTestUtils.newTempDb;
+import static components.mimir.MimirTestUtils.scalarCount;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,7 +80,7 @@ public class MimirMultiDatabaseTest {
         "INSERT INTO LOG_ENTRIES (timestamp, level, logger, thread, message, method, line) VALUES (?, ?, ?, ?, ?, ?, ?)",
         System.currentTimeMillis(),
         "INFO",
-        "db.MimirMultiDatabaseTest",
+        "components.mimir.MimirMultiDatabaseTest",
         Thread.currentThread().getName(),
         "Test log message",
         "testCustomDatabaseWithSchema",
@@ -90,7 +90,7 @@ public class MimirMultiDatabaseTest {
 
     // Query the inserted row by logger
     List<Row> logEntries = logsDb.getRows("SELECT * FROM LOG_ENTRIES WHERE logger = ?",
-        "db.MimirMultiDatabaseTest");
+        "components.mimir.MimirMultiDatabaseTest");
     assertEquals(1, logEntries.size());
 
     logsDb.close();

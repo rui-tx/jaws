@@ -74,7 +74,7 @@ Run the container, overriding any configuration you need via environment variabl
 docker run -p 15000:15000 \
   -e PORT=15000 \
   -e WWWPATH=/app/www \
-  -e DBPATH=/app/src/main/resources/db.db \
+  -e DBPATH=/app/src/main/resources/mimir.mimir \
   jaws
 ```
 
@@ -89,7 +89,8 @@ After starting JAWS, you can access the server using a web browser or an HTTP cl
 curl http://localhost:8080
 ```
 
-> Note: You can test the online version of **JAWS** at the link in the about section. The login for the backoffice is *
+> Note: You can test the online version of **JAWS** at the link in the about section. The login for
+> the backoffice is *
 *admin** - **admin1234!**
 
 ## About JAWS
@@ -101,7 +102,8 @@ JAWS is built with a modular system. Every module is responsible for one aspect 
 - `Freyr`: Asynchronous job queue system with priority queuing and retry mechanisms
 - `Heimdall`: A file watcher that monitors changes in the specified directory
 - `Hermod`: HTML parser that handles template processing and page assembly
-- `Yggdrassil`: The unified HTTP server with integrated request handling, middleware support, and direct controller
+- `Yggdrassil`: The unified HTTP server with integrated request handling, middleware support, and
+  direct controller
   routing
 - `Mimir`: Database interface for SQLite. Acts as a mini basic ORM
 - `Njord`: Dynamic router that routes requests to controllers
@@ -145,20 +147,22 @@ Example middleware:
 
 ```java
 public class AuthMiddleware implements Middleware {
-    @Override
-    public boolean handle(RequestContext context, MiddlewareChain chain) {
-        if (!isAuthenticated(context)) {
-            sendUnauthorized(context);
-            return false; // Stop the chain
-        }
-        return chain.next(); // Continue to next middleware
+
+  @Override
+  public boolean handle(RequestContext context, MiddlewareChain chain) {
+    if (!isAuthenticated(context)) {
+      sendUnauthorized(context);
+      return false; // Stop the chain
     }
+    return chain.next(); // Continue to next middleware
+  }
 }
 ```
 
 ### Bragi
 
-All controllers can and should extend this class. It provides convenient methods for accessing request data and sending
+All controllers can and should extend this class. It provides convenient methods for accessing
+request data and sending
 responses. The class automatically adapts to work with the current request context.
 
 **Example**
@@ -167,19 +171,20 @@ responses. The class automatically adapts to work with the current request conte
 
 @Route(endpoint = API_ENDPOINT + "posts", responseType = JSON)
 public void testGetExternalAPI() {
-    String url = "https://jsonplaceholder.typicode.com/posts";
-    APIResponse<List<Post>> response = call(url, Post.class);
+  String url = "https://jsonplaceholder.typicode.com/posts";
+  APIResponse<List<Post>> response = call(url, Post.class);
 
-    if (!response.success()) {
-        sendFail(response.code(), response.info());
-        return;
-    }
+  if (!response.success()) {
+    sendFail(response.code(), response.info());
+    return;
+  }
 
-    sendSuccess(response.code(), response.data());
+  sendSuccess(response.code(), response.data());
 }
 ```
 
 **Main Methods:**
+
 - **Response Methods**: `sendSuccess()`, `sendFail()`, `sendHTML()`
 - **Template Methods**: `render()`, `compose()`
 - **Parameter Methods**: `get()`, `file()`, `files()`
@@ -189,8 +194,10 @@ All these methods are available in ```Bragi```
 
 ### Freyr
 
-```Freyr``` is an asynchronous job queue system that provides powerful background job processing capabilities. It
-supports both parallel and sequential job execution, priority-based processing, automatic retry mechanisms with
+```Freyr``` is an asynchronous job queue system that provides powerful background job processing
+capabilities. It
+supports both parallel and sequential job execution, priority-based processing, automatic retry
+mechanisms with
 exponential backoff and job monitoring and statistics.
 
 **Key Features:**
@@ -209,90 +216,101 @@ exponential backoff and job monitoring and statistics.
 
 ```java
 public class ExternalApiJob extends BaseJob {
-    public static final String JOB_TYPE = "external-api-call";
-    
-    public ExternalApiJob(Map<String, Object> payload) {
-        super(JOB_TYPE, 5, 2, 30000L, payload); // priority 5, 2 retries, 30s timeout
-    }
 
-    @Override
-    public void execute() throws Exception {
-        String url = getString("url");
-        // Perform API call
-        APIResponse<List<Post>> response = callExternal(url);
-        
-        if (response.success()) {
-            JobResultStore.storeSuccess(getId(), responseData);
-        } else {
-            JobResultStore.storeError(getId(), response.code(), response.info());
-        }
+  public static final String JOB_TYPE = "external-api-call";
+
+  public ExternalApiJob(Map<String, Object> payload) {
+    super(JOB_TYPE, 5, 2, 30000L, payload); // priority 5, 2 retries, 30s timeout
+  }
+
+  @Override
+  public void execute() throws Exception {
+    String url = getString("url");
+    // Perform API call
+    APIResponse<List<Post>> response = callExternal(url);
+
+    if (response.success()) {
+      JobResultStore.storeSuccess(getId(), responseData);
+    } else {
+      JobResultStore.storeError(getId(), response.code(), response.info());
     }
+  }
 }
 ```
 
 ```java
 public class JobRegistryConfig {
-    public static void registerJobs() {
-        JobRegistry registry = JobRegistry.getInstance();
-        registry.registerJob("external-api-call", ExternalApiJob.class);
-        registry.registerJob("parallel-ping", ParallelPingJob.class);
-        registry.registerJob("sequential-ping", SequentialPingJob.class);
-    }
+
+  public static void registerJobs() {
+    JobRegistry registry = JobRegistry.getInstance();
+    registry.registerJob("external-api-call", ExternalApiJob.class);
+    registry.registerJob("parallel-ping", ParallelPingJob.class);
+    registry.registerJob("sequential-ping", SequentialPingJob.class);
+  }
 }
 ```
 
 ```java
+
 @Route(endpoint = API_ENDPOINT + "submit-job", method = POST, responseType = JSON)
 public void submitJob() {
-    Map<String, Object> payload = Map.of(
-        "url", "https://api.example.com/data",
-        "requestedBy", getCurrentToken()
-    );
-    
-    Freyr jobQueue = Freyr.getInstance();
-    String jobId = jobQueue.submit(new ExternalApiJob(payload));
-    
-    sendSuccess(OK, Map.of("jobId", jobId, "status", "submitted"));
+  Map<String, Object> payload = Map.of(
+      "url", "https://api.example.com/data",
+      "requestedBy", getCurrentToken()
+  );
+
+  Freyr jobQueue = Freyr.getInstance();
+  String jobId = jobQueue.submit(new ExternalApiJob(payload));
+
+  sendSuccess(OK, Map.of("jobId", jobId, "status", "submitted"));
 }
 
 @Route(endpoint = API_ENDPOINT + "job-status/:id", method = GET, responseType = JSON)
 public void getJobStatus() {
-    String jobId = getPathParam("id");
-    Freyr jobQueue = Freyr.getInstance();
-    
-    JobStatus status = jobQueue.getJobStatus(jobId);
-    JobResult result = jobQueue.getJobResult(jobId);
-    
-    Map<String, Object> response = new HashMap<>();
-    response.put("jobId", jobId);
-    response.put("status", status.name());
-    if (result != null) {
-        response.put("result", result);
-    }
-    
-    sendSuccess(OK, response);
+  String jobId = getPathParam("id");
+  Freyr jobQueue = Freyr.getInstance();
+
+  JobStatus status = jobQueue.getJobStatus(jobId);
+  JobResult result = jobQueue.getJobResult(jobId);
+
+  Map<String, Object> response = new HashMap<>();
+  response.put("jobId", jobId);
+  response.put("status", status.name());
+  if (result != null) {
+    response.put("result", result);
+  }
+
+  sendSuccess(OK, response);
 }
 ```
 
-The job system automatically handles persistence, retry logic and provides monitoring capabilities. Failed jobs are
-automatically retried with exponential backoff, and permanently failed jobs are moved to a dead letter queue for manual
+The job system automatically handles persistence, retry logic and provides monitoring capabilities.
+Failed jobs are
+automatically retried with exponential backoff, and permanently failed jobs are moved to a dead
+letter queue for manual
 inspection.
 
 ### Heimdall
 
-```Heimdall``` is a file watcher that monitors the specified directory for any file changes. As of now it just logs the
+```Heimdall``` is a file watcher that monitors the specified directory for any file changes. As of
+now it just logs the
 changes
 
 ### Hermod
 
-```Hermod``` is responsible for HTML template processing and page assembly using **Thymeleaf**. It provides powerful
-template rendering capabilities with proper servlet context integration, URL resolution, template inheritance, and
+```Hermod``` is responsible for HTML template processing and page assembly using **Thymeleaf**. It
+provides powerful
+template rendering capabilities with proper servlet context integration, URL resolution, template
+inheritance, and
 enhanced performance through caching.
 
 **Main Methods:**
-- `render(templatePath, queryParams, bodyParams, request, response, context)` - Render template with full context
-- `render(templatePath, request, response)` - Render template without parameters  
-- `composePage(baseTemplate, partialTemplate, request, response)` - Compose page from base + partial template
+
+- `render(templatePath, queryParams, bodyParams, request, response, context)` - Render template with
+  full context
+- `render(templatePath, request, response)` - Render template without parameters
+- `composePage(baseTemplate, partialTemplate, request, response)` - Compose page from base + partial
+  template
 
 **Key Features:**
 
@@ -310,23 +328,23 @@ enhanced performance through caching.
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>JAWS - Just Another Web Server</title>
+  <title>JAWS - Just Another Web Server</title>
 </head>
 <body>
-    <!-- URL Building -->
-    <a th:href="@{/backoffice/login.html}">Backoffice</a>
-    
-    <!-- Fragment Inclusion -->
-    <div th:insert="~{docs/staticfiles.html}">Loading guide...</div>
-    
-    <!-- Variable Display -->
-    <p th:text="${apiPath}">API Path</p>
-    
-    <!-- Conditional Rendering -->
-    <div th:if="${currentUser}">
-        <span th:text="${currentUser}">User Name</span>
-    </div>
-    
+<!-- URL Building -->
+<a th:href="@{/backoffice/login.html}">Backoffice</a>
+
+<!-- Fragment Inclusion -->
+<div th:insert="~{docs/staticfiles.html}">Loading guide...</div>
+
+<!-- Variable Display -->
+<p th:text="${apiPath}">API Path</p>
+
+<!-- Conditional Rendering -->
+<div th:if="${currentUser}">
+  <span th:text="${currentUser}">User Name</span>
+</div>
+
 </body>
 </html>
 ```
@@ -334,92 +352,100 @@ enhanced performance through caching.
 **Controller Example**
 
 ```java
-    @AccessControl(login = true)
-    @Route(endpoint = "/backoffice", method = GET)
-    public void renderIndex() {
-        User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
-        context.put("currentUser", getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
-        context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
-                ? user.profilePicture()
-                : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
-        setContext(context);
+@AccessControl(login = true)
+@Route(endpoint = "/backoffice", method = GET)
+public void renderIndex() {
+  User user = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
 
-        sendHTML(OK, compose(BASE_HTML_PATH, DASHBOARD_PAGE));
-    }
+  Map<String, String> context = new HashMap<>();
+  context.put("userId", Tyr.getUserIdFromJWT(getCurrentToken()));
+  context.put("currentUser",
+      getCurrentToken().isEmpty() ? "-" : user.firstName() + " " + user.lastName());
+  context.put("profilePicture", user.profilePicture() != null && !user.profilePicture().isEmpty()
+      ? user.profilePicture()
+      : "https://openmoji.org/data/color/svg/1F9D9-200D-2642-FE0F.svg");
+  setContext(context);
+
+  sendHTML(OK, compose(BASE_HTML_PATH, DASHBOARD_PAGE));
+}
 ```
 
 ### Mimir
 
-```Mimir``` is the database / ORM that we can use to interface with an SQLite database. It handles all the db
-connections, and it has a basic transaction handling logic. It returns an object called ```Row``` that can be then map
+```Mimir``` is the database / ORM that we can use to interface with an SQLite database. It handles
+all the db
+connections, and it has a basic transaction handling logic. It returns an object called ```Row```
+that can be then map
 to a model
 
 **Example**
 
 ```java
 public void updateLastLogin(Integer userId) {
-    db.executeSql(
-            "UPDATE USER SET last_login = ? WHERE id = ?",
-            Date.from(Instant.now()),
-            userId
-    );
+  db.executeSql(
+      "UPDATE USER SET last_login = ? WHERE id = ?",
+      Date.from(Instant.now()),
+      userId
+  );
 }
 
 public Optional<User> getUserById(Long id) {
-    Row row = db.getRow("SELECT * FROM USER WHERE id = ?", id);
-    if (row == null) {
-        return Optional.empty();
-    }
-    return User.fromRow(row);
+  Row row = db.getRow("SELECT * FROM USER WHERE id = ?", id);
+  if (row == null) {
+    return Optional.empty();
+  }
+  return User.fromRow(row);
 }
 
 public List<User> getAllUsers() {
-    List<Row> rows = db.getRows("SELECT * FROM USER ORDER BY created_at DESC");
-    return rows.stream()
-            .map(User::fromRow)
-            .flatMap(Optional::stream)
-            .toList();
+  List<Row> rows = db.getRows("SELECT * FROM USER ORDER BY created_at DESC");
+  return rows.stream()
+      .map(User::fromRow)
+      .flatMap(Optional::stream)
+      .toList();
 }
 ```
 
 ```java
 public APIResponse<List<User>> listUsers() {
-    return APIResponse.success(OK,
-            authRepo.getAllUsers().stream()
-                    .map(User::defaultView)
-                    .toList());
+  return APIResponse.success(OK,
+      authRepo.getAllUsers().stream()
+          .map(User::defaultView)
+          .toList());
 }
 ```
 
-The ```User``` class is the data model for the table ```USER```, and it's responsible for mapping a `Row` to itself.
+The ```User``` class is the data model for the table ```USER```, and it's responsible for mapping a
+`Row` to itself.
 Creating the tables is done via the SQL schema file.
 
 #### RowBinder (Projection Mapping)
 
-To reduce boilerplate when mapping query results into simple projection types (records or POJOs), JAWS provides
+To reduce boilerplate when mapping query results into simple projection types (records or POJOs),
+JAWS provides
 `RowBinder`.
 
 - Match columns by alias to projection component/property names (case-insensitive)
 - Use Optional<T> for nullable DB columns (Optional-first style)
 - Supports records and POJOs (public no-arg constructor), with simple type conversions:
-  - Integer <-> Long, Float <-> Double
-  - numeric <-> boolean (0/1)
-  - String parsing for numbers and booleans, and byte[] passthrough
+    - Integer <-> Long, Float <-> Double
+    - numeric <-> boolean (0/1)
+    - String parsing for numbers and booleans, and byte[] passthrough
 - Flat projections only — complex mappings should use explicit mappers/services
 
 **Example (record)**
 
 ```java
-public record UserSummary(Optional<Long> id, Optional<String> user, Optional<String> firstName) {}
+public record UserSummary(Optional<Long> id, Optional<String> user, Optional<String> firstName) {
+
+}
 
 String sql = """
-  SELECT id AS id, user AS user, first_name AS firstName
-  FROM USER
-  ORDER BY created_at DESC
-""";
+      SELECT id AS id, user AS user, first_name AS firstName
+      FROM USER
+      ORDER BY created_at DESC
+    """;
 
 List<UserSummary> out = repo.getAll(sql, RowBinder.mapper(UserSummary.class));
 ```
@@ -428,11 +454,20 @@ List<UserSummary> out = repo.getAll(sql, RowBinder.mapper(UserSummary.class));
 
 ```java
 public class UserSummaryPojo {
+
   private Optional<Long> id;
   private Optional<String> user;
-  public UserSummaryPojo() {}
-  public void setId(Optional<Long> id) { this.id = id; }
-  public void setUser(Optional<String> user) { this.user = user; }
+
+  public UserSummaryPojo() {
+  }
+
+  public void setId(Optional<Long> id) {
+    this.id = id;
+  }
+
+  public void setUser(Optional<String> user) {
+    this.user = user;
+  }
 }
 
 List<UserSummaryPojo> out = repo.getAll(sql, RowBinder.mapper(UserSummaryPojo.class));
@@ -453,19 +488,21 @@ Always alias SQL columns to match projection names to avoid surprises, especiall
 ```sql
 SELECT u.id AS id, u.user AS user, p.first_name AS firstName
 FROM USER u
-JOIN USER_PROFILE p ON p.user_id = u.id
+         JOIN USER_PROFILE p ON p.user_id = u.id
 ```
 
 #### Query Caching
 
 JAWS includes query-level caching. To ensure proper invalidation, annotate repository methods with
-`@Cacheable(tables = {"TABLE1", "TABLE2", ...})` listing all tables that affect the query (including joins).
+`@Cacheable(tables = {"TABLE1", "TABLE2", ...})` listing all tables that affect the query (including
+joins).
 
 - Include every table whose changes should invalidate the cache for that query
 - Order does not matter; names are used for invalidation matching
 - Keep TTL appropriate to the data volatility
 
 ```java
+
 @Cacheable(tables = {"USER"})
 public List<UserSummary> listUsers() {
   String sql = "SELECT id AS id, user AS user FROM USER ORDER BY created_at DESC";
@@ -475,8 +512,10 @@ public List<UserSummary> listUsers() {
 
 ### Njord
 
-This module is a dynamic router class that routes requests to controllers. Annotating and method with ```@Route``` will
-be picked up by ```Njord```. It's is not *completely* dynamic because we need to before hand config the classes that we
+This module is a dynamic router class that routes requests to controllers. Annotating and method
+with ```@Route``` will
+be picked up by ```Njord```. It's is not *completely* dynamic because we need to before hand config
+the classes that we
 check for these annotations
 
 **Example**
@@ -485,14 +524,14 @@ check for these annotations
 
 public class RoutesConfig {
 
-    // All the dynamic routes that will be registered
-    // File paths are not needed here, as they are handled by Yggdrasill
+  // All the dynamic routes that will be registered
+  // File paths are not needed here, as they are handled by Yggdrasill
 
-    public static final List<Object> ROUTES = List.of(
-            new AuthController(),
-            new APIController(),
-            new BackofficeController()
-    );
+  public static final List<Object> ROUTES = List.of(
+      new AuthController(),
+      new APIController(),
+      new BackofficeController()
+  );
 }
 ```
 
@@ -500,7 +539,7 @@ public class RoutesConfig {
 
 @Route(endpoint = API_ENDPOINT + "ping", responseType = JSON)
 public void ping() {
-    sendSucessfulResponse(OK, apiService.ping());
+  sendSucessfulResponse(OK, apiService.ping());
 }
 ```
 
@@ -509,14 +548,16 @@ public void ping() {
 @AccessControl(login = true)
 @Route(endpoint = "/backoffice/profile/:id", method = GET)
 public void renderUserProfile() {
-    String userId = getPathParam("id");
-    User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken()))).get();
-    User user = authRepo.getUserById(Long.parseLong(userId)).get();
-    // ...
+  String userId = getPathParam("id");
+  User currentUser = authRepo.getUserById(Long.parseLong(Tyr.getUserIdFromJWT(getCurrentToken())))
+      .get();
+  User user = authRepo.getUserById(Long.parseLong(userId)).get();
+  // ...
 }
 ```
 
-```@Route``` is also responsible for setting the request type, like ```GET``` or ```POST```. The path params are also
+```@Route``` is also responsible for setting the request type, like ```GET``` or ```POST```. The
+path params are also
 possible with this annotation, like in the example. It is very simplistic, no types, for example.
 
 ### Norns
@@ -527,14 +568,14 @@ This module is a classic scheduler, like a cron tab.
 
 ```java
 private static Thread createNorns() {
-    Norns norns = Norns.getInstance();
-    norns.registerTask(
-            "clean-old-sessions",
-            () -> new AuthService().cleanOldSessions(),
-            5,
-            TimeUnit.MINUTES
-    );
-    return new Thread(norns, "norns");
+  Norns norns = Norns.getInstance();
+  norns.registerTask(
+      "clean-old-sessions",
+      () -> new AuthService().cleanOldSessions(),
+      5,
+      TimeUnit.MINUTES
+  );
+  return new Thread(norns, "norns");
 }
 ```
 
@@ -542,30 +583,32 @@ There is not much more to say, just that it does in its own thread
 
 ### Odin
 
-```Odin``` is where JAWS is started. The modules are started here. Nothing more to say, just a init class
+```Odin``` is where JAWS is started. The modules are started here. Nothing more to say, just a init
+class
 
 ```java
 private static void startComponents() {
-    ExecutorService executor = Executors.newCachedThreadPool();
+  ExecutorService executor = Executors.newCachedThreadPool();
 
-    createMimir();
-    createNjord();
-    List<Thread> threads = Arrays.asList(
-            createYggdrasill(),
-            createHeimdall(),
-            createNorns());
+  createMimir();
+  createNjord();
+  List<Thread> threads = Arrays.asList(
+      createYggdrasill(),
+      createHeimdall(),
+      createNorns());
 
-    for (Thread thread : threads) {
-        executor.execute(thread);
-    }
+  for (Thread thread : threads) {
+    executor.execute(thread);
+  }
 
-    createHel(executor);
+  createHel(executor);
 }
 ```
 
 ### Tyr
 
-```Tyr``` is responsible for JWT handling. As of now a simple login system with access and refresh token can be used
+```Tyr``` is responsible for JWT handling. As of now a simple login system with access and refresh
+token can be used
 
 **Example**
 
@@ -573,53 +616,54 @@ private static void startComponents() {
 
 @Route(endpoint = API_ENDPOINT + "login", method = POST, responseType = JSON)
 public void loginUser(LoginRequest request) {
-    String username = request.user();
-    String password = request.password();
+  String username = request.user();
+  String password = request.password();
 
-    String userAgent = getHeaders().get("User-Agent");
-    String ipAddress = getClientIpAddress();
+  String userAgent = getHeaders().get("User-Agent");
+  String ipAddress = getClientIpAddress();
 
-    APIResponse<TokenResponse> response = authService.loginUser(
-            username,
-            password,
-            userAgent,
-            ipAddress
-    );
+  APIResponse<TokenResponse> response = authService.loginUser(
+      username,
+      password,
+      userAgent,
+      ipAddress
+  );
 
-    if (!response.success()) {
-        sendErrorResponse(response.code(), response.info());
-        return;
-    }
+  if (!response.success()) {
+    sendErrorResponse(response.code(), response.info());
+    return;
+  }
 
-    sendSucessfulResponse(OK, response.data());
+  sendSucessfulResponse(OK, response.data());
 }
 ```
 
 ```java
 
-public APIResponse<TokenResponse> loginUser(String username, String password, String userAgent, String ipAddress) {
-    if (username == null || password == null) {
-        return APIResponse.error(BAD_REQUEST, "User / password is missing");
-    }
+public APIResponse<TokenResponse> loginUser(String username, String password, String userAgent,
+    String ipAddress) {
+  if (username == null || password == null) {
+    return APIResponse.error(BAD_REQUEST, "User / password is missing");
+  }
 
-    Optional<User> user = authRepo.getUserByUsername(username.toLowerCase());
-    if (user.isEmpty()) {
-        return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
-    }
+  Optional<User> user = authRepo.getUserByUsername(username.toLowerCase());
+  if (user.isEmpty()) {
+    return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
+  }
 
-    if (!BCrypt.verifyer()
-            .verify(password.toCharArray(), user.get().passwordHash()).verified) {
-        return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
-    }
+  if (!BCrypt.verifyer()
+      .verify(password.toCharArray(), user.get().passwordHash()).verified) {
+    return APIResponse.error(UNAUTHORIZED, "Credentials are invalid");
+  }
 
-    Tyr.TokenPair tokenPair = Tyr.createTokenPair(
-            user.get().id().toString(),
-            userAgent,
-            ipAddress
-    );
+  Tyr.TokenPair tokenPair = Tyr.createTokenPair(
+      user.get().id().toString(),
+      userAgent,
+      ipAddress
+  );
 
-    authRepo.updateLastLogin(user.get().id());
-    return APIResponse.success(OK, TokenResponse.fromTokenPair(tokenPair));
+  authRepo.updateLastLogin(user.get().id());
+  return APIResponse.success(OK, TokenResponse.fromTokenPair(tokenPair));
 }
 ```
 
@@ -628,12 +672,14 @@ public APIResponse<TokenResponse> loginUser(String username, String password, St
 @AccessControl(login = true)
 @Route(endpoint = "/backoffice", method = GET)
 public void renderIndex() {
-    // ...
+  // ...
 }
 ```
 
-In this example ```createTokenPair``` is a ```Tyr``` method that generate a new pair of access and refresh tokens. In
-combination with the annotation ```@AccessControl(login = true)``` we can easily block endpoints that need
+In this example ```createTokenPair``` is a ```Tyr``` method that generate a new pair of access and
+refresh tokens. In
+combination with the annotation ```@AccessControl(login = true)``` we can easily block endpoints
+that need
 authentication. Profiles are not implemented, but one day they will (let's hope)
 
 ### Volundr
@@ -642,7 +688,8 @@ This module is just a simple builder that constructs all the response headers. N
 
 ### Yggdrasill
 
-This module is the heart of JAWS. `Yggdrasill` is responsible for handling HTTP requests, processing them through
+This module is the heart of JAWS. `Yggdrasill` is responsible for handling HTTP requests, processing
+them through
 middleware chains, discovering routes, and executing controller methods.
 
 Key features:
@@ -655,7 +702,8 @@ Key features:
 - **Thread management**: Handles concurrent connections with proper resource management
 - **Exception handling**: Comprehensive error handling and response management
 
-The `RequestContext` contains all the relevant information about the request, including headers, body, JWT tokens, path
+The `RequestContext` contains all the relevant information about the request, including headers,
+body, JWT tokens, path
 parameters, and query parameters. Controllers access this through the `Bragi` base class methods.
 
 **Example request flow:**
@@ -669,12 +717,12 @@ Route Discovery ->Controller
 @Route(endpoint = "/api/users", method = GET)
 
 public void getUsers() {
-    // Access request data through Bragi methods
-    String token = getCurrentToken();
-    Map<String, String> headers = getHeaders();
+  // Access request data through Bragi methods
+  String token = getCurrentToken();
+  Map<String, String> headers = getHeaders();
 
-    // Process and respond
-    sendSucessfulResponse(OK, userService.getAllUsers());
+  // Process and respond
+  sendSucessfulResponse(OK, userService.getAllUsers());
 }
 ```
 
@@ -686,8 +734,10 @@ I say to that: Why not have fun while learning and not taking everything so seri
 
 ### Serious? Another webserver?
 
-This is a hobby project where I don't really take it too seriously. Again, to me, this is about learning and having fun
-while doing it. I use it as a *thing* to apply new technics or ideas, even if they are bad. For example, this is where I
+This is a hobby project where I don't really take it too seriously. Again, to me, this is about
+learning and having fun
+while doing it. I use it as a *thing* to apply new technics or ideas, even if they are bad. For
+example, this is where I
 first tried the famous *vibe coding*
 
 ## License
