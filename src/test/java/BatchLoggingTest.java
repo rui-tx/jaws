@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.components.mimir.Mimir;
@@ -11,6 +12,7 @@ import java.sql.DriverManager;
 import java.util.List;
 import java.util.Map;
 
+@Disabled("Replaced by components.logger.JawsLoggerIntegrationTest")
 public class BatchLoggingTest {
 
   @BeforeAll
@@ -245,4 +247,4 @@ public class BatchLoggingTest {
       e.printStackTrace();
     }
   }
-} 
+}

@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.types.Row;
@@ -9,6 +10,7 @@ import java.io.File;
 import java.sql.DriverManager;
 import java.util.List;
 
+@Disabled("Replaced by components.logger.JawsLoggerIntegrationTest")
 public class JawsLoggerTest {
 
   @BeforeAll
@@ -159,4 +161,4 @@ public class JawsLoggerTest {
 
     System.out.println("✅ Database persistence test completed");
   }
-} 
+}

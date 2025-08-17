@@ -19,7 +19,7 @@ import org.ruitx.jaws.utils.logger.JawsLogger;
 public class ExceptionAspect {
 
   // Pointcut to match any method in controllers
-  @Pointcut("execution(* org.ruitx.www.controller..*(..))")
+  @Pointcut("execution(* org.ruitx.www..controller..*(..))")
   public void controllerMethods() {
   }
 
@@ -70,6 +70,10 @@ public class ExceptionAspect {
       handleAuthenticationException(ae, controller);
     } else if (ex.getCause() instanceof OperationException oe) {
       handleOperationException(oe, controller);
+    } else if (ex.getCause() instanceof AuthenticationException ae) {
+      handleAuthenticationException(ae, controller);
+    } else if (ex.getCause() instanceof ValidationException ve) {
+      handleValidationException(ve, controller);
     } else {
       handleUnexpectedException(ex, controller);
     }

@@ -25,8 +25,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Njord;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.Njord;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
 import org.ruitx.jaws.configs.ApplicationConfig;
@@ -53,34 +53,40 @@ public class YggdrasillIntegrationTest {
     mainDbPath = Paths.get("target", "it-db-" + System.nanoTime() + ".db");
     logsDbPath = Paths.get("target", "it-logs-" + System.nanoTime() + ".db");
 
-    Odin.registerDatabase(Odin.DB_NAME, new DatabaseConfig(
-        mainDbPath.toAbsolutePath().toString(),
-        ApplicationConfig.DATABASE_SCHEMA_PATH,
-        ApplicationConfig.MIMIR_READER_POOL_SIZE,
-        ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
-        ApplicationConfig.MIMIR_ENABLE_WAL,
-        ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
-        null,
-        "jaws-writer",
-        "jaws-reader",
-        null
-    ));
+    if (!Odin.hasDatabase(Odin.DB_NAME)) {
+      Odin.registerDatabase(Odin.DB_NAME, new DatabaseConfig(
+          mainDbPath.toAbsolutePath().toString(),
+          ApplicationConfig.DATABASE_SCHEMA_PATH,
+          ApplicationConfig.MIMIR_READER_POOL_SIZE,
+          ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
+          ApplicationConfig.MIMIR_ENABLE_WAL,
+          ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
+          null,
+          "jaws-writer",
+          "jaws-reader",
+          null
+      ));
+    }
 
-    Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
-        logsDbPath.toAbsolutePath().toString(),
-        Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
-        Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
-        ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
-        true,
-        ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
-        null,
-        "jaws-logs-writer",
-        "jaws-logs-reader",
-        null
-    ));
+    if (!Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
+      Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
+          logsDbPath.toAbsolutePath().toString(),
+          Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+          Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
+          ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
+          true,
+          ApplicationConfig.MIMIR_SYNCHRONOUS_MODE,
+          null,
+          "jaws-logs-writer",
+          "jaws-logs-reader",
+          null
+      ));
+    }
 
-    // Bootstrap JawsLogger against Odin's logs DB
-    JawsLogger.bootstrap(Odin.getDB(Odin.LOGS_DB_NAME));
+    // Bootstrap JawsLogger against Odin's logs DB (safe if called multiple times)
+    if (Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
+      JawsLogger.bootstrap(Odin.getDB(Odin.LOGS_DB_NAME));
+    }
     // pick a random free port
     port = getFreePort();
 
