@@ -293,6 +293,56 @@ public final class Odin {
     }
   }
 
+  public static synchronized void unregisterDatabase(String name) {
+    if (name == null || name.isBlank()) {
+      return;
+    }
+    try {
+      Verdandi v = DB_CONNECTORS.remove(name);
+      if (v != null) {
+        try {
+          v.close();
+        } catch (Exception ignore) {
+        }
+      }
+    } finally {
+      DBS.remove(name);
+      Logger.info("Odin: Database '{}' unregistered", name);
+    }
+  }
+
+  /**
+   * Test-only helper to shutdown all background systems and close all DB connectors. Intended for
+   * use in @AfterAll of integration tests to ensure files can be deleted safely.
+   */
+  public static synchronized void shutdownAllForTests() {
+    // Stop Freyr if running
+    try {
+      // Fully reset singleton to avoid stale DB references across tests
+      Freyr.resetForTests();
+    } catch (Throwable ignore) {
+    }
+
+    // Close any server instance (if started in a test)
+    try {
+      if (YGGDRASILL != null) {
+        YGGDRASILL.shutdown();
+      }
+    } catch (Throwable ignore) {
+    }
+
+    // Close all DB connectors and clear registries
+    DB_CONNECTORS.forEach((n, v) -> {
+      try {
+        v.close();
+      } catch (Exception ignore) {
+      }
+    });
+    DB_CONNECTORS.clear();
+    DBS.clear();
+    Logger.info("Odin: shutdownAllForTests completed");
+  }
+
   // Hel is the shutdown hook that gracefully stops all services
   private static void createHel(ExecutorService executor) {
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {

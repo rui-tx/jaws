@@ -1,10 +1,11 @@
-package org.ruitx.jaws.simulation;
+package components.tyr;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.Urd;
+import org.ruitx.jaws.simulation.TyrSimulationRunner;
 
 class TyrSimulationRunnerTest {
 

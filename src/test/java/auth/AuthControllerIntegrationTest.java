@@ -45,6 +45,9 @@ public class AuthControllerIntegrationTest {
 
   @BeforeAll
   static void beforeAll() throws Exception {
+    // Ensure clean slate across tests to avoid lingering pools/workers referencing old DB files
+    Odin.shutdownAllForTests();
+
     // temp static dir
     staticRoot = Files.createTempDirectory("auth-it-static-");
     Files.writeString(staticRoot.resolve("ok.txt"), "ok", StandardCharsets.UTF_8);
@@ -121,6 +124,9 @@ public class AuthControllerIntegrationTest {
     if (server != null) {
       server.shutdown();
     }
+    // Ensure all background workers and DB pools are closed before file deletion
+    Odin.shutdownAllForTests();
+
     try {
       Files.deleteIfExists(staticRoot.resolve("ok.txt"));
     } catch (IOException ignored) {
@@ -132,9 +138,18 @@ public class AuthControllerIntegrationTest {
     try {
       if (logsDbPath != null) {
         Files.deleteIfExists(logsDbPath);
+        // delete sidecar files if WAL was enabled
+        Path logsWal = Paths.get(logsDbPath.toString() + "-wal");
+        Path logsShm = Paths.get(logsDbPath.toString() + "-shm");
+        Files.deleteIfExists(logsWal);
+        Files.deleteIfExists(logsShm);
       }
       if (mainDbPath != null) {
         Files.deleteIfExists(mainDbPath);
+        Path mainWal = Paths.get(mainDbPath.toString() + "-wal");
+        Path mainShm = Paths.get(mainDbPath.toString() + "-shm");
+        Files.deleteIfExists(mainWal);
+        Files.deleteIfExists(mainShm);
       }
     } catch (IOException ignored) {
     }

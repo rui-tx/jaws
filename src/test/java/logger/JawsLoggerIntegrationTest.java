@@ -1,4 +1,4 @@
-package components.logger;
+package logger;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +30,9 @@ public class JawsLoggerIntegrationTest {
 
   @BeforeAll
   static void beforeAll() throws Exception {
+    // Ensure clean slate: close any previous DBs/background workers from other tests
+    Odin.shutdownAllForTests();
+
     // If main DB isn't present (e.g., running this test in isolation), register a temp one
     if (!Odin.hasDatabase(Odin.DB_NAME)) {
       mainDbPath = Paths.get("target", "logger-it-db-" + System.nanoTime() + ".db");
@@ -83,12 +86,31 @@ public class JawsLoggerIntegrationTest {
     } catch (InterruptedException ignored) {
     }
 
+    // Stop background workers first
     Freyr.getInstance().shutdown();
 
-    // Do not delete/modify any main DB. Only best-effort cleanup of our temporary logs DB file.
+    // Unregister test databases so all pools/connections are closed
+    try {
+      if (Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
+        Odin.unregisterDatabase(Odin.LOGS_DB_NAME);
+      }
+      if (mainDbPath != null && Odin.hasDatabase(Odin.DB_NAME)) {
+        Odin.unregisterDatabase(Odin.DB_NAME);
+      }
+    } catch (Throwable ignored) {
+    }
+
+    // Best-effort cleanup of temp DB files (including WAL/SHM sidecars)
     try {
       if (logsDbPath != null) {
         Files.deleteIfExists(logsDbPath);
+        Files.deleteIfExists(Paths.get(logsDbPath.toString() + "-wal"));
+        Files.deleteIfExists(Paths.get(logsDbPath.toString() + "-shm"));
+      }
+      if (mainDbPath != null) {
+        Files.deleteIfExists(mainDbPath);
+        Files.deleteIfExists(Paths.get(mainDbPath.toString() + "-wal"));
+        Files.deleteIfExists(Paths.get(mainDbPath.toString() + "-shm"));
       }
     } catch (IOException ignored) {
     }

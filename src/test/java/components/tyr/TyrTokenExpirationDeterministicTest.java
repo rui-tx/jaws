@@ -1,4 +1,4 @@
-package org.ruitx.jaws.simulation;
+package components.tyr;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

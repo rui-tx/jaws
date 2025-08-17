@@ -1,18 +1,17 @@
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
-import org.ruitx.jaws.utils.logger.JawsLogger;
-import org.ruitx.jaws.components.freyr.Freyr;
-import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
-
 import java.io.File;
 import java.sql.DriverManager;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.ruitx.jaws.components.freyr.Freyr;
+import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
-@Disabled("Replaced by components.logger.JawsLoggerIntegrationTest")
+@Disabled("Replaced by logger.JawsLoggerIntegrationTest")
 public class BatchLoggingTest {
 
   @BeforeAll

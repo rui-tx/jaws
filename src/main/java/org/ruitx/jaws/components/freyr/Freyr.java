@@ -97,6 +97,21 @@ public class Freyr implements Runnable {
   }
 
   /**
+   * Test-only helper to fully reset the Freyr singleton.
+   * Ensures no stale DB references persist across tests.
+   */
+  public static synchronized void resetForTests() {
+    if (instance != null) {
+      try {
+        instance.shutdown();
+      } catch (Throwable ignore) {
+      }
+      instance = null;
+      Logger.info("Freyr: resetForTests completed - singleton cleared");
+    }
+  }
+
+  /**
    * Submit a job for processing.
    *
    * <p>This method creates a new JobInstance and adds it to either the sequential or parallel job

@@ -1,4 +1,4 @@
-package components;
+package components.bifrost;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
