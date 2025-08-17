@@ -1,9 +1,11 @@
 package org.ruitx.jaws.components;
 
+import io.jsonwebtoken.Clock;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.function.Consumer;
 import org.tinylog.Logger;
 
 /**
@@ -16,13 +18,14 @@ public class Urd {
   private final Map<String, List<SimulationStep>> simulations;
   private final Map<String, Object> simulationState;
   private long simulationTimeMillis;
-  private long timeScale; // milliseconds of real time per millisecond of simulation time
+
+  // Simulation time is purely logical; advancing time does not sleep.
 
   private Urd() {
     this.simulations = new ConcurrentHashMap<>();
     this.simulationState = new ConcurrentHashMap<>();
     this.simulationTimeMillis = 0;
-    this.timeScale = 1; // Default: 1ms real time = 1ms simulation time
+    // No real-time coupling
   }
 
   public static synchronized Urd getInstance() {
@@ -30,16 +33,6 @@ public class Urd {
       instance = new Urd();
     }
     return instance;
-  }
-
-  /**
-   * Sets the time scale for the simulation.
-   *
-   * @param timeScale Number of milliseconds of simulation time per millisecond of real time
-   */
-  public void setTimeScale(long timeScale) {
-    this.timeScale = timeScale;
-    Logger.info("Set simulation time scale to {}ms simulation time per 1ms real time", timeScale);
   }
 
   /**
@@ -52,26 +45,19 @@ public class Urd {
   }
 
   /**
+   * Provides a JWT Clock backed by Urd's logical time.
+   */
+  public Clock jwtClock() {
+    return () -> new Date(simulationTimeMillis);
+  }
+
+  /**
    * Advances the simulation time by the specified duration.
    *
    * @param durationMillis Duration to advance in milliseconds
    */
   public void advanceTime(long durationMillis) {
-    long realTimeStart = System.currentTimeMillis();
     simulationTimeMillis += durationMillis;
-
-    // If timeScale < 1, we need to wait to slow down simulation
-    // If timeScale > 1, simulation runs faster than real time (no waiting)
-    if (timeScale < 1 && timeScale > 0) {
-      long realTimeToWait = (long) (durationMillis / (double) timeScale);
-      try {
-        Thread.sleep(realTimeToWait);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        Logger.error("Time advancement interrupted: {}", e.getMessage());
-      }
-    }
-
     Logger.info("Advanced simulation time by {}ms to {}ms", durationMillis, simulationTimeMillis);
   }
 
@@ -141,16 +127,16 @@ public class Urd {
   public static class SimulationStep {
 
     private final String description;
-    private final Function<Map<String, Object>, Void> action;
+    private final Consumer<Map<String, Object>> action;
 
-    public SimulationStep(String description, Function<Map<String, Object>, Void> action) {
+    public SimulationStep(String description, Consumer<Map<String, Object>> action) {
       this.description = description;
       this.action = action;
     }
 
     public void execute(Map<String, Object> state) {
       Logger.info("Executing simulation step: {}", description);
-      action.apply(state);
+      action.accept(state);
     }
   }
-} 
+}
