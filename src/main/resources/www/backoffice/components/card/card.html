@@ -17,14 +17,12 @@
         </div>
     </div>
 
-    <!-- Stats card with icon, label, value, color -->
-    <div th:fragment="stats-card(icon, label, value, color)">
+    <!-- Stats card with iconClass, label, value, color -->
+    <div th:fragment="stats-card(iconClass, label, value, color)">
         <div class="card">
             <section>
                 <div class="flex items-center gap-2">
-                    <div th:utext="${icon}" th:class="${'text-' + color + '-500'}">
-                        <!-- Icon will be inserted here -->
-                    </div>
+                    <i th:class="${'icon ' + iconClass + ' w-6 h-6 text-' + color + '-500'}"></i>
                     <div>
                         <p class="text-sm text-muted-foreground" th:text="${label}">Label</p>
                         <p class="text-2xl font-bold" th:text="${value}">Value</p>
@@ -79,4 +77,4 @@
         </section>
     </div>
 </body>
-</html> 
+</html>

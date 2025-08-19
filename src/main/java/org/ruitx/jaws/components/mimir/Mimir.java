@@ -44,9 +44,6 @@ import org.tinylog.Logger;
 /**
  * Mimir is a database management component for Jaws framework. It provides methods to initialize,
  * manage transactions, execute SQL queries, and handle pagination.
- * <p>
- * Mimir uses SQLite as the underlying database engine and supports schema loading from a specified
- * file path.
  */
 public class Mimir {
 
@@ -69,7 +66,7 @@ public class Mimir {
   private final ThreadLocal<Connection> transactionConnection = new ThreadLocal<>();
   // Preferred external connector (when non-null, Mimir will delegate all connections)
   private final DbConnector connector;
-  private String schemaPath;
+  private final String schemaPath;
   // Legacy local pools (used only if no external connector is provided)
   private HikariDataSource writerDs;
   private HikariDataSource readerDs;
@@ -141,7 +138,7 @@ public class Mimir {
       entry.put("params", key.params);
       entry.put("value", value);
       entry.put("ttlNanos", keyToTtl.getOrDefault(key, Long.MAX_VALUE));
-      entries.add(java.util.Map.copyOf(entry));
+      entries.add(Map.copyOf(entry));
     });
     return List.copyOf(entries);
   }

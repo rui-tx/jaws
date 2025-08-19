@@ -2,13 +2,6 @@ package org.ruitx.jaws.components.mimir;
 
 import java.util.List;
 
-/**
- * @param schemaPath               nullable
- * @param leakDetectionThresholdMs nullable
- * @param writerPoolName           nullable
- * @param readerPoolName           nullable
- * @param seeders                  Optional, ordered seeders to run after DB is ready nullable
- */
 public record DatabaseConfig(
     String databasePath,
     String schemaPath,

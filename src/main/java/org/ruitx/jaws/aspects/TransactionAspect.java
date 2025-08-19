@@ -1,5 +1,6 @@
 package org.ruitx.jaws.aspects;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -89,7 +90,7 @@ public class TransactionAspect {
 
     // Then check target object fields
     Object target = joinPoint.getTarget();
-    for (java.lang.reflect.Field field : target.getClass().getDeclaredFields()) {
+    for (Field field : target.getClass().getDeclaredFields()) {
       if (Mimir.class.isAssignableFrom(field.getType())) {
         try {
           field.setAccessible(true);

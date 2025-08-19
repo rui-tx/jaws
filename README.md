@@ -371,6 +371,118 @@ public void renderIndex() {
 }
 ```
 
+#### Thymeleaf Fragments + HTMX Component System
+
+JAWS now uses a simple component system built on Thymeleaf fragments and HTMX for partial updates.
+This keeps the UI fast and the codebase simple.
+
+Key ideas:
+
+- **Fragments as components**: UI pieces live as `th:fragment` inside files like
+  `backoffice/components/card/card.html` and `backoffice/components/table/table.html`.
+- **Direct fragment rendering**: Controllers return fragments via
+  `renderFragment(templatePath, fragmentName, context)`.
+- **Stable HTMX targets**: Fragment roots include container IDs so `hx-target` remains valid after
+  swaps.
+- **Skeletons**: Lightweight loading placeholders rendered until HTMX swaps in the real fragment.
+
+Example: stats card component (`backoffice/components/card/card.html`)
+
+```html
+<!-- stats-card(iconClass, label, value, color) -->
+<div th:fragment="stats-card(iconClass, label, value, color)">
+  <div class="card">
+    <section>
+      <div class="flex items-center gap-2">
+        <i th:class="${'icon ' + iconClass + ' w-6 h-6 text-' + color + '-500'}"></i>
+        <div>
+          <p class="text-sm text-muted-foreground" th:text="${label}">Label</p>
+          <p class="text-2xl font-bold" th:text="${value}">Value</p>
+        </div>
+      </div>
+    </section>
+  </div>
+  }
+</div>
+```
+
+Example: table with pagination (`backoffice/components/table/table.html`)
+
+```html
+<!-- Root contains a stable ID so hx-target persists after swaps -->
+<div id="logs-table-container"
+     th:fragment="table-logs-with-pagination(headers, rows, caption, actions, pagination)">
+  <div class="card">
+    <header th:if="${caption != null}">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 th:text="${caption}">Recent System Logs</h2>
+          <p class="text-sm text-muted-foreground">
+            Showing <span th:text="${pagination.currentPage + 1}">1</span>
+            of <span th:text="${pagination.totalPages}">1</span> pages
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm p-2 rounded-md hover:bg-accent"
+                hx-swap="outerHTML"
+                hx-target="#logs-table-container"
+                th:hx-get="'\/backoffice\/htmx\/logs-filtered?page=' + ${pagination.currentPage} + '&size=' + ${pagination.pageSize}">
+          <i class="icon icon-arrow-path w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+    <!-- table body omitted for brevity -->
+  </div>
+</div>
+```
+
+Example: controller returning a fragment (see
+`org/ruitx/www/base/controller/BackofficeController.java`)
+
+```java
+
+@AccessControl(login = true)
+@Route(endpoint = HTMX_ENDPOINT + "/user-count", method = GET, responseType = HTML, htmx = true)
+public void getUserCount() {
+  Context svc = backofficeService.getUserCount();
+  Map<String, Object> data = (Map<String, Object>) svc.context().get("data");
+
+  Context ctx = Context.builder()
+      .with("iconClass", data.get("icon"))
+      .with("label", data.get("label"))
+      .with("value", data.get("value"))
+      .with("color", "blue")
+      .build();
+
+  sendHTML(OK, renderFragment("backoffice/components/card/card.html", "stats-card", ctx));
+}
+```
+
+Example: skeletons while loading (`src/main/resources/www/backoffice/main.html`)
+
+```html
+<!-- Cards -->
+<div class="card" hx-get="/backoffice/htmx/user-count" hx-target="this" hx-swap="outerHTML"
+     hx-trigger="load">
+  <div th:replace="~{backoffice/components/card/card.html :: skeleton-card}"></div>
+  <!-- Real card fragment replaces this on load -->
+</div>
+
+<!-- Table -->
+<div hx-get="/backoffice/htmx/logs?page=0&size=10" hx-target="this" hx-swap="outerHTML"
+     hx-trigger="load">
+  <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
+  <!-- Real table fragment replaces this on load -->
+</div>
+```
+
+Recommendations:
+
+- **Use stable container IDs** on fragment roots for any element that is an HTMX target.
+- **Prefer passing data (e.g., iconClass) over raw HTML** to fragments to keep templates safe and
+  declarative.
+- **Optionals over nulls** in services/repos to avoid NPEs and simplify template conditions.
+- Consider `hx-push-url="true"` for pagination/filtering to improve back/forward navigation.
+
 ### Mimir
 
 ```Mimir``` is the database / ORM that we can use to interface with an SQLite database. It handles

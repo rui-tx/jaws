@@ -8,8 +8,7 @@ import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
 
 /**
- * BaseRepo provides small, explicit helpers around Mimir for typed mapping and common ops. Keep it
- * simple and SQLite-first for now.
+ * BaseRepo provides small, explicit helpers around Mimir for typed mapping and common ops.
  */
 public abstract class Repository {
 

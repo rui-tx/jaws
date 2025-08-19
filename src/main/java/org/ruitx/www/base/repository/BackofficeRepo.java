@@ -1,6 +1,7 @@
 package org.ruitx.www.base.repository;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -154,7 +155,7 @@ public class BackofficeRepo extends Repository {
       StringBuilder sqlBuilder =
           new StringBuilder(
               "SELECT id, timestamp, level, message, logger as source FROM LOG_ENTRIES WHERE 1=1");
-      java.util.List<Object> params = new java.util.ArrayList<>();
+      List<Object> params = new ArrayList<>();
 
       if (level != null && !level.trim().isEmpty()) {
         sqlBuilder.append(" AND level = ?");
@@ -264,11 +265,7 @@ public class BackofficeRepo extends Repository {
   public Map<String, String> getUserById(String userId) {
     try {
       Optional<Row> row = db.getRow("SELECT * FROM USER WHERE id = ?", userId);
-      if (row.isEmpty()) {
-        return null;
-      }
-
-      return mapUserDetailRow(row.get());
+      return row.map(this::mapUserDetailRow).orElse(null);
 
     } catch (Exception e) {
       Logger.error("Failed to get user {}: {}", userId, e.getMessage());

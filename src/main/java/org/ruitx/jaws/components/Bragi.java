@@ -540,6 +540,63 @@ public abstract class Bragi {
   }
 
   /**
+   * Render a specific fragment from a template without extra context.
+   *
+   * @param templatePath the path to the template file
+   * @param fragmentName the fragment selector name defined via th:fragment
+   * @return the rendered fragment HTML
+   */
+  protected String renderFragment(String templatePath, String fragmentName) {
+    try {
+      Yggdrasill.RequestContext rqContext = requestContext.get();
+      if (rqContext != null) {
+        return Hermod.renderFragment(
+            templatePath,
+            fragmentName,
+            rqContext.getQueryParams(),
+            rqContext.getBodyParams(),
+            rqContext.getRequest(),
+            rqContext.getResponse(),
+            null);
+      } else {
+        throw new IllegalStateException("No request context available");
+      }
+    } catch (IOException e) {
+      JawsLogger.error("Failed to render fragment: {}", e.getMessage());
+      throw new SendRespondException("Failed to render fragment", e);
+    }
+  }
+
+  /**
+   * Render a specific fragment from a template with additional context variables.
+   *
+   * @param templatePath the path to the template file
+   * @param fragmentName the fragment selector name defined via th:fragment
+   * @param context      additional context variables
+   * @return the rendered fragment HTML
+   */
+  protected String renderFragment(String templatePath, String fragmentName, Context context) {
+    try {
+      Yggdrasill.RequestContext rqContext = requestContext.get();
+      if (rqContext != null) {
+        return Hermod.renderFragment(
+            templatePath,
+            fragmentName,
+            rqContext.getQueryParams(),
+            rqContext.getBodyParams(),
+            rqContext.getRequest(),
+            rqContext.getResponse(),
+            context);
+      } else {
+        throw new IllegalStateException("No request context available");
+      }
+    } catch (IOException e) {
+      JawsLogger.error("Failed to render fragment: {}", e.getMessage());
+      throw new SendRespondException("Failed to render fragment", e);
+    }
+  }
+
+  /**
    * Compose a page by combining base and partial templates.
    *
    * @param baseTemplate    The path to the base template
@@ -841,4 +898,4 @@ public abstract class Bragi {
           "Failed to parse response");
     }
   }
-} 
+}

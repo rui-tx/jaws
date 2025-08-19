@@ -7,9 +7,11 @@ import static org.ruitx.jaws.strings.ResponseType.HTML;
 import static org.ruitx.jaws.types.ParamType.PATH;
 import static org.ruitx.jaws.types.ParamType.QUERY;
 
+import java.util.Map;
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.types.Context;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.www.base.service.BackofficeService;
 import org.tinylog.Logger;
@@ -53,11 +55,23 @@ public class BackofficeController extends Bragi {
   @AccessControl(login = true)
   @Route(endpoint = HTMX_ENDPOINT + "/user-count", method = GET, responseType = HTML, htmx = true)
   public void getUserCount() {
+    Context svc = backofficeService.getUserCount();
+    Map<String, Object> data = (Map<String, Object>) svc.context().get("data");
+    String iconClass = (String) data.get("icon");
+
+    Context ctx = Context.builder()
+        .with("iconClass", iconClass)
+        .with("label", data.get("label"))
+        .with("value", data.get("value"))
+        .with("color", "blue")
+        .build();
+
     sendHTML(
         OK,
-        render(
-            "backoffice/components/card/stats-card-view.html",
-            backofficeService.getUserCount()));
+        renderFragment(
+            "backoffice/components/card/card.html",
+            "stats-card",
+            ctx));
   }
 
   /**
@@ -68,11 +82,24 @@ public class BackofficeController extends Bragi {
   @Route(endpoint = HTMX_ENDPOINT
       + "/usersession-count", method = GET, responseType = HTML, htmx = true)
   public void getUserSessionCount() {
+    Context svc = backofficeService.getUserSessionCount();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> data = (Map<String, Object>) svc.context().get("data");
+    String iconClass = (String) data.get("icon");
+
+    Context ctx = Context.builder()
+        .with("iconClass", iconClass)
+        .with("label", data.get("label"))
+        .with("value", data.get("value"))
+        .with("color", "blue")
+        .build();
+
     sendHTML(
         OK,
-        render(
-            "backoffice/components/card/stats-card-view.html",
-            backofficeService.getUserSessionCount()));
+        renderFragment(
+            "backoffice/components/card/card.html",
+            "stats-card",
+            ctx));
   }
 
   /**
@@ -107,11 +134,23 @@ public class BackofficeController extends Bragi {
 
     PageRequest pageRequest = new PageRequest(page, size);
 
+    Context svc = backofficeService.getPaginatedLogTableData(pageRequest);
+    Map<String, Object> data = (Map<String, Object>) svc.context().get("data");
+    Context ctx = Context.builder()
+        .with("headers", data.get("headers"))
+        .with("rows", data.get("rows"))
+        .with("caption", data.get("caption"))
+        .with("actions", data.get("actions"))
+        .with("pagination", data.get("pagination"))
+        .with("data", data)
+        .build();
+
     sendHTML(
         OK,
-        render(
-            "backoffice/components/table/table-view.html",
-            backofficeService.getPaginatedLogTableData(pageRequest)));
+        renderFragment(
+            "backoffice/components/table/table.html",
+            "table-logs-with-pagination",
+            ctx));
 
   }
 
@@ -185,11 +224,20 @@ public class BackofficeController extends Bragi {
 
     PageRequest pageRequest = new PageRequest(page, size);
 
-    sendHTML(
-        OK,
-        render(
-            "backoffice/components/table/table-view.html",
-            backofficeService.getFilteredLogTableData(pageRequest, level, source, search)));
+    Context svc = backofficeService.getFilteredLogTableData(pageRequest, level, source, search);
+    Map<String, Object> data = (Map<String, Object>) svc.context().get("data");
+    Context ctx = Context.builder()
+        .with("headers", data.get("headers"))
+        .with("rows", data.get("rows"))
+        .with("caption", data.get("caption"))
+        .with("actions", data.get("actions"))
+        .with("pagination", data.get("pagination"))
+        .with("data", data)
+        .build();
+
+    sendHTML(OK,
+        renderFragment("backoffice/components/table/table.html", "table-logs-with-pagination",
+            ctx));
 
   }
 
@@ -225,10 +273,20 @@ public class BackofficeController extends Bragi {
 
     PageRequest pageRequest = new PageRequest(page, size);
 
-    sendHTML(
-        OK,
-        render("backoffice/components/table/table-view.html",
-            backofficeService.getPaginatedUserTableData(pageRequest)));
+    Context svc = backofficeService.getPaginatedUserTableData(pageRequest);
+    Map<String, Object> data = (Map<String, Object>) svc.context().get("data");
+    Context ctx = Context.builder()
+        .with("headers", data.get("headers"))
+        .with("rows", data.get("rows"))
+        .with("caption", data.get("caption"))
+        .with("actions", data.get("actions"))
+        .with("pagination", data.get("pagination"))
+        .with("data", data)
+        .build();
+
+    sendHTML(OK,
+        renderFragment("backoffice/components/table/table.html", "table-users-with-pagination",
+            ctx));
 
   }
 
@@ -302,11 +360,20 @@ public class BackofficeController extends Bragi {
 
     PageRequest pageRequest = new PageRequest(page, size);
 
-    sendHTML(
-        OK,
-        render(
-            "backoffice/components/table/table-view.html",
-            backofficeService.getFilteredUserTableData(pageRequest, status, role, search)));
+    Context svc = backofficeService.getFilteredUserTableData(pageRequest, status, role, search);
+    Map<String, Object> data = (Map<String, Object>) svc.context().get("data");
+    Context ctx = Context.builder()
+        .with("headers", data.get("headers"))
+        .with("rows", data.get("rows"))
+        .with("caption", data.get("caption"))
+        .with("actions", data.get("actions"))
+        .with("pagination", data.get("pagination"))
+        .with("data", data)
+        .build();
+
+    sendHTML(OK,
+        renderFragment("backoffice/components/table/table.html", "table-users-with-pagination",
+            ctx));
 
   }
 }
