@@ -55,7 +55,7 @@ public class BackofficeService {
   public Context getUserSessionCount() {
     Map<String, Object> data = Map.of(
         "icon", "icon-users",
-        "label", "Total Users",
+        "label", "Total Sessions",
         "value", backofficeRepo.getAllUserSessions().size()
     );
 

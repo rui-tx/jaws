@@ -1,0 +1,24 @@
+<div id="api-builder">
+    <article>
+        <h3>API Builder</h3>
+        <nav>
+            <strong>On this section</strong>
+            <ul>
+                <li><a href="#controller-pattern">Controller Pattern</a></li>
+                <li><a href="#dtos-validation">DTOs &amp; Validation</a></li>
+                <li><a href="#error-handling">Error Handling</a></li>
+            </ul>
+        </nav>
+        <p>Guidelines and patterns for building APIs with controllers, DTOs, and validation.</p>
+        <h4 id="controller-pattern">Controller Pattern</h4>
+        <p>Controllers extend <code>Bragi</code>; annotate methods with <code>@Route</code>.</p>
+        <h4 id="dtos-validation">DTOs &amp; Validation</h4>
+        <ul>
+            <li>Request DTO validates itself (fail fast). Map to domain models.</li>
+            <li>Response DTO shapes output payload.</li>
+            <li>Avoid nulls — use <code>Optional</code> to prevent NPEs.</li>
+        </ul>
+        <h4 id="error-handling">Error Handling</h4>
+        <p>Return consistent error payloads and codes via <code>sendFail</code>.</p>
+    </article>
+</div>

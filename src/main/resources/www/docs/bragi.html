@@ -1,9 +1,19 @@
-<div id="base-controller">
+<div id="bragi">
     <article>
-        <h3>Base Controller</h3>
+        <h3>Bragi (Base Controller)</h3>
+        <nav>
+            <strong>On this section</strong>
+            <ul>
+                <li><a href="#features">Key Features</a></li>
+                <li><a href="#handler">Request Handler Management</a></li>
+                <li><a href="#common-methods">Common Methods</a></li>
+                <li><a href="#usage-example">Usage Example</a></li>
+                <li><a href="#templates">Template Rendering</a></li>
+            </ul>
+        </nav>
         <p>JAWS includes <strong><code>Bragi</code></strong>, a class that provides a foundation for all controllers. This class simplifies request handling and provides common functionality for all controllers.</p>
 
-        <h4>1. Key Features</h4>
+        <h4 id="features">1. Key Features</h4>
         <ul>
             <li>Thread-safe request handler management</li>
             <li>Common response methods (HTML, JSON)</li>
@@ -13,10 +23,10 @@
             <li>Automatic cleanup of request handlers</li>
         </ul>
 
-        <h4>2. Request Handler Management</h4>
+        <h4 id="handler">2. Request Handler Management</h4>
         <p><strong><code>Bragi</code></strong> uses a thread-local <strong><code>RequestHandler</code></strong> to ensure thread safety and proper request handling. The request handler is automatically set and cleaned up for each request.</p>
 
-        <h4>3. Common Methods</h4>
+        <h4 id="common-methods">3. Common Methods</h4>
         <p><strong><code>Bragi</code></strong> provides the following common methods:</p>
         <ul>
             <li><strong><code>sendHTMLResponse(code, content)</code></strong>: Send an HTML response</li>
@@ -34,7 +44,7 @@
             <li><strong><code>callApi()</code></strong>: Calls external API with automatic type conversion</li>
         </ul>
 
-        <h4>4. Usage Example</h4>
+        <h4 id="usage-example">4. Usage Example</h4>
         <p>To create a new controller, extend the <strong><code>Bragi</code></strong> class:
         </p><pre><code>
 public class BackofficeController extends Bragi {
@@ -52,8 +62,8 @@ public class BackofficeController extends Bragi {
     }
 }</code></pre>
 
-        <h4>5. Template Rendering</h4>
-        <p>The <strong><code>BaseController</code></strong> provides several methods for template rendering:</p>
+        <h4 id="templates">5. Template Rendering</h4>
+        <p>The <strong><code>Bragi</code></strong> provides several methods for template rendering:</p>
         <ul>
             <li><strong><code>renderTemplate</code></strong>: Renders a template file with optional parameters</li>
             <li><strong><code>composePage</code></strong>: Combines a base template with a partial template</li>
@@ -62,4 +72,4 @@ public class BackofficeController extends Bragi {
 
         <aside><strong><code>Bragi</code></strong> automatically handles the cleanup of request handlers after each request, ensuring proper resource management.</aside>
     </article>
-</div> 
+</div>

@@ -1,0 +1,27 @@
+<div id="bifrost">
+    <article>
+        <h3>Bifrost (Middleware)</h3>
+        <nav>
+            <strong>On this section</strong>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#key-middlewares">Key Middlewares</a></li>
+                <li><a href="#usage">Usage</a></li>
+            </ul>
+        </nav>
+        <p>Bifrost is the middleware system that processes requests before they reach controllers and responses before they are sent.</p>
+        <h4 id="overview">Overview</h4>
+        <p>Middleware are executed in order. Each may short-circuit the chain.</p>
+        <h4 id="key-middlewares">Key Middlewares</h4>
+        <ul>
+            <li>LoggingMiddleware — request/response logging</li>
+            <li>CorsMiddleware — CORS headers</li>
+            <li>AuthMiddleware — JWT validation for protected routes</li>
+        </ul>
+        <h4 id="usage">Usage</h4>
+        <pre><code>// register in startup order
+// e.g., logging -> cors -> auth
+</code></pre>
+        <aside>Ensure middlewares are idempotent and fast; avoid blocking operations.</aside>
+    </article>
+</div>
