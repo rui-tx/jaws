@@ -3,86 +3,87 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>System Users</title>
-    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/select.min.js" defer></script>
-    <script>
+  <title>System Users</title>
+  <script defer
+          src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/select.min.js"></script>
+  <script>
     // Debounce function to limit API calls
     function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
         };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
     }
 
     // Function to apply filters
     function applyFilters() {
-        console.log('applyFilters called');
-        const form = document.getElementById('filters-form');
-        if (form) {
-            // Get current values from comboboxes
-            const statusSelect = document.getElementById('status-select');
-            const roleSelect = document.getElementById('role-select');
-            const sizeSelect = document.getElementById('size-select');
-            const searchInput = document.getElementById('search-filter');
-            
-            // Update form hidden inputs
-            if (statusSelect) {
-                const statusInput = statusSelect.querySelector('input[type="hidden"]');
-                const formStatusInput = form.querySelector('input[name="status"]');
-                if (statusInput && formStatusInput) {
-                    formStatusInput.value = statusInput.value;
-                    console.log('Status value:', statusInput.value);
-                }
-            }
-            
-            if (roleSelect) {
-                const roleInput = roleSelect.querySelector('input[type="hidden"]');
-                const formRoleInput = form.querySelector('input[name="role"]');
-                if (roleInput && formRoleInput) {
-                    formRoleInput.value = roleInput.value;
-                    console.log('Role value:', roleInput.value);
-                }
-            }
-            
-            if (sizeSelect) {
-                const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
-                const formSizeInput = form.querySelector('input[name="size"]');
-                if (sizeInput && formSizeInput) {
-                    formSizeInput.value = sizeInput.value;
-                    console.log('Size value:', sizeInput.value);
-                }
-            }
-            
-            // Build query string
-            const params = new URLSearchParams();
-            if (form.querySelector('input[name="status"]').value) {
-                params.append('status', form.querySelector('input[name="status"]').value);
-            }
-            if (form.querySelector('input[name="role"]').value) {
-                params.append('role', form.querySelector('input[name="role"]').value);
-            }
-            if (form.querySelector('input[name="search"]').value) {
-                params.append('search', form.querySelector('input[name="search"]').value);
-            }
-            if (form.querySelector('input[name="size"]').value) {
-                params.append('size', form.querySelector('input[name="size"]').value);
-            }
-            params.append('page', '0'); // Reset to first page when filtering
-            
-            console.log('Query params:', params.toString());
-            
-            // Trigger HTMX request
-            htmx.ajax('GET', '/backoffice/htmx/users-filtered?' + params.toString(), {
-                target: '#users-table-container',
-                swap: 'outerHTML',
-                indicator: '#loading-indicator'
-            });
+      console.log('applyFilters called');
+      const form = document.getElementById('filters-form');
+      if (form) {
+        // Get current values from comboboxes
+        const statusSelect = document.getElementById('status-select');
+        const roleSelect = document.getElementById('role-select');
+        const sizeSelect = document.getElementById('size-select');
+        const searchInput = document.getElementById('search-filter');
+
+        // Update form hidden inputs
+        if (statusSelect) {
+          const statusInput = statusSelect.querySelector('input[type="hidden"]');
+          const formStatusInput = form.querySelector('input[name="status"]');
+          if (statusInput && formStatusInput) {
+            formStatusInput.value = statusInput.value;
+            console.log('Status value:', statusInput.value);
+          }
         }
+
+        if (roleSelect) {
+          const roleInput = roleSelect.querySelector('input[type="hidden"]');
+          const formRoleInput = form.querySelector('input[name="role"]');
+          if (roleInput && formRoleInput) {
+            formRoleInput.value = roleInput.value;
+            console.log('Role value:', roleInput.value);
+          }
+        }
+
+        if (sizeSelect) {
+          const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
+          const formSizeInput = form.querySelector('input[name="size"]');
+          if (sizeInput && formSizeInput) {
+            formSizeInput.value = sizeInput.value;
+            console.log('Size value:', sizeInput.value);
+          }
+        }
+
+        // Build query string
+        const params = new URLSearchParams();
+        if (form.querySelector('input[name="status"]').value) {
+          params.append('status', form.querySelector('input[name="status"]').value);
+        }
+        if (form.querySelector('input[name="role"]').value) {
+          params.append('role', form.querySelector('input[name="role"]').value);
+        }
+        if (form.querySelector('input[name="search"]').value) {
+          params.append('search', form.querySelector('input[name="search"]').value);
+        }
+        if (form.querySelector('input[name="size"]').value) {
+          params.append('size', form.querySelector('input[name="size"]').value);
+        }
+        params.append('page', '0'); // Reset to first page when filtering
+
+        console.log('Query params:', params.toString());
+
+        // Trigger HTMX request
+        htmx.ajax('GET', '/backoffice/htmx/users-filtered?' + params.toString(), {
+          target: '#users-table-container',
+          swap: 'outerHTML',
+          indicator: '#loading-indicator'
+        });
+      }
     }
 
     // Debounced version of applyFilters for search input
@@ -90,389 +91,421 @@
 
     // Initialize filters when the page loads
     document.addEventListener('DOMContentLoaded', function () {
-        console.log('DOM loaded, initializing filters');
-        
-        // Wait for Basecoat select.js to initialize
-        setTimeout(function () {
-            console.log('Setting up combobox event listeners');
-            
-            // Add event listeners for combobox changes
-            const statusSelect = document.getElementById('status-select');
-            const roleSelect = document.getElementById('role-select');
-            const sizeSelect = document.getElementById('size-select');
-            
-            if (statusSelect) {
-                console.log('Setting up status select');
-                // Listen for changes on the hidden input
-                const statusInput = statusSelect.querySelector('input[type="hidden"]');
-                if (statusInput) {
-                    statusInput.addEventListener('change', function() {
-                        console.log('Status changed:', this.value);
-                        // Don't auto-apply, let user click button
-                    });
-                }
-            }
-            
-            if (roleSelect) {
-                console.log('Setting up role select');
-                // Listen for changes on the hidden input
-                const roleInput = roleSelect.querySelector('input[type="hidden"]');
-                if (roleInput) {
-                    roleInput.addEventListener('change', function() {
-                        console.log('Role changed:', this.value);
-                        // Don't auto-apply, let user click button
-                    });
-                }
-            }
-            
-            if (sizeSelect) {
-                console.log('Setting up size select');
-                // Listen for changes on the hidden input
-                const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
-                if (sizeInput) {
-                    sizeInput.addEventListener('change', function() {
-                        console.log('Size changed:', this.value);
-                        // Don't auto-apply, let user click button
-                    });
-                }
-            }
-        }, 200); // Increased delay to ensure Basecoat is loaded
-        
-        // Handle search input with debouncing
-        const searchInput = document.getElementById('search-filter');
-        if (searchInput) {
-            searchInput.addEventListener('input', debouncedApplyFilters);
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    applyFilters(); // Apply immediately on Enter
-                }
+      console.log('DOM loaded, initializing filters');
+
+      // Wait for Basecoat select.js to initialize
+      setTimeout(function () {
+        console.log('Setting up combobox event listeners');
+
+        // Add event listeners for combobox changes
+        const statusSelect = document.getElementById('status-select');
+        const roleSelect = document.getElementById('role-select');
+        const sizeSelect = document.getElementById('size-select');
+
+        if (statusSelect) {
+          console.log('Setting up status select');
+          // Listen for changes on the hidden input
+          const statusInput = statusSelect.querySelector('input[type="hidden"]');
+          if (statusInput) {
+            statusInput.addEventListener('change', function () {
+              console.log('Status changed:', this.value);
+              // Don't auto-apply, let user click button
             });
+          }
         }
+
+        if (roleSelect) {
+          console.log('Setting up role select');
+          // Listen for changes on the hidden input
+          const roleInput = roleSelect.querySelector('input[type="hidden"]');
+          if (roleInput) {
+            roleInput.addEventListener('change', function () {
+              console.log('Role changed:', this.value);
+              // Don't auto-apply, let user click button
+            });
+          }
+        }
+
+        if (sizeSelect) {
+          console.log('Setting up size select');
+          // Listen for changes on the hidden input
+          const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
+          if (sizeInput) {
+            sizeInput.addEventListener('change', function () {
+              console.log('Size changed:', this.value);
+              // Don't auto-apply, let user click button
+            });
+          }
+        }
+      }, 200); // Increased delay to ensure Basecoat is loaded
+
+      // Handle search input with debouncing
+      const searchInput = document.getElementById('search-filter');
+      if (searchInput) {
+        searchInput.addEventListener('input', debouncedApplyFilters);
+        searchInput.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            applyFilters(); // Apply immediately on Enter
+          }
+        });
+      }
     });
 
     // Function to clear filters
     function clearFilters() {
-        console.log('clearFilters called');
-        const form = document.getElementById('filters-form');
-        if (form) {
-            // Reset combobox elements to their default options
-            const statusSelect = document.getElementById('status-select');
-            const roleSelect = document.getElementById('role-select');
-            const sizeSelect = document.getElementById('size-select');
-            const searchInput = document.getElementById('search-filter');
+      console.log('clearFilters called');
+      const form = document.getElementById('filters-form');
+      if (form) {
+        // Reset combobox elements to their default options
+        const statusSelect = document.getElementById('status-select');
+        const roleSelect = document.getElementById('role-select');
+        const sizeSelect = document.getElementById('size-select');
+        const searchInput = document.getElementById('search-filter');
 
-            if (statusSelect) {
-                // Reset combobox to default
-                const statusInput = statusSelect.querySelector('input[type="hidden"]');
-                const statusTrigger = statusSelect.querySelector('button');
-                if (statusInput) statusInput.value = '';
-                if (statusTrigger) statusTrigger.querySelector('span').textContent = 'All Statuses';
-            }
-            
-            if (roleSelect) {
-                // Reset combobox to default
-                const roleInput = roleSelect.querySelector('input[type="hidden"]');
-                const roleTrigger = roleSelect.querySelector('button');
-                if (roleInput) roleInput.value = '';
-                if (roleTrigger) roleTrigger.querySelector('span').textContent = 'All Roles';
-            }
-            
-            if (sizeSelect) {
-                // Reset combobox to default
-                const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
-                const sizeTrigger = sizeSelect.querySelector('button');
-                if (sizeInput) sizeInput.value = '25';
-                if (sizeTrigger) sizeTrigger.querySelector('span').textContent = '25 per page';
-            }
-            
-            if (searchInput) {
-                searchInput.value = ''; // Clear search input
-            }
-
-            // Trigger HTMX request to clear filters
-            applyFilters();
+        if (statusSelect) {
+          // Reset combobox to default
+          const statusInput = statusSelect.querySelector('input[type="hidden"]');
+          const statusTrigger = statusSelect.querySelector('button');
+          if (statusInput) {
+            statusInput.value = '';
+          }
+          if (statusTrigger) {
+            statusTrigger.querySelector('span').textContent = 'All Statuses';
+          }
         }
+
+        if (roleSelect) {
+          // Reset combobox to default
+          const roleInput = roleSelect.querySelector('input[type="hidden"]');
+          const roleTrigger = roleSelect.querySelector('button');
+          if (roleInput) {
+            roleInput.value = '';
+          }
+          if (roleTrigger) {
+            roleTrigger.querySelector('span').textContent = 'All Roles';
+          }
+        }
+
+        if (sizeSelect) {
+          // Reset combobox to default
+          const sizeInput = sizeSelect.querySelector('input[type="hidden"]');
+          const sizeTrigger = sizeSelect.querySelector('button');
+          if (sizeInput) {
+            sizeInput.value = '25';
+          }
+          if (sizeTrigger) {
+            sizeTrigger.querySelector('span').textContent = '25 per page';
+          }
+        }
+
+        if (searchInput) {
+          searchInput.value = ''; // Clear search input
+        }
+
+        // Trigger HTMX request to clear filters
+        applyFilters();
+      }
     }
 
     // Handle view button clicks
     function handleViewButtonClick(event) {
-        const button = event.target.closest('button');
-        if (button && button.getAttribute('data-action') === 'view') {
-            const rowId = button.getAttribute('data-row-id');
-            if (rowId) {
-                // Check if we're on the users page or logs page
-                const isUsersPage = window.location.pathname.includes('/users');
-                const baseUrl = isUsersPage ? '/backoffice/users/' : '/backoffice/logs/';
-                window.location.href = baseUrl + rowId;
-            }
+      const button = event.target.closest('button');
+      if (button && button.getAttribute('data-action') === 'view') {
+        const rowId = button.getAttribute('data-row-id');
+        if (rowId) {
+          // Check if we're on the users page or logs page
+          const isUsersPage = window.location.pathname.includes('/users');
+          const baseUrl = isUsersPage ? '/backoffice/users/' : '/backoffice/logs/';
+          window.location.href = baseUrl + rowId;
         }
+      }
     }
 
     // Add event listener for view button clicks
     document.addEventListener('click', handleViewButtonClick);
-    </script>
+  </script>
 </head>
 <body>
 <section layout:fragment="content">
-    <div class="space-y-6">
-        <!-- Page Header -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold">System Users</h1>
-                <p class="text-muted-foreground">View and filter system users</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="btn btn-ghost btn-sm"
-                        hx-get="/backoffice/htmx/users-filtered?page=0&size=25"
-                        hx-swap="outerHTML"
-                        hx-target="#users-table-container"
-                        title="Refresh Users">
-                    <i class="icon icon-arrow-path w-4 h-4"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="card">
-            <header>
-                <h2 class="text-lg font-semibold">Filters</h2>
-            </header>
-            <section>
-                <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-                      id="filters-form">
-
-                    <!-- User Status Filter -->
-                    <div>
-                        <label class="form-label" for="status-select">User Status</label>
-                        <div class="select" id="status-select">
-                            <button aria-controls="status-select-listbox" aria-expanded="false"
-                                    aria-haspopup="listbox"
-                                    class="btn-outline justify-between font-normal w-full"
-                                    id="status-select-trigger"
-                                    type="button">
-                                <span class="truncate">All Statuses</span>
-                                <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
-                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
-                                     width="24"
-                                     xmlns="http://www.w3.org/2000/svg">
-                                    <path d="m7 15 5 5 5-5"/>
-                                    <path d="m7 9 5-5 5 5"/>
-                                </svg>
-                            </button>
-                            <div aria-hidden="true" data-popover id="status-select-popover">
-                                <header>
-                                    <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24" stroke="currentColor"
-                                         stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
-                                         width="24" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="11" cy="11" r="8"/>
-                                        <path d="m21 21-4.3-4.3"/>
-                                    </svg>
-                                    <input aria-autocomplete="list" aria-controls="status-select-listbox" aria-expanded="false" aria-labelledby="status-select-trigger"
-                                           autocomplete="off" autocorrect="off" placeholder="Search status..." role="combobox"
-                                           spellcheck="false" type="text"
-                                           value=""/>
-                                </header>
-                                <div aria-labelledby="status-select-trigger" aria-orientation="vertical" data-empty="No status found."
-                                     id="status-select-listbox" role="listbox">
-                                    <div data-value="" role="option">All Statuses</div>
-                                    <div role="option" th:data-value="${status}"
-                                         th:each="status : ${data.userStatuses}"
-                                         th:text="${status}">active
-                                    </div>
-                                </div>
-                            </div>
-                            <input name="status" type="hidden" value=""/>
-                        </div>
-                    </div>
-
-                    <!-- User Role Filter -->
-                    <div>
-                        <label class="form-label" for="role-select">User Role</label>
-                        <div class="select" id="role-select">
-                            <button aria-controls="role-select-listbox" aria-expanded="false"
-                                    aria-haspopup="listbox"
-                                    class="btn-outline justify-between font-normal w-full"
-                                    id="role-select-trigger"
-                                    type="button">
-                                <span class="truncate">All Roles</span>
-                                <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
-                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
-                                     width="24"
-                                     xmlns="http://www.w3.org/2000/svg">
-                                    <path d="m7 15 5 5 5-5"/>
-                                    <path d="m7 9 5-5 5 5"/>
-                                </svg>
-                            </button>
-                            <div aria-hidden="true" data-popover id="role-select-popover">
-                                <header>
-                                    <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24" stroke="currentColor"
-                                         stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
-                                         width="24" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="11" cy="11" r="8"/>
-                                        <path d="m21 21-4.3-4.3"/>
-                                    </svg>
-                                    <input aria-autocomplete="list" aria-controls="role-select-listbox" aria-expanded="false" aria-labelledby="role-select-trigger"
-                                           autocomplete="off" autocorrect="off" placeholder="Search role..." role="combobox"
-                                           spellcheck="false" type="text"
-                                           value=""/>
-                                </header>
-                                <div aria-labelledby="role-select-trigger" aria-orientation="vertical" data-empty="No role found."
-                                     id="role-select-listbox" role="listbox">
-                                    <div data-value="" role="option">All Roles</div>
-                                    <div role="option" th:data-value="${role}"
-                                         th:each="role : ${data.userRoles}"
-                                         th:text="${role}">admin
-                                    </div>
-                                </div>
-                            </div>
-                            <input name="role" type="hidden" value=""/>
-                        </div>
-                    </div>
-
-                    <!-- Search Filter -->
-                    <div>
-                        <label class="form-label" for="search-filter">Search Users</label>
-                        <input class="input"
-                               id="search-filter"
-                               name="search"
-                               placeholder="Search username, email, name..."
-                               type="text">
-                    </div>
-
-                    <!-- Page Size -->
-                    <div>
-                        <label class="form-label" for="size-select">Page Size</label>
-                        <div class="select" id="size-select">
-                            <button aria-controls="size-select-listbox" aria-expanded="false"
-                                    aria-haspopup="listbox"
-                                    class="btn-outline justify-between font-normal w-full"
-                                    id="size-select-trigger"
-                                    type="button">
-                                <span class="truncate">25 per page</span>
-                                <svg class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0" fill="none" height="24" stroke="currentColor"
-                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"
-                                     width="24"
-                                     xmlns="http://www.w3.org/2000/svg">
-                                    <path d="m7 15 5 5 5-5"/>
-                                    <path d="m7 9 5-5 5 5"/>
-                                </svg>
-                            </button>
-                            <div aria-hidden="true" data-popover id="size-select-popover">
-                                <div aria-labelledby="size-select-trigger" aria-orientation="vertical"
-                                     id="size-select-listbox" role="listbox">
-                                    <div data-value="25" role="option">25 per page</div>
-                                    <div data-value="50" role="option">50 per page</div>
-                                    <div data-value="100" role="option">100 per page</div>
-                                </div>
-                            </div>
-                            <input name="size" type="hidden" value="25"/>
-                        </div>
-                    </div>
-                </form>
-                
-                <!-- Clear Filters Button -->
-                <div class="flex justify-between items-center mt-4">
-                    <button type="button" 
-                            class="btn"
-                            onclick="clearFilters()">
-                        <i class="icon icon-x-mark w-4 h-4"></i>
-                        Clear Filters
-                    </button>
-                    <div class="flex items-center gap-2">
-                        <button type="button" 
-                                class="btn btn-primary btn-sm"
-                                onclick="applyFilters()">
-                            <i class="icon icon-funnel w-4 h-4"></i>
-                            Apply Filters
-                        </button>
-                        <div class="text-sm text-muted-foreground">
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- Loading Indicator -->
-        <div id="loading-indicator" class="htmx-indicator flex justify-center p-4" style="display: none;">
-            <div class="flex items-center gap-2">
-                <i class="icon icon-arrow-path w-4 h-4 animate-spin"></i>
-                <span>Loading users...</span>
-            </div>
-        </div>
-
-        <!-- Users Table Container -->
-        <div id="users-table-container">
-            <div hx-get="/backoffice/htmx/users-filtered?page=0&size=25"
-                 hx-swap="outerHTML transition:true"
-                 hx-trigger="load"
-                 id="users-table">
-                <!-- Skeleton state while loading -->
-                <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
-            </div>
-        </div>
+  <div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">System Users</h1>
+        <p class="text-muted-foreground">View and filter system users</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost btn-sm"
+                hx-get="/backoffice/htmx/users-filtered?page=0&size=25"
+                hx-swap="outerHTML"
+                hx-target="#users-table-container"
+                title="Refresh Users">
+          <i class="icon icon-arrow-path w-4 h-4"></i>
+        </button>
+      </div>
     </div>
+
+    <!-- Filters -->
+    <div class="card">
+      <header>
+        <h2 class="text-lg font-semibold">Filters</h2>
+      </header>
+      <section>
+        <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+              id="filters-form">
+
+          <!-- User Status Filter -->
+          <div>
+            <label class="form-label" for="status-select"></label>
+            <div class="select" id="status-select">
+              <button aria-controls="status-select-listbox" aria-expanded="false"
+                      aria-haspopup="listbox"
+                      class="btn-outline justify-between font-normal w-full"
+                      id="status-select-trigger"
+                      type="button">
+                <span class="truncate">All Statuses</span>
+                <svg
+                    class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0"
+                    fill="none" height="24" stroke="currentColor"
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg">
+                  <path d="m7 15 5 5 5-5"/>
+                  <path d="m7 9 5-5 5 5"/>
+                </svg>
+              </button>
+              <div aria-hidden="true" data-popover id="status-select-popover">
+                <header>
+                  <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24"
+                       stroke="currentColor"
+                       stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                       viewBox="0 0 24 24"
+                       width="24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                  </svg>
+                  <input aria-autocomplete="list" aria-controls="status-select-listbox"
+                         aria-expanded="false" aria-labelledby="status-select-trigger"
+                         autocomplete="off" autocorrect="off" placeholder="Search status..."
+                         role="combobox"
+                         spellcheck="false" type="text"
+                         value=""/>
+                </header>
+                <div aria-labelledby="status-select-trigger" aria-orientation="vertical"
+                     data-empty="No status found."
+                     id="status-select-listbox" role="listbox">
+                  <div data-value="" role="option">All Statuses</div>
+                  <div role="option" th:data-value="${status}"
+                       th:each="status : ${data.userStatuses}"
+                       th:text="${status}">active
+                  </div>
+                </div>
+              </div>
+              <input name="status" type="hidden" value=""/>
+            </div>
+          </div>
+
+          <!-- User Role Filter -->
+          <div>
+            <label class="form-label" for="role-select"></label>
+            <div class="select" id="role-select">
+              <button aria-controls="role-select-listbox" aria-expanded="false"
+                      aria-haspopup="listbox"
+                      class="btn-outline justify-between font-normal w-full"
+                      id="role-select-trigger"
+                      type="button">
+                <span class="truncate">All Roles</span>
+                <svg
+                    class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0"
+                    fill="none" height="24" stroke="currentColor"
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg">
+                  <path d="m7 15 5 5 5-5"/>
+                  <path d="m7 9 5-5 5 5"/>
+                </svg>
+              </button>
+              <div aria-hidden="true" data-popover id="role-select-popover">
+                <header>
+                  <svg class="lucide lucide-search-icon lucide-search" fill="none" height="24"
+                       stroke="currentColor"
+                       stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                       viewBox="0 0 24 24"
+                       width="24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                  </svg>
+                  <input aria-autocomplete="list" aria-controls="role-select-listbox"
+                         aria-expanded="false" aria-labelledby="role-select-trigger"
+                         autocomplete="off" autocorrect="off" placeholder="Search role..."
+                         role="combobox"
+                         spellcheck="false" type="text"
+                         value=""/>
+                </header>
+                <div aria-labelledby="role-select-trigger" aria-orientation="vertical"
+                     data-empty="No role found."
+                     id="role-select-listbox" role="listbox">
+                  <div data-value="" role="option">All Roles</div>
+                  <div role="option" th:data-value="${role}"
+                       th:each="role : ${data.userRoles}"
+                       th:text="${role}">admin
+                  </div>
+                </div>
+              </div>
+              <input name="role" type="hidden" value=""/>
+            </div>
+          </div>
+
+          <!-- Search Filter -->
+          <div>
+            <label class="form-label" for="search-filter"></label>
+            <input class="input"
+                   id="search-filter"
+                   name="search"
+                   placeholder="Search username, email, name..."
+                   type="text">
+          </div>
+
+          <!-- Page Size -->
+          <div>
+            <label class="form-label" for="size-select"></label>
+            <div class="select" id="size-select">
+              <button aria-controls="size-select-listbox" aria-expanded="false"
+                      aria-haspopup="listbox"
+                      class="btn-outline justify-between font-normal w-full"
+                      id="size-select-trigger"
+                      type="button">
+                <span class="truncate">25 per page</span>
+                <svg
+                    class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0"
+                    fill="none" height="24" stroke="currentColor"
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg">
+                  <path d="m7 15 5 5 5-5"/>
+                  <path d="m7 9 5-5 5 5"/>
+                </svg>
+              </button>
+              <div aria-hidden="true" data-popover id="size-select-popover">
+                <div aria-labelledby="size-select-trigger" aria-orientation="vertical"
+                     id="size-select-listbox" role="listbox">
+                  <div data-value="25" role="option">25 per page</div>
+                  <div data-value="50" role="option">50 per page</div>
+                  <div data-value="100" role="option">100 per page</div>
+                </div>
+              </div>
+              <input name="size" type="hidden" value="25"/>
+            </div>
+          </div>
+        </form>
+
+        <!-- Clear Filters Button -->
+        <div class="flex justify-between items-center mt-4">
+          <button class="btn"
+                  onclick="clearFilters()"
+                  type="button">
+            <i class="icon icon-x-mark w-4 h-4"></i>
+            Clear Filters
+          </button>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-primary btn-sm"
+                    onclick="applyFilters()"
+                    type="button">
+              <i class="icon icon-funnel w-4 h-4"></i>
+              Apply Filters
+            </button>
+            <div class="text-sm text-muted-foreground">
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="htmx-indicator flex justify-center p-4" id="loading-indicator"
+         style="display: none;">
+      <div class="flex items-center gap-2">
+        <i class="icon icon-arrow-path w-4 h-4 animate-spin"></i>
+        <span>Loading users...</span>
+      </div>
+    </div>
+
+    <!-- Users Table Container -->
+    <div id="users-table-container">
+      <div hx-get="/backoffice/htmx/users-filtered?page=0&size=25"
+           hx-swap="outerHTML transition:true"
+           hx-trigger="load"
+           id="users-table">
+        <!-- Skeleton state while loading -->
+        <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <script>
-// Initialize filters when the page loads
-document.addEventListener('DOMContentLoaded', function () {
+  // Initialize filters when the page loads
+  document.addEventListener('DOMContentLoaded', function () {
     // Wait for Basecoat select.js to initialize
     setTimeout(function () {
-        // Add event listeners for combobox changes
-        const statusSelect = document.getElementById('status-select');
-        const roleSelect = document.getElementById('role-select');
-        
-        if (statusSelect) {
-            // Listen for changes on the hidden input
-            const statusInput = statusSelect.querySelector('input[type="hidden"]');
-            if (statusInput) {
-                statusInput.addEventListener('change', function () {
-                    // Update the form's hidden input
-                    const formStatusInput = document.querySelector('input[name="status"]');
-                    if (formStatusInput) {
-                        formStatusInput.value = this.value;
-                    }
-                    // Trigger HTMX request
-                    const form = document.getElementById('filters-form');
-                    if (form) {
-                        htmx.trigger(form, 'submit');
-                    }
-                });
+      // Add event listeners for combobox changes
+      const statusSelect = document.getElementById('status-select');
+      const roleSelect = document.getElementById('role-select');
+
+      if (statusSelect) {
+        // Listen for changes on the hidden input
+        const statusInput = statusSelect.querySelector('input[type="hidden"]');
+        if (statusInput) {
+          statusInput.addEventListener('change', function () {
+            // Update the form's hidden input
+            const formStatusInput = document.querySelector('input[name="status"]');
+            if (formStatusInput) {
+              formStatusInput.value = this.value;
             }
-        }
-        
-        if (roleSelect) {
-            // Listen for changes on the hidden input
-            const roleInput = roleSelect.querySelector('input[type="hidden"]');
-            if (roleInput) {
-                roleInput.addEventListener('change', function () {
-                    // Update the form's hidden input
-                    const formRoleInput = document.querySelector('input[name="role"]');
-                    if (formRoleInput) {
-                        formRoleInput.value = this.value;
-                    }
-                    // Trigger HTMX request
-                    const form = document.getElementById('filters-form');
-                    if (form) {
-                        htmx.trigger(form, 'submit');
-                    }
-                });
+            // Trigger HTMX request
+            const form = document.getElementById('filters-form');
+            if (form) {
+              htmx.trigger(form, 'submit');
             }
+          });
         }
+      }
+
+      if (roleSelect) {
+        // Listen for changes on the hidden input
+        const roleInput = roleSelect.querySelector('input[type="hidden"]');
+        if (roleInput) {
+          roleInput.addEventListener('change', function () {
+            // Update the form's hidden input
+            const formRoleInput = document.querySelector('input[name="role"]');
+            if (formRoleInput) {
+              formRoleInput.value = this.value;
+            }
+            // Trigger HTMX request
+            const form = document.getElementById('filters-form');
+            if (form) {
+              htmx.trigger(form, 'submit');
+            }
+          });
+        }
+      }
     }, 100);
-    
+
     // Allow Enter key in search input to trigger filtering
     const searchInput = document.getElementById('search-filter');
     if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                // The form will automatically trigger due to hx-trigger="change"
-            }
-        });
+      searchInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          // The form will automatically trigger due to hx-trigger="change"
+        }
+      });
     }
-});
+  });
 </script>
 </body>
 </html> 

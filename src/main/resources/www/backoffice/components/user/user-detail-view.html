@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Fragment: user-detail -->
+<div th:fragment="user-detail"
+     id="user-detail-container">
+  <!-- Page Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">User Details</h1>
+      <p class="text-muted-foreground">Complete information for user</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="btn btn-ghost btn-sm"
+              title="Edit"
+              th:hx-get="@{|/backoffice/htmx/users/${data.userEntry.id}/edit|}"
+              hx-target="#user-detail-container"
+              hx-swap="outerHTML">
+        <i class="icon icon-pencil w-4 h-4"></i>
+      </button>
+      <a class="btn btn-primary" href="/backoffice/users">
+        <i class="icon icon-arrow-left w-4 h-4"></i>
+        Back to Users
+      </a>
+    </div>
+  </div>
+
+  <!-- User Details Card -->
+  <div class="card">
+    <header>
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">User Information</h2>
+        <span th:class="${'px-3 py-1 rounded-full text-sm font-medium ' +
+                          (data.userEntry.status == 'active' ? 'bg-green-100 text-green-800' :
+                           data.userEntry.status == 'inactive' ? 'bg-gray-100 text-gray-800' :
+                           'bg-red-100 text-red-800')}"
+              th:text="${data.userEntry.status}">active</span>
+      </div>
+    </header>
+    <section>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Basic Information -->
+        <div class="space-y-4">
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">ID</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.id}">123</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Username</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.username}">john_doe</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Email</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.email}">john@example.com</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Full Name</label>
+            <p th:text="${data.userEntry.name}">John Doe</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Status</label>
+            <p th:text="${data.userEntry.status}">active</p>
+          </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="space-y-4">
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Last Login</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.last_login}">2024-01-15 10:30:45</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Failed Login Attempts</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.failed_login_attempts}">0</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Lockout Until</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.lockout_until}">-</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Created At</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.created_at}">2024-01-15 10:30:45</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Profile Information Card -->
+  <div class="card">
+    <header>
+      <h2 class="text-lg font-semibold">Profile Information</h2>
+    </header>
+    <section>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Personal Information -->
+        <div class="space-y-4">
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">First Name</label>
+            <p th:text="${data.userEntry.first_name != null and !data.userEntry.first_name.isEmpty() ? data.userEntry.first_name : 'N/A'}">John</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Last Name</label>
+            <p th:text="${data.userEntry.last_name != null and !data.userEntry.last_name.isEmpty() ? data.userEntry.last_name : 'N/A'}">Doe</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Birthdate</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.birthdate != null and !data.userEntry.birthdate.isEmpty() ? data.userEntry.birthdate : 'N/A'}">1990-01-01</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Gender</label>
+            <p th:text="${data.userEntry.gender != null and !data.userEntry.gender.isEmpty() ? data.userEntry.gender : 'N/A'}">Male</p>
+          </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="space-y-4">
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Phone Number</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.phone_number != null and !data.userEntry.phone_number.isEmpty() ? data.userEntry.phone_number : 'N/A'}">+1-555-123-4567</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Location</label>
+            <p th:text="${data.userEntry.location != null and !data.userEntry.location.isEmpty() ? data.userEntry.location : 'N/A'}">New York, NY</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Website</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.website != null and !data.userEntry.website.isEmpty() ? data.userEntry.website : 'N/A'}">https://example.com</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-muted-foreground">Updated At</label>
+            <p class="font-mono text-sm" th:text="${data.userEntry.updated_at != null and !data.userEntry.updated_at.isEmpty() ? data.userEntry.updated_at : 'N/A'}">2024-01-15 10:30:45</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Profile Picture Card (if available) -->
+  <div class="card" th:if="${data.userEntry.profile_picture != null and !data.userEntry.profile_picture.isEmpty()}">
+    <header>
+      <h2 class="text-lg font-semibold">Profile Picture</h2>
+    </header>
+    <section>
+      <div class="flex justify-center">
+        <img alt="Profile Picture"
+             class="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
+             th:src="${data.userEntry.profile_picture}">
+      </div>
+    </section>
+  </div>
+
+  <!-- Bio Card (if available) -->
+  <div class="card" th:if="${data.userEntry.bio != null and !data.userEntry.bio.isEmpty()}">
+    <header>
+      <h2 class="text-lg font-semibold">Bio</h2>
+    </header>
+    <section>
+      <div class="bg-muted p-4 rounded-md">
+        <p class="whitespace-pre-wrap" th:text="${data.userEntry.bio}">User bio content</p>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

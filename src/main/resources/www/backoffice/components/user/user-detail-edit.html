@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+  <!-- backoffice/components/user/user-detail-edit.html -->
+  <div th:fragment="user-edit" id="user-detail-container">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">Edit User</h1>
+        <p class="text-muted-foreground">Update user information</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost btn-sm"
+                title="Cancel"
+                th:hx-get="@{|/backoffice/htmx/users/${data.userEntry.id}/view|}"
+                hx-target="#user-detail-container"
+                hx-swap="outerHTML">
+          <i class="icon icon-x w-4 h-4"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>
+        <h2 class="text-lg font-semibold">User Information</h2>
+      </header>
+      <section>
+        <form id="user-edit-form"
+              th:hx-post="@{|/backoffice/htmx/users/${data.userEntry.id}|}"
+              hx-encoding="multipart/form-data"
+              hx-target="#user-detail-container"
+              hx-swap="outerHTML"
+              onsubmit="prepareEpochFields(event)">
+
+          <!-- Hidden epoch fields populated by script -->
+          <input type="hidden" name="birthdateEpoch" id="birthdateEpoch">
+          <input type="hidden" name="lockoutUntilEpoch" id="lockoutUntilEpoch">
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left column -->
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Email</label>
+                <input class="input" type="email" name="email" th:value="${data.userEntry.email}" placeholder="user@example.com"/>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">First Name</label>
+                  <input class="input" type="text" name="firstName" th:value="${data.userEntry.first_name}" placeholder="First name"/>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Last Name</label>
+                  <input class="input" type="text" name="lastName" th:value="${data.userEntry.last_name}" placeholder="Last name"/>
+                </div>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Password</label>
+                <input class="input" type="password" name="password" autocomplete="new-password" placeholder="Leave blank to keep current"/>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Gender</label>
+                <input class="input" type="text" name="gender" th:value="${data.userEntry.gender}" placeholder="e.g., male, female, other"/>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Birthdate</label>
+                <input class="input" type="date" id="birthdateDate"/>
+                <p class="text-xs text-muted-foreground">Current: <span class="font-mono" th:text="${data.userEntry.birthdate}">-</span></p>
+              </div>
+            </div>
+
+            <!-- Right column -->
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Phone Number</label>
+                <input class="input" type="text" name="phoneNumber" th:value="${data.userEntry.phone_number}" placeholder="+1 555 123 4567"/>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Location</label>
+                <input class="input" type="text" name="location" th:value="${data.userEntry.location}" placeholder="City, Country"/>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Website</label>
+                <input class="input" type="url" name="website" th:value="${data.userEntry.website}" placeholder="https://example.com"/>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Profile Picture URL</label>
+                <input class="input" type="url" name="profilePicture" th:value="${data.userEntry.profile_picture}" placeholder="https://..."/>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="hidden" name="isActive" value="0"/>
+                <input id="isActive" type="checkbox" name="isActive" value="1" th:checked="${data.userEntry.status == 'active'}"/>
+                <label for="isActive" class="text-sm font-medium text-muted-foreground">Active</label>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-muted-foreground">Lockout Until</label>
+                <input class="input" type="datetime-local" id="lockoutUntilDateTime"/>
+                <p class="text-xs text-muted-foreground">Current: <span class="font-mono" th:text="${data.userEntry.lockout_until}">-</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <label class="text-sm font-medium text-muted-foreground">Bio</label>
+            <textarea class="textarea w-full" rows="4" name="bio" placeholder="Short bio..." th:text="${data.userEntry.bio}"></textarea>
+          </div>
+
+          <div class="mt-6 flex items-center justify-end gap-2">
+            <button type="button"
+                    class="btn"
+                    th:hx-get="@{|/backoffice/htmx/users/${data.userEntry.id}/view|}"
+                    hx-target="#user-detail-container"
+                    hx-swap="outerHTML">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="icon icon-save w-4 h-4"></i>
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <script>
+      function parseDateToEpoch(dateStr) {
+        try {
+          if (!dateStr) return null;
+          // Date input gives yyyy-MM-dd in local time; construct as local midnight
+          const [y, m, d] = dateStr.split('-').map(Number);
+          const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+          return Math.floor(dt.getTime());
+        } catch (e) { return null; }
+      }
+      function parseDateTimeToEpoch(dtStr) {
+        try {
+          if (!dtStr) return null;
+          // datetime-local returns local date/time
+          const dt = new Date(dtStr);
+          return Math.floor(dt.getTime());
+        } catch (e) { return null; }
+      }
+      function prepareEpochFields(ev) {
+        const birthdateDate = document.getElementById('birthdateDate')?.value;
+        const lockoutDt = document.getElementById('lockoutUntilDateTime')?.value;
+        const bEpoch = parseDateToEpoch(birthdateDate);
+        const lEpoch = parseDateTimeToEpoch(lockoutDt);
+        const bEl = document.getElementById('birthdateEpoch');
+        const lEl = document.getElementById('lockoutUntilEpoch');
+        if (bEl) bEl.value = (bEpoch === null ? '' : String(bEpoch));
+        if (lEl) lEl.value = (lEpoch === null ? '' : String(lEpoch));
+      }
+    </script>
+  </div>
+</body>
+</html>

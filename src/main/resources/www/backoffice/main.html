@@ -3,49 +3,49 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Dashboard</title>
+  <title>Dashboard</title>
 </head>
 <body>
 <section layout:fragment="content">
-    <div class="space-y-6">
-        <!-- Welcome Section -->
-        <div th:replace="~{backoffice/components/card/card.html :: simple-card(
-            'Welcome to Jaws Backoffice',
+  <div class="space-y-6">
+    <!-- Welcome Section -->
+    <div th:replace="~{backoffice/components/card/card.html :: simple-card(
+            'Welcome to JAWS Backoffice',
             'This is the dashboard. Use the sidebar to navigate between different sections.',
             null,
             null
         )}"></div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="card"
-                 hx-get="/backoffice/htmx/user-count"
-                 hx-swap="outerHTML transition:true"
-                 hx-target="this"
-                 hx-trigger="load">
-                <!-- Skeleton state while loading -->
-                <div th:replace="~{backoffice/components/card/card.html :: skeleton-card}"></div>
-            </div>
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card"
+           hx-get="/backoffice/htmx/user-count"
+           hx-swap="outerHTML transition:true"
+           hx-target="this"
+           hx-trigger="load">
+        <!-- Skeleton state while loading -->
+        <div th:replace="~{backoffice/components/card/card.html :: skeleton-card}"></div>
+      </div>
 
-            <div class="card"
-                 hx-get="/backoffice/htmx/usersession-count"
-                 hx-swap="outerHTML transition:true"
-                 hx-target="this"
-                 hx-trigger="load">
-                <!-- Skeleton state while loading -->
-                <div th:replace="~{backoffice/components/card/card.html :: skeleton-card}"></div>
-            </div>
-        </div>
-
-        <!-- System Logs -->
-        <div hx-get="/backoffice/htmx/logs?page=0&size=10"
-             hx-swap="outerHTML transition:true"
-             hx-target="this"
-             hx-trigger="load">
-            <!-- Skeleton state while loading -->
-            <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
-        </div>
+      <div class="card"
+           hx-get="/backoffice/htmx/usersession-count"
+           hx-swap="outerHTML transition:true"
+           hx-target="this"
+           hx-trigger="load">
+        <!-- Skeleton state while loading -->
+        <div th:replace="~{backoffice/components/card/card.html :: skeleton-card}"></div>
+      </div>
     </div>
+
+    <!-- System Logs -->
+    <div hx-get="/backoffice/htmx/logs?page=0&size=10"
+         hx-swap="outerHTML transition:true"
+         hx-target="this"
+         hx-trigger="load">
+      <!-- Skeleton state while loading -->
+      <div th:replace="~{backoffice/components/table/table.html :: table-skeleton}"></div>
+    </div>
+  </div>
 </section>
 </body>
 </html>

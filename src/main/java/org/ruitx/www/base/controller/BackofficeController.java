@@ -1,6 +1,7 @@
 package org.ruitx.www.base.controller;
 
 import static org.ruitx.jaws.strings.RequestType.GET;
+import static org.ruitx.jaws.strings.RequestType.POST;
 import static org.ruitx.jaws.strings.ResponseCode.BAD_REQUEST;
 import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.strings.ResponseType.HTML;
@@ -8,11 +9,15 @@ import static org.ruitx.jaws.types.ParamType.PATH;
 import static org.ruitx.jaws.types.ParamType.QUERY;
 
 import java.util.Map;
+import java.util.function.Function;
+
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.types.Context;
 import org.ruitx.jaws.types.PageRequest;
+import org.ruitx.www.base.dto.auth.UserUpdateRequest;
+import org.ruitx.www.base.service.AuthService;
 import org.ruitx.www.base.service.BackofficeService;
 import org.tinylog.Logger;
 
@@ -22,11 +27,12 @@ public class BackofficeController extends Bragi {
   private static final String HTMX_ENDPOINT = API_ENDPOINT + "/htmx";
 
   private final BackofficeService backofficeService;
+  private final AuthService authService;
 
   public BackofficeController() {
     this.backofficeService = new BackofficeService();
+    this.authService = new AuthService();
   }
-
 
   /**
    * Renders the backoffice login page. Accessible via GET request to /backoffice/login.
@@ -47,6 +53,36 @@ public class BackofficeController extends Bragi {
         render(
             "backoffice/main.html",
             backofficeService.getBackofficeContext()));
+  }
+
+  /**
+   * HTMX endpoint to create a new toast.
+   */
+  @AccessControl(login = true)
+  @Route(
+      endpoint = HTMX_ENDPOINT + "/toast/:title/:description",
+      method = GET,
+      responseType = HTML,
+      htmx = true)
+  public void getToast() {
+    String title = get("title") != null
+        ? get("title")
+        : "title";
+    String description = get("description") != null
+        ? get("description")
+        : "desc";
+
+    Context ctx = Context.builder()
+        .with("title", title)
+        .with("description", description)
+        .build();
+
+    sendHTML(
+        OK,
+        renderFragment(
+            "backoffice/components/toast/toast.html",
+            "toast",
+            ctx));
   }
 
   /**
@@ -375,5 +411,119 @@ public class BackofficeController extends Bragi {
         renderFragment("backoffice/components/table/table.html", "table-users-with-pagination",
             ctx));
 
+  }
+
+  /**
+   * HTMX endpoint: render user detail EDIT fragment for given user id.
+   */
+  @AccessControl(login = true)
+  @Route(endpoint = HTMX_ENDPOINT + "/users/:id/edit", method = GET, responseType = HTML, htmx = true)
+  public void renderUserEditFragment() {
+    String userId = get("id", PATH);
+    if (userId == null) {
+      sendFail(BAD_REQUEST, "User ID is required.");
+      return;
+    }
+
+    sendHTML(
+        OK,
+        renderFragment(
+            "backoffice/components/user/user-detail-edit.html",
+            "user-edit",
+            backofficeService.getUserDetailContext(userId))
+    );
+  }
+
+  /**
+   * HTMX endpoint: render user detail VIEW fragment for given user id.
+   */
+  @AccessControl(login = true)
+  @Route(endpoint = HTMX_ENDPOINT + "/users/:id/view", method = GET, responseType = HTML, htmx = true)
+  public void renderUserViewFragment() {
+    String userId = get("id", PATH);
+    if (userId == null) {
+      sendFail(BAD_REQUEST, "User ID is required.");
+      return;
+    }
+
+    sendHTML(
+        OK,
+        renderFragment(
+            "backoffice/components/user/user-detail-view.html",
+            "user-detail",
+            backofficeService.getUserDetailContext(userId))
+    );
+  }
+
+  /**
+   * HTMX endpoint: handle user update (PATCH-like via POST) and return refreshed VIEW fragment.
+   */
+  @AccessControl(login = true)
+  @Route(endpoint = HTMX_ENDPOINT + "/users/:id", method = POST, responseType = HTML, htmx = true)
+  public void updateUserFromForm() {
+    String userIdStr = get("id", PATH);
+    if (userIdStr == null) {
+      sendFail(BAD_REQUEST, "User ID is required.");
+      return;
+    }
+
+    Integer userId;
+    try {
+      userId = Integer.parseInt(userIdStr);
+    } catch (NumberFormatException e) {
+      sendFail(BAD_REQUEST, "Invalid User ID.");
+      return;
+    }
+
+    // Helpers to normalize input
+    Function<String, String> nn = (s) -> (s == null || s.isBlank()) ? null : s;
+    Function<String, Long> toLong = (s) -> {
+      try { return (s == null || s.isBlank()) ? null : Long.parseLong(s); } catch (Exception ex) { return null; }
+    };
+    Function<String, Integer> toInt = (s) -> {
+      try { return (s == null || s.isBlank()) ? null : Integer.parseInt(s); } catch (Exception ex) { return null; }
+    };
+
+    String password = nn.apply(get("password"));
+    String email = nn.apply(get("email"));
+    String firstName = nn.apply(get("firstName"));
+    String lastName = nn.apply(get("lastName"));
+    Long birthdate = toLong.apply(get("birthdateEpoch"));
+    String gender = nn.apply(get("gender"));
+    String phoneNumber = nn.apply(get("phoneNumber"));
+    String profilePicture = nn.apply(get("profilePicture"));
+    String bio = nn.apply(get("bio"));
+    String location = nn.apply(get("location"));
+    String website = nn.apply(get("website"));
+    Integer isActive = toInt.apply(get("isActive")); // expect 1 or 0
+    Long lockoutUntil = toLong.apply(get("lockoutUntilEpoch"));
+
+    UserUpdateRequest request = new UserUpdateRequest(
+        password,
+        email,
+        firstName,
+        lastName,
+        birthdate,
+        gender,
+        phoneNumber,
+        profilePicture,
+        bio,
+        location,
+        website,
+        isActive,
+        lockoutUntil
+    );
+
+    // Perform update
+    authService.updateUser(userId, request);
+
+    // Return refreshed VIEW fragment
+    sendHTML(
+        OK,
+        renderFragment(
+            "backoffice/components/user/user-detail-view.html",
+            "user-detail",
+            backofficeService.getUserDetailContext(userIdStr))
+    );
   }
 }
