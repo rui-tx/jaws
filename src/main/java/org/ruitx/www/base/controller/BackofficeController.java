@@ -10,7 +10,6 @@ import static org.ruitx.jaws.types.ParamType.QUERY;
 
 import java.util.Map;
 import java.util.function.Function;
-
 import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.interfaces.AccessControl;
 import org.ruitx.jaws.interfaces.Route;
@@ -417,7 +416,8 @@ public class BackofficeController extends Bragi {
    * HTMX endpoint: render user detail EDIT fragment for given user id.
    */
   @AccessControl(login = true)
-  @Route(endpoint = HTMX_ENDPOINT + "/users/:id/edit", method = GET, responseType = HTML, htmx = true)
+  @Route(endpoint = HTMX_ENDPOINT
+      + "/users/:id/edit", method = GET, responseType = HTML, htmx = true)
   public void renderUserEditFragment() {
     String userId = get("id", PATH);
     if (userId == null) {
@@ -438,7 +438,8 @@ public class BackofficeController extends Bragi {
    * HTMX endpoint: render user detail VIEW fragment for given user id.
    */
   @AccessControl(login = true)
-  @Route(endpoint = HTMX_ENDPOINT + "/users/:id/view", method = GET, responseType = HTML, htmx = true)
+  @Route(endpoint = HTMX_ENDPOINT
+      + "/users/:id/view", method = GET, responseType = HTML, htmx = true)
   public void renderUserViewFragment() {
     String userId = get("id", PATH);
     if (userId == null) {
@@ -478,10 +479,18 @@ public class BackofficeController extends Bragi {
     // Helpers to normalize input
     Function<String, String> nn = (s) -> (s == null || s.isBlank()) ? null : s;
     Function<String, Long> toLong = (s) -> {
-      try { return (s == null || s.isBlank()) ? null : Long.parseLong(s); } catch (Exception ex) { return null; }
+      try {
+        return (s == null || s.isBlank()) ? null : Long.parseLong(s);
+      } catch (Exception ex) {
+        return null;
+      }
     };
     Function<String, Integer> toInt = (s) -> {
-      try { return (s == null || s.isBlank()) ? null : Integer.parseInt(s); } catch (Exception ex) { return null; }
+      try {
+        return (s == null || s.isBlank()) ? null : Integer.parseInt(s);
+      } catch (Exception ex) {
+        return null;
+      }
     };
 
     String password = nn.apply(get("password"));

@@ -27,6 +27,7 @@ import org.ruitx.www.base.dto.auth.UserUpdateRequest;
 import org.ruitx.www.base.model.auth.Role;
 import org.ruitx.www.base.model.auth.User;
 import org.ruitx.www.base.model.auth.UserRole;
+import org.ruitx.www.base.notify.ToastNotifier;
 import org.ruitx.www.base.repository.AuthRepo;
 import org.tinylog.Logger;
 
@@ -445,5 +446,6 @@ public class AuthService {
   // Schedule method
   public void cleanOldSessions() {
     authRepo.cleanOldSessions();
+    ToastNotifier.broadcastToast("Job: clean-old-sessions", "Done");
   }
 }

@@ -7,14 +7,25 @@
     <title layout:title-pattern="$CONTENT_TITLE - Jaws Backoffice">Jaws Backoffice</title>
     <link th:href="@{/backoffice/styles.css}" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.2/dist/js/basecoat.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/sidebar.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.2/dist/js/toast.min.js" defer></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.2.8/dist/js/sidebar.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.2/dist/js/toast.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" crossorigin="anonymous" defer></script>
     <script th:src="@{/backoffice/scripts/base.js}" defer></script>
     <script th:src="@{/backoffice/scripts/auth.js}" defer></script>
     <script th:src="@{/backoffice/scripts/refresh-button.js}" defer></script>
 </head>
-<body class="min-h-screen bg-background">
+<body class="min-h-screen bg-background" hx-ext="sse">
+
+    <!-- SSE notifications will append to #toaster as toasts -->
+    <div
+        hx-ext="sse"
+        sse-connect="/events"
+        sse-swap="notification"
+        hx-target="#toaster"
+        hx-swap="beforeend">
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar" data-side="left" aria-hidden="false">
         <nav aria-label="Sidebar navigation">

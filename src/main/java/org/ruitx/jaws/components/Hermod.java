@@ -266,6 +266,7 @@ public final class Hermod {
 
       // Process only the fragment
       return templateEngine.process(spec, context);
+
     } catch (Exception e) {
       JawsLogger.error("Error processing Thymeleaf fragment '{} :: {}': {}", templatePath,
           fragmentName, e.getMessage());
@@ -388,5 +389,35 @@ public final class Hermod {
     }
 
     return context;
+  }
+
+  /**
+   * Render a specific fragment headlessly (without servlet request/response). Useful for background
+   * jobs or other non-HTTP contexts.
+   *
+   * @param templatePath the template path
+   * @param fragmentName the fragment name defined via th:fragment
+   * @param variables    map of variables to expose to the fragment
+   * @return rendered HTML string (empty on error)
+   */
+  public static String renderFragmentHeadless(String templatePath,
+      String fragmentName,
+      Map<String, Object> variables) {
+    try {
+      org.thymeleaf.context.Context thymeCtx = new org.thymeleaf.context.Context();
+      if (variables != null) {
+        for (Map.Entry<String, Object> e : variables.entrySet()) {
+          thymeCtx.setVariable(e.getKey(), e.getValue());
+        }
+      }
+
+      TemplateSpec spec = new TemplateSpec(templatePath, Set.of(fragmentName), TemplateMode.HTML,
+          null);
+      return templateEngine.process(spec, thymeCtx);
+    } catch (Exception e) {
+      JawsLogger.error("Error processing headless fragment '{} :: {}': {}", templatePath,
+          fragmentName, e.getMessage());
+      return "";
+    }
   }
 }

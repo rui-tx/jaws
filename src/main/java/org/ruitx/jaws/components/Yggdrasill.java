@@ -127,6 +127,9 @@ public class Yggdrasill {
 
       // Wrap everything in Jetty's GzipHandler for automatic compression
       GzipHandler gzipHandler = new GzipHandler();
+      // Exclude Server-Sent Events from gzip to avoid buffering issues
+      gzipHandler.addExcludedMimeTypes("text/event-stream");
+      gzipHandler.addExcludedPaths("/events", "/events/*");
       gzipHandler.setHandler(context);
 
       server.setHandler(gzipHandler);

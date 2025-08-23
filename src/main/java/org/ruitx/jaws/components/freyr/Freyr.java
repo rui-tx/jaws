@@ -25,6 +25,7 @@ import org.ruitx.jaws.types.Page;
 import org.ruitx.jaws.types.PageRequest;
 import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.types.SortDirection;
+import org.ruitx.www.base.notify.ToastNotifier;
 import org.tinylog.Logger;
 
 /**
@@ -97,8 +98,8 @@ public class Freyr implements Runnable {
   }
 
   /**
-   * Test-only helper to fully reset the Freyr singleton.
-   * Ensures no stale DB references persist across tests.
+   * Test-only helper to fully reset the Freyr singleton. Ensures no stale DB references persist
+   * across tests.
    */
   public static synchronized void resetForTests() {
     if (instance != null) {
@@ -552,6 +553,9 @@ public class Freyr implements Runnable {
       if (expiredResults > 0 || oldJobs > 0) {
         Logger.info("Cleanup: removed {} expired results and {} old jobs",
             expiredResults, oldJobs);
+        ToastNotifier.broadcastToast(
+            "Freyr: Cleanup",
+            "Removed %d expired results and %d old jobs".formatted(expiredResults, oldJobs));
       }
     } catch (Exception e) {
       Logger.error("Failed to cleanup expired data: {}", e.getMessage());
