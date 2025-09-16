@@ -22,6 +22,7 @@ Among other features, these are the main ones
 - **Middleware System**: Extensible middleware for cross-cutting concerns
 - **Async**: A job system for async processing
 - **Query-level Caching**: Automatic per-statement caching powered by Caffeine
+- **Server-Sent Events (SSE)**: Real-time events with per-event filtering
 
 ## Setup
 
@@ -482,6 +483,59 @@ Recommendations:
   declarative.
 - **Optionals over nulls** in services/repos to avoid NPEs and simplify template conditions.
 - Consider `hx-push-url="true"` for pagination/filtering to improve back/forward navigation.
+
+### Real-time events (Huginn) and Toast notifications
+
+Huginn provides a simple SSE hub with per-event filtering. Clients subscribe to a channel; each
+event can be broadcast to:
+
+- All subscribers on the channel.
+- Only users with specific roles.
+- A single user by userId.
+
+Client subscription is already wired in `backoffice/layouts/base.html` using custom attributes:
+
+```html
+
+<body sse-connect="/events" sse-swap="notification">
+<!-- ... -->
+<div id="toaster"></div>
+</body>
+```
+
+> ToastNotifier is just an simple implementation of this system.
+
+On the server, use the `ToastNotifier` helpers to render a toast fragment and broadcast it via SSE:
+
+```java
+// 1) Broadcast to everyone on the channel
+ToastNotifier.broadcastToast("Build complete","Artifacts published.");
+
+// 2) Broadcast only to certain roles (e.g., admins)
+ToastNotifier.
+
+broadcastToast(Set.of("admin"), "Maintenance","DB migration at 22:00");
+
+// 3) Broadcast only to a specific user
+    ToastNotifier.
+
+broadcastToast(userId, "Report ready","Your export finished.");
+```
+
+Under the hood, these call `Huginn`:
+
+- `broadcast(String channel, EventType event, String data)`
+- `broadcastToRoles(String channel, Set<String> roles, EventType event, String data)`
+- `broadcastToUser(String channel, String userId, EventType event, String data)`
+
+The current event type used for toasts is `Huginn.EventType.NOTIFICATION`.
+
+Notes:
+
+- All clients may share the same channel, but filtered broadcasts ensure only eligible recipients
+  receive a given event.
+- Keep using the role/user-filtered APIs for sensitive messages; the generic
+  `broadcastToast(title, description)` goes to all subscribers.
 
 ### Mimir
 

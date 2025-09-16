@@ -66,20 +66,20 @@
         <!-- Top Bar -->
         <header class="flex items-center justify-between p-4 border-b bg-background">
             <div class="flex items-center gap-4">
-                <button type="button" 
+                <button type="button"
                         onclick="document.dispatchEvent(new CustomEvent('basecoat:sidebar'))"
                         class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]">
                     <i class="icon icon-bars-3 w-5 h-5"></i>
                 </button>
                 <h2 class="text-lg font-semibold"
-                    th:text="${data.currentPage != null
-                    ? (data.currentPage == 'dashboard' ? 'Dashboard'
-                        : data.currentPage == 'logs' ? 'System Logs'
-                        : data.currentPage == 'log-detail' ? 'Log Detail'
-                        : data.currentPage == 'users' ? 'Users'
-                        : data.currentPage == 'user-detail' ? 'User Detail'
-                      : 'Dashboard')
-                    : 'Dashboard'}">Dashboard</h2>
+                    th:text="${data != null and data.currentPage != null
+                     ? (data.currentPage == 'dashboard' ? 'Dashboard'
+                         : data.currentPage == 'logs' ? 'System Logs'
+                         : data.currentPage == 'log-detail' ? 'Log Detail'
+                         : data.currentPage == 'users' ? 'Users'
+                         : data.currentPage == 'user-detail' ? 'User Detail'
+                       : 'Dashboard')
+                     : 'Dashboard'}">Dashboard</h2>
             </div>
             
             <div class="flex items-center gap-2">

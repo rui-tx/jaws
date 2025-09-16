@@ -105,7 +105,7 @@ public class Huginn {
   /**
    * Broadcast an event to all subscribers in the channel. Returns number of recipients.
    */
-  public int broadcast(String channel, String event, String data) {
+  private int broadcast(String channel, String event, String data) {
     List<Client> list = channels.getOrDefault(channel, new CopyOnWriteArrayList<>());
     if (list.isEmpty()) {
       return 0;
@@ -123,6 +123,74 @@ public class Huginn {
       }
     }
     return sent;
+  }
+
+  // Overload using EventType
+  public int broadcast(String channel, EventType event, String data) {
+    Objects.requireNonNull(event);
+    return broadcast(channel, event.eventName(), data);
+  }
+
+  // Filtered broadcast: only to users with at least one of the given roles.
+  public int broadcastToRoles(String channel, Set<String> roles, EventType event, String data) {
+    Objects.requireNonNull(event);
+    if (roles == null || roles.isEmpty()) {
+      return 0;
+    }
+    List<Client> list = channels.getOrDefault(channel, new CopyOnWriteArrayList<>());
+    if (list.isEmpty()) {
+      return 0;
+    }
+    String payload = formatEvent(event.eventName(), data);
+    int sent = 0;
+    for (Client c : list) {
+      if (hasAnyRole(c.roles, roles)) {
+        boolean ok = c.sendRaw(payload);
+        if (!ok) {
+          close(c);
+        } else {
+          sent++;
+        }
+      }
+    }
+    return sent;
+  }
+
+  // Filtered broadcast: only to a specific userId
+  public int broadcastToUser(String channel, String userId, EventType event, String data) {
+    Objects.requireNonNull(event);
+    if (userId == null || userId.isBlank()) {
+      return 0;
+    }
+    List<Client> list = channels.getOrDefault(channel, new CopyOnWriteArrayList<>());
+    if (list.isEmpty()) {
+      return 0;
+    }
+    String payload = formatEvent(event.eventName(), data);
+    int sent = 0;
+    for (Client c : list) {
+      if (userId.equals(c.userId)) {
+        boolean ok = c.sendRaw(payload);
+        if (!ok) {
+          close(c);
+        } else {
+          sent++;
+        }
+      }
+    }
+    return sent;
+  }
+
+  private boolean hasAnyRole(List<String> userRoles, Set<String> requiredRoles) {
+    if (userRoles == null || userRoles.isEmpty()) {
+      return false;
+    }
+    for (String r : userRoles) {
+      if (requiredRoles.contains(r)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private String formatEvent(String event, String data) {
@@ -173,6 +241,22 @@ public class Huginn {
     }
   }
 
+  // Event types supported by SSE. Add more as needed.
+  public enum EventType {
+    NOTIFICATION("notification"),
+    CONNECTION("connection");
+
+    private final String eventName;
+
+    EventType(String eventName) {
+      this.eventName = eventName;
+    }
+
+    public String eventName() {
+      return eventName;
+    }
+  }
+
   /**
    * Represents a subscribed client.
    */
@@ -185,7 +269,11 @@ public class Huginn {
     private final PrintWriter writer;
     private volatile long lastWriteEpochSec = Instant.now().getEpochSecond();
 
-    private Client(String channel, String userId, List<String> roles, AsyncContext async,
+    private Client(
+        String channel,
+        String userId,
+        List<String> roles,
+        AsyncContext async,
         PrintWriter writer) {
       this.channel = channel;
       this.userId = userId;
