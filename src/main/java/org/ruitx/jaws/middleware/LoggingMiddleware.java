@@ -4,7 +4,7 @@ import java.util.UUID;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * LoggingMiddleware logs incoming HTTP requests for debugging and monitoring.

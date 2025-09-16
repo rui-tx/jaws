@@ -1,0 +1,23 @@
+<div id="freyr">
+    <article>
+        <h3>Freyr (Job System)</h3>
+        <nav>
+            <strong>On this section</strong>
+            <ul>
+                <li><a href="#concepts">Concepts</a></li>
+                <li><a href="#usage">Usage</a></li>
+            </ul>
+        </nav>
+        <p>Background job processing with parallel and sequential queues, priorities, retries, and persistence.</p>
+        <h4 id="concepts">Concepts</h4>
+        <ul>
+            <li>Job types (parallel vs sequential)</li>
+            <li>Priority-based processing</li>
+            <li>Retry with exponential backoff</li>
+            <li>Persistent storage via Mimir</li>
+        </ul>
+        <h4 id="usage">Usage</h4>
+        <pre><code>String jobId = Freyr.getInstance().submit(new ExternalApiJob(Map.of("url", "...")));
+</code></pre>
+    </article>
+</div>

@@ -1,5 +1,6 @@
 package org.ruitx.jaws.aspects;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -8,10 +9,10 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.interfaces.IsolationLevel;
 import org.ruitx.jaws.interfaces.Transactional;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * TransactionAspect - Manages database transactions for methods annotated with @Transactional.
@@ -89,7 +90,7 @@ public class TransactionAspect {
 
     // Then check target object fields
     Object target = joinPoint.getTarget();
-    for (java.lang.reflect.Field field : target.getClass().getDeclaredFields()) {
+    for (Field field : target.getClass().getDeclaredFields()) {
       if (Mimir.class.isAssignableFrom(field.getType())) {
         try {
           field.setAccessible(true);

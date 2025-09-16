@@ -1,5 +1,5 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head></head>
+<head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <link href="https://camo.githubusercontent.com/368d4462c328f8b82ceec9a7ac2f9600afacb4d870120b12838f880488193666/68747470733a2f2f6f70656e6d6f6a692e6f72672f646174612f636f6c6f722f7376672f31463938382e737667"
@@ -16,19 +16,51 @@
 </header>
 <main>
 <section>
-    <div th:insert="~{docs/staticfiles.html}">Loading static files guide...</div>
+    <!-- Core Systems -->
+    <h2>Core Systems</h2>
+    <div th:insert="~{docs/yggdrassil.html}">Loading Yggdrassil (HTTP server)...</div>
     <hr/>
-    <div th:insert="~{docs/placeholders.html}">Loading placeholders guide...</div>
+    <div th:insert="~{docs/njord.html}">Loading Njord (dynamic routing)...</div>
     <hr/>
-    <div th:insert="~{docs/dynamicsroutes.html}">Loading dynamic routes guide...</div>
+    <div th:insert="~{docs/bifrost.html}">Loading Bifrost (middleware)...</div>
     <hr/>
-    <div th:insert="~{docs/basecontroller.html}">Loading base controller guide...</div>
+    <div th:insert="~{docs/volundr.html}">Loading Volundr (headers)...</div>
     <hr/>
-    <div th:insert="~{docs/authsystem.html}">Loading auth system guide...</div>
+    <div th:insert="~{docs/huginn.html}">Loading Huginn (SSE hub)...</div>
+
+    <!-- Application & Templates -->
+    <h2>Application & Templates</h2>
+    <div th:insert="~{docs/bragi.html}">Loading Bragi (base controller)...</div>
     <hr/>
-    <div th:insert="~{docs/dbsystem.html}">Loading database system guide...</div>
+    <div th:insert="~{docs/api-builder.html}">Loading API Builder...</div>
     <hr/>
-        <div th:insert="~{docs/cronservice.html}">Loading cron service guide...</div>
-    </section>
+    <div th:insert="~{docs/hermod.html}">Loading Hermod (templates & fragments)...</div>
+
+    <!-- Infrastructure -->
+    <h2>Infrastructure</h2>
+    <div th:insert="~{docs/mimir.html}">Loading Mimir (database)...</div>
+    <hr/>
+    <div th:insert="~{docs/freyr.html}">Loading Freyr (job system)...</div>
+    <hr/>
+    <div th:insert="~{docs/norns.html}">Loading Norns (scheduler)...</div>
+    <hr/>
+    <div th:insert="~{docs/heimdall.html}">Loading Heimdall (file watcher)...</div>
+    <hr/>
+    <div th:insert="~{docs/odin.html}">Loading Odin (bootstrap)...</div>
+    <hr/>
+    <div th:insert="~{docs/application-config.html}">Loading Application Configuration...</div>
+
+    <!-- Security -->
+    <h2>Security</h2>
+    <div th:insert="~{docs/tyr.html}">Loading Tyr (JWT auth)...</div>
+
+    <!-- Features & Conventions -->
+    <h2>Features & Conventions</h2>
+    <div th:insert="~{docs/static-files.html}">Loading Static Files...</div>
+    <hr/>
+    <div th:insert="~{docs/caching.html}">Loading Caching...</div>
+    <hr/>
+    <div th:insert="~{docs/conventions.html}">Loading Conventions...</div>
+</section>
 </body>
 </html>

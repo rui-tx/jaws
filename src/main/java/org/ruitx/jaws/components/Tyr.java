@@ -16,9 +16,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.crypto.SecretKey;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.types.Row;
-import org.ruitx.jaws.utils.JawsLogger;
-import org.ruitx.www.model.auth.UserSession;
+import org.ruitx.jaws.utils.logger.JawsLogger;
+import org.ruitx.www.base.mapper.UserSessionMapper;
+import org.ruitx.www.base.model.auth.UserSession;
 
 /**
  * Tyr is a utility class for handling JWT token creation, validation, and refresh operations. It
@@ -61,8 +63,8 @@ public class Tyr {
         .signWith(key)
         .compact();
 
-    Mimir db = new Mimir();
-    db.executeSql("""
+    Mimir db = Odin.getDB();
+    db.execute("""
             INSERT INTO USER_SESSION (
                 user_id, refresh_token, access_token, user_agent, ip_address, 
                 created_at, expires_at, last_used_at
@@ -103,13 +105,14 @@ public class Tyr {
           .getPayload();
 
       // Get session from database
-      Mimir db = new Mimir();
+      Mimir db = Odin.getDB();
       Row sessionRow = db.getRow(
           "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
           refreshToken
-      );
+      ).get();
 
-      Optional<UserSession> session = UserSession.fromRow(sessionRow);
+      Optional<UserSession> session = Optional.ofNullable(
+          UserSessionMapper.INSTANCE.map(sessionRow));
       if (session.isEmpty()) {
         return Optional.empty();
       }
@@ -118,7 +121,7 @@ public class Tyr {
       UserSession s = session.get();
       if (!s.userAgent().equals(userAgent) || !s.ipAddress().equals(ipAddress)) {
         // Potential security breach - invalidate session
-        db.executeSql(
+        db.execute(
             "UPDATE USER_SESSION SET is_active = 0 WHERE refresh_token = ?",
             refreshToken
         );
@@ -131,7 +134,7 @@ public class Tyr {
       TokenPair newTokens = createTokenPair(userId, userRoles, userAgent, ipAddress);
 
       // Invalidate old session
-      db.executeSql(
+      db.execute(
           "UPDATE USER_SESSION SET is_active = 0 WHERE refresh_token = ?",
           refreshToken
       );
@@ -244,5 +247,3 @@ public class Tyr {
 
   }
 }
-
-

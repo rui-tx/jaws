@@ -21,7 +21,7 @@ import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
 import org.ruitx.jaws.types.Context;
 import org.ruitx.jaws.types.ParamType;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * Base controller class for all controllers. Contains methods for sending responses to the client.
@@ -315,21 +315,21 @@ public abstract class Bragi {
    */
   protected String get(String name) {
     Yggdrasill.RequestContext context = requestContext.get();
-      if (context == null) {
-          return null;
-      }
+    if (context == null) {
+      return null;
+    }
 
     // Check path parameters first
     String value = context.getPathParams().get(name);
-      if (value != null) {
-          return value;
-      }
+    if (value != null) {
+      return value;
+    }
 
     // Check query parameters
     value = context.getQueryParams().get(name);
-      if (value != null) {
-          return value;
-      }
+    if (value != null) {
+      return value;
+    }
 
     // Check body parameters
     return context.getBodyParams().get(name);
@@ -344,9 +344,9 @@ public abstract class Bragi {
    */
   protected String get(String name, ParamType type) {
     Yggdrasill.RequestContext context = requestContext.get();
-      if (context == null) {
-          return null;
-      }
+    if (context == null) {
+      return null;
+    }
 
     return switch (type) {
       case PATH -> context.getPathParams().get(name);
@@ -385,9 +385,9 @@ public abstract class Bragi {
    */
   protected boolean isMultipartRequest() {
     Yggdrasill.RequestContext context = requestContext.get();
-      if (context == null) {
-          return false;
-      }
+    if (context == null) {
+      return false;
+    }
 
     String contentType = context.getHeader("Content-Type");
     return contentType != null && contentType.contains("multipart/form-data");
@@ -536,6 +536,63 @@ public abstract class Bragi {
     } catch (IOException e) {
       JawsLogger.error("Failed to render template: {}", e.getMessage());
       throw new SendRespondException("Failed to render template", e);
+    }
+  }
+
+  /**
+   * Render a specific fragment from a template without extra context.
+   *
+   * @param templatePath the path to the template file
+   * @param fragmentName the fragment selector name defined via th:fragment
+   * @return the rendered fragment HTML
+   */
+  protected String renderFragment(String templatePath, String fragmentName) {
+    try {
+      Yggdrasill.RequestContext rqContext = requestContext.get();
+      if (rqContext != null) {
+        return Hermod.renderFragment(
+            templatePath,
+            fragmentName,
+            rqContext.getQueryParams(),
+            rqContext.getBodyParams(),
+            rqContext.getRequest(),
+            rqContext.getResponse(),
+            null);
+      } else {
+        throw new IllegalStateException("No request context available");
+      }
+    } catch (IOException e) {
+      JawsLogger.error("Failed to render fragment: {}", e.getMessage());
+      throw new SendRespondException("Failed to render fragment", e);
+    }
+  }
+
+  /**
+   * Render a specific fragment from a template with additional context variables.
+   *
+   * @param templatePath the path to the template file
+   * @param fragmentName the fragment selector name defined via th:fragment
+   * @param context      additional context variables
+   * @return the rendered fragment HTML
+   */
+  protected String renderFragment(String templatePath, String fragmentName, Context context) {
+    try {
+      Yggdrasill.RequestContext rqContext = requestContext.get();
+      if (rqContext != null) {
+        return Hermod.renderFragment(
+            templatePath,
+            fragmentName,
+            rqContext.getQueryParams(),
+            rqContext.getBodyParams(),
+            rqContext.getRequest(),
+            rqContext.getResponse(),
+            context);
+      } else {
+        throw new IllegalStateException("No request context available");
+      }
+    } catch (IOException e) {
+      JawsLogger.error("Failed to render fragment: {}", e.getMessage());
+      throw new SendRespondException("Failed to render fragment", e);
     }
   }
 
@@ -841,4 +898,4 @@ public abstract class Bragi {
           "Failed to parse response");
     }
   }
-} 
+}

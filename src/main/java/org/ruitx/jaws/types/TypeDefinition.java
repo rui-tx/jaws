@@ -17,18 +17,18 @@ import org.ruitx.www.dto.api.Post;
  */
 public class TypeDefinition {
 
-  private static final ObjectMapper mapper = Odin.getMapper();
+  private static final ObjectMapper MAPPER = Odin.getMapper();
 
   /**
    * JavaType -> {@code Post}
    */
-  public static final JavaType POST = mapper.getTypeFactory()
+  public static final JavaType POST = MAPPER.getTypeFactory()
       .constructType(Post.class);
 
   /**
    * JavaType -> {@code List<Post>}
    */
-  public static final JavaType LIST_POST = mapper.getTypeFactory()
+  public static final JavaType LIST_POST = MAPPER.getTypeFactory()
       .constructParametricType(List.class, Post.class);
 
   private TypeDefinition() {

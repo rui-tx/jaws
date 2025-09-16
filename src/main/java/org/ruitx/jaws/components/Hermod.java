@@ -10,11 +10,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
 import org.ruitx.jaws.types.Context;
-import org.ruitx.jaws.utils.JawsLogger;
 import org.ruitx.jaws.utils.ThymeleafUtils;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.TemplateSpec;
 import org.thymeleaf.context.WebContext;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
@@ -223,6 +225,70 @@ public final class Hermod {
   }
 
   /**
+   * Render a specific fragment from a template using Thymeleaf TemplateSpec.
+   *
+   * @param templatePath    the path to the template file (relative to WWW_PATH)
+   * @param fragmentName    the fragment selector name defined via th:fragment
+   * @param queryParams     the query parameters map
+   * @param bodyParams      the body parameters map
+   * @param request         the HTTP servlet request
+   * @param response        the HTTP servlet response
+   * @param templateContext additional context variables
+   * @return the processed fragment HTML
+   * @throws IOException if there's an error rendering the fragment
+   */
+  public static String renderFragment(String templatePath,
+      String fragmentName,
+      Map<String, String> queryParams,
+      Map<String, String> bodyParams,
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Context templateContext) throws IOException {
+    if (queryParams == null) {
+      queryParams = new LinkedHashMap<>();
+    }
+    if (bodyParams == null) {
+      bodyParams = new LinkedHashMap<>();
+    }
+
+    try {
+      // Build Thymeleaf web context identical to page rendering
+      WebContext context = createThymeleafWebContext(queryParams, bodyParams, request, response);
+
+      // Add additional variables if provided
+      if (templateContext != null) {
+        context.setVariables(templateContext.context());
+      }
+
+      // Build a TemplateSpec targeting the fragment
+      TemplateSpec spec =
+          new TemplateSpec(templatePath, Set.of(fragmentName), TemplateMode.HTML, null);
+
+      // Process only the fragment
+      return templateEngine.process(spec, context);
+
+    } catch (Exception e) {
+      JawsLogger.error("Error processing Thymeleaf fragment '{} :: {}': {}", templatePath,
+          fragmentName, e.getMessage());
+      return "Error processing fragment: " + templatePath + " :: " + fragmentName;
+    } finally {
+      // Clean up template variables
+      clearTemplateVariables();
+    }
+  }
+
+  /**
+   * Convenience overload to render a fragment without extra context.
+   */
+  public static String renderFragment(String templatePath,
+      String fragmentName,
+      HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    return renderFragment(templatePath, fragmentName, new LinkedHashMap<>(), new LinkedHashMap<>(),
+        request, response, null);
+  }
+
+  /**
    * Compose a full page by combining a base template with a partial template.
    *
    * @param baseTemplatePath    The path to the base template file
@@ -323,5 +389,35 @@ public final class Hermod {
     }
 
     return context;
+  }
+
+  /**
+   * Render a specific fragment headlessly (without servlet request/response). Useful for background
+   * jobs or other non-HTTP contexts.
+   *
+   * @param templatePath the template path
+   * @param fragmentName the fragment name defined via th:fragment
+   * @param variables    map of variables to expose to the fragment
+   * @return rendered HTML string (empty on error)
+   */
+  public static String renderFragmentHeadless(String templatePath,
+      String fragmentName,
+      Map<String, Object> variables) {
+    try {
+      org.thymeleaf.context.Context thymeCtx = new org.thymeleaf.context.Context();
+      if (variables != null) {
+        for (Map.Entry<String, Object> e : variables.entrySet()) {
+          thymeCtx.setVariable(e.getKey(), e.getValue());
+        }
+      }
+
+      TemplateSpec spec = new TemplateSpec(templatePath, Set.of(fragmentName), TemplateMode.HTML,
+          null);
+      return templateEngine.process(spec, thymeCtx);
+    } catch (Exception e) {
+      JawsLogger.error("Error processing headless fragment '{} :: {}': {}", templatePath,
+          fragmentName, e.getMessage());
+      return "";
+    }
   }
 }

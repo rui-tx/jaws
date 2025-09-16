@@ -13,13 +13,13 @@ import org.ruitx.jaws.exceptions.OperationException;
 import org.ruitx.jaws.exceptions.ValidationException;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @Aspect
 public class ExceptionAspect {
-    
+
   // Pointcut to match any method in controllers
-  @Pointcut("execution(* org.ruitx.www.controller..*(..))")
+  @Pointcut("execution(* org.ruitx.www..controller..*(..))")
   public void controllerMethods() {
   }
 
@@ -70,6 +70,10 @@ public class ExceptionAspect {
       handleAuthenticationException(ae, controller);
     } else if (ex.getCause() instanceof OperationException oe) {
       handleOperationException(oe, controller);
+    } else if (ex.getCause() instanceof AuthenticationException ae) {
+      handleAuthenticationException(ae, controller);
+    } else if (ex.getCause() instanceof ValidationException ve) {
+      handleValidationException(ve, controller);
     } else {
       handleUnexpectedException(ex, controller);
     }

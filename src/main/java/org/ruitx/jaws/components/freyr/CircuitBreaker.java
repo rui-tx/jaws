@@ -6,8 +6,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.tinylog.Logger;
 
 /**
@@ -23,7 +23,7 @@ public class CircuitBreaker {
   // Instance fields
   private final String serviceName;
   private final Configuration config;
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getDB();
   // State management
   private final AtomicReference<State> state = new AtomicReference<>(State.CLOSED);
   private final AtomicLong lastStateChangeTime = new AtomicLong(System.currentTimeMillis());
@@ -34,6 +34,7 @@ public class CircuitBreaker {
   private final AtomicInteger successfulCalls = new AtomicInteger(0);
   private final AtomicInteger failedCalls = new AtomicInteger(0);
   private final AtomicInteger slowCalls = new AtomicInteger(0);
+
   /**
    * Private constructor - use factory methods
    */
@@ -334,12 +335,12 @@ public class CircuitBreaker {
     int recentSlowCalls = 0;
 
     for (CallResult call : recentCalls) {
-        if (!call.success) {
-            recentFailures++;
-        }
-        if (call.isSlow(config.slowCallThresholdMs)) {
-            recentSlowCalls++;
-        }
+      if (!call.success) {
+        recentFailures++;
+      }
+      if (call.isSlow(config.slowCallThresholdMs)) {
+        recentSlowCalls++;
+      }
     }
 
     double recentFailureRate = recentCalls.length > 0 ?
@@ -573,4 +574,4 @@ public class CircuitBreaker {
       size = 0;
     }
   }
-} 
+}

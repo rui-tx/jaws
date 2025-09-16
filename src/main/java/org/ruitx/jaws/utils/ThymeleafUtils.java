@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.ruitx.jaws.configs.ApplicationConfig;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * Utility class that provides functions for Thymeleaf templates.

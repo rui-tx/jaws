@@ -2,9 +2,9 @@ package org.ruitx.jaws.configs;
 
 import java.util.Map;
 import org.ruitx.jaws.interfaces.Job;
-import org.ruitx.jaws.utils.JawsLoggerJob;
-import org.ruitx.www.jobs.ParallelPingJob;
-import org.ruitx.www.jobs.SequentialPingJob;
+import org.ruitx.jaws.utils.logger.JawsLoggerJob;
+import org.ruitx.www.base.jobs.ParallelPingJob;
+import org.ruitx.www.base.jobs.SequentialPingJob;
 
 /**
  * Configuration class for job registry. This class holds the mapping between job types and their

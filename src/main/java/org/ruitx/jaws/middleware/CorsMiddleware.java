@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.interfaces.Middleware;
 import org.ruitx.jaws.interfaces.MiddlewareChain;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * CorsMiddleware handles Cross-Origin Resource Sharing (CORS) headers. This middleware adds

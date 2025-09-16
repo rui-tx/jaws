@@ -1,0 +1,22 @@
+<div id="hermod">
+    <article>
+        <h3>Hermod (Templates & Fragments)</h3>
+        <nav>
+            <strong>On this section</strong>
+            <ul>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#example">Example</a></li>
+            </ul>
+        </nav>
+        <p>HTML template processing and page assembly using Thymeleaf, with fragment-based components and HTMX for partial updates.</p>
+        <h4 id="features">Features</h4>
+        <ul>
+            <li>render(templatePath, ...)</li>
+            <li>composePage(baseTemplate, partialTemplate)</li>
+            <li>Fragment inclusion via <code>th:insert</code></li>
+        </ul>
+        <h4 id="example">Example</h4>
+        <pre><code>&lt;div th:insert="~{docs/static-files.html}"&gt;Loading...&lt;/div&gt;
+</code></pre>
+    </article>
+</div>

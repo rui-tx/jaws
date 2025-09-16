@@ -1,0 +1,57 @@
+<section>
+  <h3>Huginn (Server-Sent Events)</h3>
+  <p>
+    Huginn is JAWS' SSE hub. Clients subscribe to a channel, and the server can broadcast
+    events to all subscribers or filter delivery by roles or specific users.
+  </p>
+
+  <h4>Client subscription</h4>
+  <p>
+    The backoffice layout wires SSE via HTML attributes:
+  </p>
+  <pre><code class="language-html">&lt;body sse-connect="/events" sse-swap="notification"&gt;
+  &lt;!-- ... --&gt;
+  &lt;div id="toaster"&gt;&lt;/div&gt;
+&lt;/body&gt;</code></pre>
+
+  <h4>Event types</h4>
+  <p>
+    Event names are typed via <code>Huginn.EventType</code>. Currently:
+  </p>
+  <ul>
+    <li><code>NOTIFICATION</code> → event name <code>notification</code></li>
+  </ul>
+
+  <h4>Server-side broadcasting</h4>
+  <p>
+    ToastNotifier is just and example.
+    Use <code>ToastNotifier</code> to render a toast (Thymeleaf fragment) and broadcast.
+  </p>
+  <pre><code class="language-java">// Broadcast to all subscribers on the channel
+ToastNotifier.broadcastToast("Build complete", "Artifacts published.");
+
+// Broadcast only to specific roles
+ToastNotifier.broadcastToast(Set.of("admin"), "Maintenance", "DB migration at 22:00");
+
+// Broadcast only to a specific user (by userId)
+ToastNotifier.broadcastToast(userId, "Report ready", "Your export finished.");
+</code></pre>
+
+  <p>
+    Under the hood, <code>ToastNotifier</code> uses <code>Huginn</code>:
+  </p>
+  <ul>
+    <li><code>broadcast(String channel, EventType event, String data)</code></li>
+    <li><code>broadcastToRoles(String channel, Set&lt;String&gt; roles, EventType event, String
+      data)</code></li>
+    <li><code>broadcastToUser(String channel, String userId, EventType event, String data)</code>
+    </li>
+  </ul>
+
+  <h4>Notes</h4>
+  <ul>
+    <li>Multiple audiences can share the same channel (e.g., admins and users).</li>
+    <li>Per-event filtering ensures only eligible clients receive a given event.</li>
+    <li>Use role/user-filtered helpers for sensitive messages.</li>
+  </ul>
+</section>

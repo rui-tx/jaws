@@ -14,7 +14,7 @@ import java.nio.file.WatchService;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
-import org.ruitx.jaws.utils.JawsLogger;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * Heimdall is a file watcher that monitors changes in the www path. It ignores certain file

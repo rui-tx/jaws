@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Use absolute path to project root
-PROJECT_ROOT="/home/rui/Coding/jaws"
+PROJECT_ROOT="/Users/ruiteixeira/Documents/Coding/jaws"
 
 echo "Project root: $PROJECT_ROOT"
 

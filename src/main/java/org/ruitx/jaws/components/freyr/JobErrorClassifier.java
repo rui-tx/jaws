@@ -7,7 +7,8 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
@@ -16,7 +17,7 @@ import org.tinylog.Logger;
  */
 public class JobErrorClassifier {
 
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getDB();
 
   /**
    * Job-specific error classification We can add job-specific error classification here
@@ -268,9 +269,9 @@ public class JobErrorClassifier {
    * Check if errors are escalating (increasing frequency)
    */
   private boolean isEscalatingPattern(List<Row> recentErrors) {
-      if (recentErrors.size() < 3) {
-          return false;
-      }
+    if (recentErrors.size() < 3) {
+      return false;
+    }
 
     // Check if errors are becoming more frequent (simple heuristic)
     long now = Instant.now().toEpochMilli();
@@ -345,9 +346,9 @@ public class JobErrorClassifier {
    * Adjust strategy based on job type
    */
   private RetryStrategy adjustStrategyForJobType(RetryStrategy baseStrategy, String jobType) {
-      if (jobType == null) {
-          return baseStrategy;
-      }
+    if (jobType == null) {
+      return baseStrategy;
+    }
 
     switch (jobType.toLowerCase()) {
       case "critical":
@@ -531,4 +532,4 @@ public class JobErrorClassifier {
   //         Logger.warn("Failed to record error classification: {}", e.getMessage());
   //     }
   // }
-} 
+}

@@ -1,0 +1,175 @@
+<div id="application-config">
+  <article>
+    <h3>Application Configuration (Environment Vars & application.properties)</h3>
+    <nav>
+      <strong>On this section</strong>
+      <ul>
+        <li><a href="#core">Core</a></li>
+        <li><a href="#db-paths">Database paths</a></li>
+        <li><a href="#jwt">JWT / Tyr</a></li>
+        <li><a href="#hermod">Hermod (templates)</a></li>
+        <li><a href="#freyr">Norns/Freyr (jobs & queue)</a></li>
+        <li><a href="#logger">JawsLogger</a></li>
+        <li><a href="#startup">Startup barrier</a></li>
+        <li><a href="#ratelimiter">RateLimiter</a></li>
+        <li><a href="#mimir-cache">Mimir Cache</a></li>
+        <li><a href="#mimir-hikari">Mimir/Hikari (SQLite)</a></li>
+        <li><a href="#example-props">Example application.properties</a></li>
+      </ul>
+    </nav>
+    <h4 id="core">1) Core</h4>
+    <ul>
+      <li><strong>URL</strong> — env: <code>URL</code> | prop: <code>url</code> | default: <code>http://localhost:15000/</code>
+      </li>
+      <li><strong>PORT</strong> — env: <code>PORT</code> | prop: <code>port</code> | default: <code>15000</code>
+      </li>
+      <li><strong>WWW path</strong> — env: <code>WWWPATH</code> | prop: <code>www.path</code> |
+        default: <code>src/main/resources/www/</code></li>
+      <li><strong>WWW blocked patterns</strong> — env: <code>WWW_BLOCKED_PATTERNS</code> | prop:
+        <code>www.blocked.patterns</code> | default: empty (comma-separated list)
+      </li>
+      <li><strong>Custom 401 page</strong> — env: <code>CUSTOM_PAGE_PATH_401</code> | prop: <code>custom.page.path.401</code>
+        | default: empty
+      </li>
+      <li><strong>Custom 404 page</strong> — env: <code>CUSTOM_PAGE_PATH_404</code> | prop: <code>custom.page.path.404</code>
+        | default: empty
+      </li>
+    </ul>
+
+    <h4 id="db-paths">2) Database paths</h4>
+    <ul>
+      <li><strong>Main DB path</strong> — env: <code>DBPATH</code> | prop:
+        <code>database.path</code> | default: <code>src/main/resources/db.db</code></li>
+      <li><strong>Schema path</strong> — env: <code>DBSCHEMAPATH</code> | prop: <code>database.schema.path</code>
+        | default: <code>src/main/resources/sql/create_schema_v1.sql</code></li>
+    </ul>
+
+    <h4 id="jwt">3) JWT / Tyr</h4>
+    <ul>
+      <li><strong>JWT secret</strong> — env: <code>JWTTOKEN</code> | prop: <code>jwt.secret</code> |
+        default: none (auto-generated if missing)
+      </li>
+      <li><strong>Application name (issuer)</strong> — constant: <code>JAWS</code> (not overridden
+        via config)
+      </li>
+    </ul>
+
+    <h4 id="hermod">4) Hermod (templates)</h4>
+    <ul>
+      <li><strong>Dev mode</strong> — env: <code>HERMOD_DEVELOPMENT_MODE</code> | prop: <code>hermod.development.mode</code>
+        | default: <code>false</code></li>
+      <li><strong>Template cache TTL (ms)</strong> — env: <code>HERMOD_TEMPLATE_CACHE_TTL</code> |
+        prop: <code>hermod.template.cache.ttl</code> | default: <code>3600000</code></li>
+    </ul>
+
+    <h4 id="freyr">5) Norns/Freyr (jobs & queue)</h4>
+    <ul>
+      <li><strong>Worker threads</strong> — env: <code>WORKER_THREADS</code> | prop: <code>freyr.queue.workers</code>
+        | default: <em>Runtime.availableProcessors()</em></li>
+      <li><strong>Queue capacity</strong> — env: <code>QUEUE_CAPACITY</code> | prop: <code>freyr.queue.size</code>
+        | default: <code>10000</code></li>
+      <li><strong>Cleanup interval (ms)</strong> — env: <code>CLEANUP_INTERVAL_MS</code> | prop:
+        <code>freyr.queue.interval_cleanup</code> | default: <code>300000</code></li>
+    </ul>
+
+    <h4 id="logger">6) JawsLogger</h4>
+    <ul>
+      <li><strong>DB level</strong> — env: <code>DB_LEVEL</code> | prop:
+        <code>jawsLogger.db.level</code> | default: <code>INFO</code></li>
+      <li><strong>Batch size</strong> — env: <code>BATCH_SIZE</code> | prop: <code>jawslogger.batchsize</code>
+        | default: <code>1000</code></li>
+      <li><strong>Flush interval (ms)</strong> — env: <code>FLUSH_INTERVAL_MS</code> | prop: <code>jawslogger.flush_interval</code>
+        | default: <code>5000</code></li>
+      <li><strong>Buffer capacity</strong> — env: <code>BUFFER_CAPACITY</code> | prop: <code>jawsLogger.buffer_capacity</code>
+        | default: <code>10000</code></li>
+    </ul>
+
+    <h4 id="startup">7) Startup barrier</h4>
+    <ul>
+      <li><strong>Mimir init timeout (ms)</strong> — env: <code>STARTUP_DB_TIMEOUT_MS</code> | prop:
+        <code>startup.mimir.timeout.ms</code> | default: <code>30000</code></li>
+    </ul>
+
+    <h4 id="ratelimiter">8) RateLimiter</h4>
+    <ul>
+      <li><strong>Max requests</strong> — env: <code>RATE_LIMIT_MAX_REQUESTS</code> | prop: <code>ratelimiter.max.requests</code>
+        | default: <code>100</code></li>
+      <li><strong>Window (ms)</strong> — env: <code>RATE_LIMIT_WINDOW_MS</code> | prop: <code>ratelimiter.window.ms</code>
+        | default: <code>60000</code></li>
+    </ul>
+
+    <h4 id="mimir-cache">9) Mimir Cache</h4>
+    <ul>
+      <li><strong>Enabled</strong> — env: <code>MIMIR_CACHE_ENABLED</code> | prop: <code>mimir.cache.enabled</code>
+        | default: <code>true</code></li>
+      <li><strong>Max size</strong> — env: <code>MIMIR_CACHE_MAX_SIZE</code> | prop: <code>mimir.cache.maxSize</code>
+        | default: <code>10000</code></li>
+    </ul>
+
+    <h4 id="mimir-hikari">10) Mimir/Hikari (SQLite)</h4>
+    <ul>
+      <li><strong>Reader pool size</strong> — env: <code>MIMIR_READER_POOL_SIZE</code> | prop:
+        <code>mimir.reader.pool.size</code> | default: <code>16</code></li>
+      <li><strong>Busy timeout (ms)</strong> — env: <code>MIMIR_BUSY_TIMEOUT_MS</code> | prop:
+        <code>mimir.busy.timeout.ms</code> | default: <code>5000</code></li>
+      <li><strong>Enable WAL</strong> — env: <code>MIMIR_ENABLE_WAL</code> | prop: <code>mimir.enable.wal</code>
+        | default: <code>true</code></li>
+      <li><strong>Synchronous mode</strong> — env: <code>MIMIR_SYNCHRONOUS_MODE</code> | prop:
+        <code>mimir.synchronous.mode</code> | default: <code>NORMAL</code></li>
+    </ul>
+
+    <h4 id="example-props">Example application.properties</h4>
+    <pre><code># Core
+url=http://localhost:15000/
+port=15000
+www.path=src/main/resources/www/
+www.blocked.patterns=
+custom.page.path.401=
+custom.page.path.404=
+
+# Database paths
+database.path=src/main/resources/db.db
+database.schema.path=src/main/resources/sql/create_schema_v1.sql
+
+# JWT / Tyr
+jwt.secret=&lt;paste-generated-secret&gt;
+
+# Hermod
+hermod.development.mode=false
+hermod.template.cache.ttl=3600000
+
+# Freyr (queue)
+freyr.queue.workers=4
+freyr.queue.size=10000
+freyr.queue.interval_cleanup=300000
+
+# JawsLogger
+jawsLogger.db.level=INFO
+jawslogger.batchsize=1000
+jawslogger.flush_interval=5000
+jawsLogger.buffer_capacity=10000
+
+# Startup
+startup.mimir.timeout.ms=30000
+
+# RateLimiter
+ratelimiter.max.requests=100
+ratelimiter.window.ms=60000
+
+# Mimir Cache
+mimir.cache.enabled=true
+mimir.cache.maxSize=10000
+
+# Mimir/Hikari
+mimir.reader.pool.size=16
+mimir.busy.timeout.ms=5000
+mimir.enable.wal=true
+mimir.synchronous.mode=NORMAL
+</code></pre>
+
+    <aside>
+      Precedence: environment variables override properties. If no env/prop is set, defaults from
+      <code>ApplicationConfig</code> apply.
+    </aside>
+  </article>
+</div>

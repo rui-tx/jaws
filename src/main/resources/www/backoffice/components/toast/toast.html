@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="toast(title, description)">
+  <div aria-atomic="true" aria-hidden="false" class="toast" data-category="info" role="status">
+    <div class="toast-content">
+      <section>
+        <h2 th:text="${title}">Toast Title</h2>
+        <p th:text="${description}">Card Description</p>
+      </section>
+      <footer>
+        <button class="btn" data-toast-action type="button">Close</button>
+      </footer>
+    </div>
+  </div>
+</div>
+</body>
+</html>

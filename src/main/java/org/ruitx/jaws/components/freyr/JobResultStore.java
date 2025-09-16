@@ -3,8 +3,8 @@ package org.ruitx.jaws.components.freyr;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import org.ruitx.jaws.components.Mimir;
 import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.tinylog.Logger;
 
 /**
@@ -12,7 +12,7 @@ import org.tinylog.Logger;
  */
 public class JobResultStore {
 
-  private static final Mimir mimir = new Mimir();
+  private static final Mimir mimir = Odin.getDB();
 
   /**
    * Store a job result
@@ -24,7 +24,7 @@ public class JobResultStore {
         headersJson = Odin.getMapper().writeValueAsString(result.getHeaders());
       }
 
-      mimir.executeSql(
+      mimir.execute(
           "INSERT OR REPLACE INTO JOB_RESULTS (id, job_id, status_code, headers, body, content_type, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
           UUID.randomUUID().toString(),
           result.getJobId(),

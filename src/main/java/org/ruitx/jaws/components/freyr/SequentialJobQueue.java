@@ -11,7 +11,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.ruitx.jaws.components.Mimir;
+import org.ruitx.jaws.components.Odin;
+import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.interfaces.Job;
 import org.tinylog.Logger;
 
@@ -22,7 +23,7 @@ public class SequentialJobQueue {
 
   private static final int DEFAULT_QUEUE_CAPACITY = QUEUE_CAPACITY;
 
-  private final Mimir mimir = new Mimir();
+  private final Mimir mimir = Odin.getDB();
   private final BlockingQueue<Job> sequentialQueue;
   private final ExecutorService singleWorker;
   private final JobRetryManager retryManager;
@@ -144,8 +145,7 @@ public class SequentialJobQueue {
      * the 'running' flag is true.
      *
      * <p>It handles interruptions by setting the interrupt flag and breaking the loop, and logs
-     * any
-     * unexpected exceptions that occur during job processing.
+     * any unexpected exceptions that occur during job processing.
      */
     @Override
     public void run() {
@@ -268,7 +268,7 @@ public class SequentialJobQueue {
 
         params[idx] = jobId;
 
-        mimir.executeSql(sql.toString(), params);
+        mimir.execute(sql.toString(), params);
 
       } catch (Exception e) {
         Logger.error("Failed to update job status for sequential job {}: {}", jobId,

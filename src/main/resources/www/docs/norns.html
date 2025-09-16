@@ -1,0 +1,45 @@
+<div id="norns">
+    <article>
+        <h3>Norns (Scheduler)</h3>
+        <nav>
+            <strong>On this section</strong>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#impl">Implementation Example</a></li>
+                <li><a href="#errors">Error Handling</a></li>
+            </ul>
+        </nav>
+        <p>The Norns scheduler manages scheduled tasks in JAWS, like the cleanup of expired uploads.</p>
+
+        <h4 id="overview">1. Overview</h4>
+        <p>Provides a flexible and reliable way to execute scheduled tasks in the application.</p>
+
+        <h4 id="features">2. Features</h4>
+        <ul>
+            <li>Configurable scheduling using time intervals</li>
+            <li>Background task execution</li>
+            <li>Error handling and logging</li>
+            <li>Thread-safe operation</li>
+            <li>Graceful shutdown support</li>
+        </ul>
+
+        <h4 id="impl">3. Implementation Example</h4>
+        <pre><code>private static Thread createCronService() {
+    Norns norns = Norns.getInstance();
+    norns.registerTask(
+        "file-cleanup",
+        () -> new CleanupService().cleanup(),
+        5,
+        TimeUnit.MINUTES
+    );
+    return new Thread(norns, "norns");
+}</code></pre>
+
+        <h4 id="errors">4. Error Handling</h4>
+        <ul>
+            <li>Logs all errors with detailed stack traces</li>
+            <li>Continues operation even if individual tasks fail</li>
+        </ul>
+    </article>
+</div>
