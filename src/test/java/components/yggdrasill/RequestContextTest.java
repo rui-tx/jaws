@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Yggdrasill;
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
+import org.ruitx.jaws.enums.ResponseCode;
 
 public class RequestContextTest {
 

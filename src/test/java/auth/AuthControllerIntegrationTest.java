@@ -17,17 +17,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Njord;
 import org.ruitx.jaws.components.Odin;
-import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
+import org.ruitx.jaws.components.njord.Njord;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
 import org.ruitx.jaws.configs.ApplicationConfig;
+import org.ruitx.jaws.configs.bifrost.middleware.AuthMiddleware;
+import org.ruitx.jaws.configs.bifrost.middleware.RequestValidationMiddleware;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.www.base.controller.AuthController;
 import org.ruitx.www.base.dto.auth.UserCreateRequest;
 import org.ruitx.www.base.service.AuthService;
-import org.ruitx.jaws.middleware.AuthMiddleware;
-import org.ruitx.jaws.middleware.RequestValidationMiddleware;
 
 @DisplayName("AuthController Integration Tests")
 public class AuthControllerIntegrationTest {
@@ -76,7 +76,7 @@ public class AuthControllerIntegrationTest {
     if (!Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
       Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
           logsDbPath.toAbsolutePath().toString(),
-          Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+          Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath().toString(),
           Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
           ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
           true,

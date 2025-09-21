@@ -8,7 +8,7 @@ import java.time.Instant;
 
 /**
  * TimestampDeserializer - Custom deserializer for handling both epoch seconds and ISO 8601 date
- * strings.
+ * enums.
  * <p>
  * This deserializer attempts to parse a timestamp from either a numeric string (epoch seconds) or
  * an ISO 8601 formatted date string. If both parsing attempts fail, it throws an IOException.

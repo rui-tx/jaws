@@ -1,18 +1,16 @@
 package components.volundr;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.Volundr;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.strings.HttpHeaders;
+import org.ruitx.jaws.enums.HttpHeaders;
 
 @DisplayName("Volundr Tests")
 public class VolundrTest {
@@ -34,7 +32,8 @@ public class VolundrTest {
     assertTrue(header.contains(HttpHeaders.CACHE_CONTROL.getHeaderName() + ": no-cache"));
     assertTrue(header.contains(HttpHeaders.CONNECTION.getHeaderName() + ": keep-alive"));
     assertTrue(header.contains(HttpHeaders.CONTENT_TYPE.getHeaderName() + ": text/html"));
-    assertTrue(header.contains(HttpHeaders.SERVER.getHeaderName() + ": " + ApplicationConfig.APPLICATION_NAME));
+    assertTrue(header.contains(
+        HttpHeaders.SERVER.getHeaderName() + ": " + ApplicationConfig.APPLICATION_NAME));
 
     // Date present and non-empty (avoid strict locale/timezone-specific regex)
     String datePrefix = HttpHeaders.DATE.getHeaderName() + ": ";

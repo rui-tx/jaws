@@ -2,9 +2,9 @@ package org.ruitx.www.base.service;
 
 import java.util.Arrays;
 import java.util.Map;
-import org.ruitx.jaws.types.Context;
-import org.ruitx.jaws.types.Page;
-import org.ruitx.jaws.types.PageRequest;
+import org.ruitx.jaws.components.hermod.Context;
+import org.ruitx.jaws.components.mimir.Page;
+import org.ruitx.jaws.components.mimir.PageRequest;
 import org.ruitx.www.base.repository.BackofficeRepo;
 
 public class BackofficeService {

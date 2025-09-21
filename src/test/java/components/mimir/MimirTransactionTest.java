@@ -29,7 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 
 /**
  * Transaction behavior tests for Mimir focusing on correctness, isolation, and cache interaction.

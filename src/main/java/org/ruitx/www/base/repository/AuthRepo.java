@@ -5,21 +5,21 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.components.Odin;
-import org.ruitx.jaws.interfaces.Cacheable;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Cacheable;
+import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.components.mimir.Repository;
+import org.ruitx.jaws.components.mimir.Row;
+import org.ruitx.jaws.components.mimir.RowBinder;
 import org.ruitx.jaws.utils.logger.JawsLogger;
-import org.ruitx.www.base.mapper.UserMapper;
 import org.ruitx.www.base.mapper.RoleMapper;
+import org.ruitx.www.base.mapper.UserMapper;
 import org.ruitx.www.base.mapper.UserRoleMapper;
 import org.ruitx.www.base.mapper.UserSessionMapper;
 import org.ruitx.www.base.model.auth.Role;
 import org.ruitx.www.base.model.auth.User;
 import org.ruitx.www.base.model.auth.UserRole;
 import org.ruitx.www.base.model.auth.UserSession;
-import org.ruitx.jaws.components.mimir.Repository;
-import org.ruitx.jaws.components.mimir.RowBinder;
 import org.ruitx.www.base.projection.UserSummaryProjection;
 
 public class AuthRepo extends Repository {
@@ -148,8 +148,8 @@ public class AuthRepo extends Repository {
   }
 
   /**
-   * Lightweight list of users using RowBinder and a projection record.
-   * Only selects the necessary columns and aliases them to match projection fields.
+   * Lightweight list of users using RowBinder and a projection record. Only selects the necessary
+   * columns and aliases them to match projection fields.
    */
   @Cacheable(tables = {"USER"})
   public List<UserSummaryProjection> listUserSummaries() {

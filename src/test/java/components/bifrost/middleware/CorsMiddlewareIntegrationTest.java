@@ -8,12 +8,12 @@ import components.bifrost.middleware.support.MiddlewareTestBase;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Njord;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.middleware.CorsMiddleware;
-import org.ruitx.jaws.strings.RequestType;
-import org.ruitx.jaws.strings.ResponseType;
+import org.ruitx.jaws.components.njord.Njord;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.configs.bifrost.middleware.CorsMiddleware;
+import org.ruitx.jaws.enums.RequestType;
+import org.ruitx.jaws.enums.ResponseType;
 
 @DisplayName("CorsMiddleware Integration Tests")
 class CorsMiddlewareIntegrationTest extends MiddlewareTestBase {

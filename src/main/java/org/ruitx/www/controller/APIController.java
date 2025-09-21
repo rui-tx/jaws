@@ -1,17 +1,17 @@
 package org.ruitx.www.controller;
 
-import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
-import static org.ruitx.jaws.strings.RequestType.POST;
-import static org.ruitx.jaws.strings.ResponseCode.OK;
-import static org.ruitx.jaws.strings.ResponseType.JSON;
-import static org.ruitx.jaws.types.TypeDefinition.LIST_POST;
+import static org.ruitx.jaws.configs.TypeDefinitions.LIST_POST;
+import static org.ruitx.jaws.enums.HttpHeaders.CONTENT_TYPE;
+import static org.ruitx.jaws.enums.RequestType.POST;
+import static org.ruitx.jaws.enums.ResponseCode.OK;
+import static org.ruitx.jaws.enums.ResponseType.JSON;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.www.dto.api.Post;
 import org.ruitx.www.service.APIService;
 

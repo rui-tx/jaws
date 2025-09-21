@@ -1,36 +1,44 @@
 <div id="mimir">
-    <article>
-        <h3>Mimir (Database)</h3>
-        <nav>
-            <strong>On this section</strong>
-            <ul>
-                <li><a href="#connectors">Connectors & Registration</a></li>
-                <li><a href="#env-vars">Environment Variables</a></li>
-                <li><a href="#seeders">Seeders</a></li>
-                <li><a href="#repo-helpers">Repository Helpers</a></li>
-                <li><a href="#repo-skeleton">Repository Skeleton</a></li>
-                <li><a href="#row-mapping">Row Mapping</a></li>
-                <li><a href="#pagination">Pagination</a></li>
-                <li><a href="#transactions">Transactions</a></li>
-                <li><a href="#multi-db">Multi-DB</a></li>
-                <li><a href="#caching">Caching</a></li>
-            </ul>
-        </nav>
-        <p>Mimir is the database access component used across the app. It wraps a JDBC connector and provides small, explicit helpers for queries, mapping, pagination, and transactions.</p>
+  <article>
+    <h3>Mimir (Database)</h3>
+    <nav>
+      <strong>On this section</strong>
+      <ul>
+        <li><a href="#connectors">Connectors & Registration</a></li>
+        <li><a href="#env-vars">Environment Variables</a></li>
+        <li><a href="#seeders">Seeders</a></li>
+        <li><a href="#repo-helpers">Repository Helpers</a></li>
+        <li><a href="#repo-skeleton">Repository Skeleton</a></li>
+        <li><a href="#row-mapping">Row Mapping</a></li>
+        <li><a href="#pagination">Pagination</a></li>
+        <li><a href="#transactions">Transactions</a></li>
+        <li><a href="#multi-db">Multi-DB</a></li>
+        <li><a href="#caching">Caching</a></li>
+      </ul>
+    </nav>
+    <p>Mimir is the database access component used across the app. It wraps a JDBC connector and
+      provides small, explicit helpers for queries, mapping, pagination, and transactions.</p>
 
-        <h4 id="connectors">1) Connectors and Initialization</h4>
-        <p>Mimir works with a pluggable connector interface <code>DbConnector</code> and a default SQLite/Hikari implementation <code>Verdandi</code>.</p>
-        <ul>
-            <li><strong><code>DbConnector</code></strong> — contract for DB lifecycle and connections:<br/>
-                <code>initialize()</code>, <code>isReady()</code>, <code>getReaderConnection()</code>, <code>getWriterConnection()</code>, <code>withTransaction(Function&lt;Connection,T&gt;)</code>, <code>close()</code>.<br/>
-                See: <code>org.ruitx.jaws.components.mimir.DbConnector</code>
-            </li>
-            <li><strong><code>Verdandi</code></strong> — SQLite connector using Hikari pools (reader/writer), applies PRAGMAs, and initializes schema. See: <code>org.ruitx.jaws.components.mimir.Verdandi</code></li>
-        </ul>
+    <h4 id="connectors">1) Connectors and Initialization</h4>
+    <p>Mimir works with a pluggable connector interface <code>DbConnector</code> and a default
+      SQLite/Hikari implementation <code>Verdandi</code>.</p>
+    <ul>
+      <li><strong><code>DbConnector</code></strong> — contract for DB lifecycle and
+        connections:<br/>
+        <code>initialize()</code>, <code>isReady()</code>, <code>getReaderConnection()</code>,
+        <code>getWriterConnection()</code>,
+        <code>withTransaction(Function&lt;Connection,T&gt;)</code>, <code>close()</code>.<br/>
+        See: <code>org.ruitx.jaws.components.mimir.DbConnector</code>
+      </li>
+      <li><strong><code>Verdandi</code></strong> — SQLite connector using Hikari pools
+        (reader/writer), applies PRAGMAs, and initializes schema. See: <code>org.ruitx.jaws.components.mimir.Verdandi</code>
+      </li>
+    </ul>
 
-        <h4>2) Database Configuration</h4>
-        <p>Databases are configured via <code>DatabaseConfig</code> and registered with <code>Odin</code>. Fields:</p>
-        <pre><code>public record DatabaseConfig(
+    <h4>2) Database Configuration</h4>
+    <p>Databases are configured via <code>DatabaseConfig</code> and registered with
+      <code>Odin</code>. Fields:</p>
+    <pre><code>public record DatabaseConfig(
     String databasePath,
     String schemaPath,
     int readerPoolSize,
@@ -42,8 +50,8 @@
     String readerPoolName,
     List&lt;DatabaseSeeder&gt; seeders
 ) {}</code></pre>
-        <p>Default databases are registered in <code>Odin</code>:</p>
-        <pre><code>// org.ruitx.jaws.components.Odin.registerDefaultDatabases()
+    <p>Default databases are registered in <code>Odin</code>:</p>
+    <pre><code>// org.ruitx.jaws.components.Odin.registerDefaultDatabases()
 registerDatabase("db", new DatabaseConfig(
     ApplicationConfig.DATABASE_PATH,
     ApplicationConfig.DATABASE_SCHEMA_PATH,
@@ -59,7 +67,7 @@ registerDatabase("db", new DatabaseConfig(
 
 registerDatabase("logs", new DatabaseConfig(
     Paths.get("src/main/resources/logs.db").toString(),
-    Paths.get("src/main/resources/sql/logs_schema.sql").toString(),
+    Paths.get("src/main/resources/sql/logs_schema_v1.sql").toString(),
     Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
     ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
     true,
@@ -69,13 +77,14 @@ registerDatabase("logs", new DatabaseConfig(
     "jaws-logs-reader",
     null
 ));</code></pre>
-        <p>Access registered DBs via <code>Odin.getDB()</code> or <code>Odin.getDB("logs")</code>.</p>
+    <p>Access registered DBs via <code>Odin.getDB()</code> or <code>Odin.getDB("logs")</code>.</p>
 
-        <h4 id="env-vars">2.1) Environment Variables</h4>
-        <p>These environment variables (or corresponding properties) control Mimir and database behavior. See <code>org.ruitx.jaws.configs.ApplicationConfig</code>.</p>
-        <pre><code>// Paths
+    <h4 id="env-vars">2.1) Environment Variables</h4>
+    <p>These environment variables (or corresponding properties) control Mimir and database
+      behavior. See <code>org.ruitx.jaws.configs.ApplicationConfig</code>.</p>
+    <pre><code>// Paths
 DBPATH=src/main/resources/db.db
-DBSCHEMAPATH=src/main/resources/sql/create_schema_v1.sql
+DBSCHEMAPATH=src/main/resources/sql/db_schema_v1.sql
 
 // Connection/pooling & SQLite pragmas
 MIMIR_READER_POOL_SIZE=16
@@ -89,18 +98,27 @@ STARTUP_DB_TIMEOUT_MS=30000
 // Query cache
 MIMIR_CACHE_ENABLED=true
 MIMIR_CACHE_MAX_SIZE=10000</code></pre>
-        <aside>
-            Values can also be provided via <code>src/main/resources/application.properties</code> using matching keys (e.g., <code>database.path</code>, <code>database.schema.path</code>, <code>mimir.cache.enabled</code>, etc.).
-        </aside>
+    <aside>
+      Values can also be provided via <code>src/main/resources/application.properties</code> using
+      matching keys (e.g., <code>database.path</code>, <code>database.schema.path</code>, <code>mimir.cache.enabled</code>,
+      etc.).
+    </aside>
 
-        <h4 id="seeders">2.2) Seeders (Database bootstrap)</h4>
-        <p>Seeders run after a database is initialized and ready. They must be <strong>idempotent</strong>. If any seeder throws, startup aborts.</p>
-        <ul>
-            <li><strong>Interface</strong>: <code>org.ruitx.jaws.components.mimir.DatabaseSeeder</code> with <code>name()</code> and <code>run(Mimir db)</code>.</li>
-            <li><strong>Attach</strong>: pass a list to <code>DatabaseConfig.seeders()</code> when registering the DB in <code>Odin.registerDatabase(...)</code>.</li>
-            <li><strong>Execution</strong>: Odin wraps each seeder in a transaction (<code>begin</code>/<code>commit</code>/<code>rollback</code>) and logs times.</li>
-        </ul>
-        <pre><code>// Define a seeder
+    <h4 id="seeders">2.2) Seeders (Database bootstrap)</h4>
+    <p>Seeders run after a database is initialized and ready. They must be
+      <strong>idempotent</strong>. If any seeder throws, startup aborts.</p>
+    <ul>
+      <li><strong>Interface</strong>: <code>org.ruitx.jaws.components.mimir.DatabaseSeeder</code>
+        with <code>name()</code> and <code>run(Mimir db)</code>.
+      </li>
+      <li><strong>Attach</strong>: pass a list to <code>DatabaseConfig.seeders()</code> when
+        registering the DB in <code>Odin.registerDatabase(...)</code>.
+      </li>
+      <li><strong>Execution</strong>: Odin wraps each seeder in a transaction
+        (<code>begin</code>/<code>commit</code>/<code>rollback</code>) and logs times.
+      </li>
+    </ul>
+    <pre><code>// Define a seeder
 package org.example.db.seeders;
 
 import java.util.Optional;
@@ -130,18 +148,20 @@ Odin.registerDatabase("db", new DatabaseConfig(
     "jaws-writer",
     "jaws-reader",
     java.util.List.of(
-        new org.ruitx.jaws.components.mimir.seeders.AdminBootstrapSeeder(),
+        new org.ruitx.jaws.components.mimir.defaultSeeders.AdminBootstrapSeeder(),
         new org.example.db.seeders.ExampleSeeder()
     )
 ));
 </code></pre>
-        <aside>
-            See <code>org.ruitx.jaws.components.Odin.registerDatabase()</code> for the transaction wrapper and logging. Example included seeder: <code>AdminBootstrapSeeder</code> ensures an admin role/user exists.
-        </aside>
+    <aside>
+      See <code>org.ruitx.jaws.components.Odin.registerDatabase()</code> for the transaction wrapper
+      and logging. Example included seeder: <code>AdminBootstrapSeeder</code> ensures an admin
+      role/user exists.
+    </aside>
 
-        <h4 id="repo-helpers">3) Repository Helpers</h4>
-        <p>Extend <code>Repository</code> for typed access with small, explicit helpers.</p>
-        <pre><code>// org.ruitx.jaws.components.mimir.Repository
+    <h4 id="repo-helpers">3) Repository Helpers</h4>
+    <p>Extend <code>Repository</code> for typed access with small, explicit helpers.</p>
+    <pre><code>// org.ruitx.jaws.components.mimir.Repository
 protected &lt;T&gt; Optional&lt;T&gt; getOne(String sql, RowMapper&lt;T&gt; mapper, Object... params)
 protected &lt;T&gt; List&lt;T&gt;     getAll(String sql, RowMapper&lt;T&gt; mapper, Object... params)
 protected &lt;T&gt; Page&lt;T&gt;     getPage(String sql, PageRequest pr, RowMapper&lt;T&gt; mapper, Object... params)
@@ -149,8 +169,8 @@ protected int             execute(String sql, Object... params)
 protected long            insert(String sql, Object... params)
 protected &lt;R&gt; R           inTransaction(SqlSupplier&lt;R&gt; body) throws Exception
 protected void            inTransaction(SqlRunnable body) throws Exception</code></pre>
-        <p>Examples from real repositories:</p>
-        <pre><code>// org.ruitx.www.base.repository.AuthRepo
+    <p>Examples from real repositories:</p>
+    <pre><code>// org.ruitx.www.base.repository.AuthRepo
 @Cacheable(tables = {"USER"})
 public Optional&lt;User&gt; getUserByUsername(String username) {
   return getOne("SELECT * FROM USER WHERE user = ?", UserMapper.INSTANCE, username);
@@ -165,9 +185,10 @@ public List&lt;UserSummaryProjection&gt; listUserSummaries() {
   return getAll(sql, RowBinder.mapper(UserSummaryProjection.class));
 }</code></pre>
 
-        <h4 id="repo-skeleton">3.1) Repository Skeleton</h4>
-        <p>Start with a simple repository that extends <code>Repository</code>. Inject <code>Mimir</code> or use the default DB via <code>Odin.getDB()</code>.</p>
-        <pre><code>package org.example.app.repository;
+    <h4 id="repo-skeleton">3.1) Repository Skeleton</h4>
+    <p>Start with a simple repository that extends <code>Repository</code>. Inject
+      <code>Mimir</code> or use the default DB via <code>Odin.getDB()</code>.</p>
+    <pre><code>package org.example.app.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -225,14 +246,18 @@ public record MyProjection(java.util.Optional&lt;Long&gt; id, java.util.Optional
 // Example entity (simplified)
 public record MyEntity(Long id, String name) {}</code></pre>
 
-        <h4 id="row-mapping">4) Row Mapping</h4>
-        <ul>
-            <li><strong><code>RowMapper&lt;T&gt;</code></strong> — functional interface for explicit mapping.<br/>
-                <code>T map(Row r) throws Exception;</code>
-            </li>
-            <li><strong><code>RowBinder</code></strong> — reflection-based binder for lightweight projections (records/POJOs). Prefer Java records, alias SQL columns to projection names, and use <code>Optional&lt;T&gt;</code> for nullable fields.</li>
-        </ul>
-        <pre><code>// org.ruitx.jaws.components.mimir.RowMapper
+    <h4 id="row-mapping">4) Row Mapping</h4>
+    <ul>
+      <li><strong><code>RowMapper&lt;T&gt;</code></strong> — functional interface for explicit
+        mapping.<br/>
+        <code>T map(Row r) throws Exception;</code>
+      </li>
+      <li><strong><code>RowBinder</code></strong> — reflection-based binder for lightweight
+        projections (records/POJOs). Prefer Java records, alias SQL columns to projection names, and
+        use <code>Optional&lt;T&gt;</code> for nullable fields.
+      </li>
+    </ul>
+    <pre><code>// org.ruitx.jaws.components.mimir.RowMapper
 @FunctionalInterface
 public interface RowMapper&lt;T&gt; { T map(Row r) throws Exception; }
 
@@ -249,44 +274,57 @@ String sql = """
   FROM USER ORDER BY created_at DESC
 """;
 List&lt;UserSummaryProjection&gt; rows = repo.getAll(sql, RowBinder.mapper(UserSummaryProjection.class));</code></pre>
-        <aside>
-            <strong>RowBinder Notes:</strong>
-            <ul>
-                <li>Case-insensitive column matching; alias to match record component or POJO property names.</li>
-                <li><code>Optional&lt;T&gt;</code> fields are filled with <code>Optional.of(value)</code> or <code>Optional.empty()</code>.</li>
-                <li>Common conversions supported (Integer/Long, Float/Double, numeric&lt;-&gt;boolean, String parsing).</li>
-                <li>Intended for flat projections and small DTOs; use custom mappers for complex entities.</li>
-            </ul>
-        </aside>
+    <aside>
+      <strong>RowBinder Notes:</strong>
+      <ul>
+        <li>Case-insensitive column matching; alias to match record component or POJO property
+          names.
+        </li>
+        <li><code>Optional&lt;T&gt;</code> fields are filled with <code>Optional.of(value)</code> or
+          <code>Optional.empty()</code>.
+        </li>
+        <li>Common conversions supported (Integer/Long, Float/Double, numeric&lt;-&gt;boolean,
+          String parsing).
+        </li>
+        <li>Intended for flat projections and small DTOs; use custom mappers for complex entities.
+        </li>
+      </ul>
+    </aside>
 
-        <h4 id="pagination">5) Pagination</h4>
-        <p>Use <code>Mimir.getPage</code> (or <code>Repository.getPage</code>) with <code>PageRequest</code> and a mapper.</p>
-        <pre><code>// From BackofficeRepo (logs DB)
+    <h4 id="pagination">5) Pagination</h4>
+    <p>Use <code>Mimir.getPage</code> (or <code>Repository.getPage</code>) with
+      <code>PageRequest</code> and a mapper.</p>
+    <pre><code>// From BackofficeRepo (logs DB)
 Page&lt;LogEntry&gt; entryPage = logsDb.getPage(
     "SELECT id, timestamp, level, message, logger FROM LOG_ENTRIES ORDER BY timestamp DESC",
     pageRequest,
     LogEntryMapper.INSTANCE::map
 );</code></pre>
 
-        <h4 id="transactions">6) Transactions</h4>
-        <p>Wrap write sequences in a transaction. Repositories expose <code>inTransaction</code> helpers:</p>
-        <pre><code>return inTransaction(() -&gt; {
+    <h4 id="transactions">6) Transactions</h4>
+    <p>Wrap write sequences in a transaction. Repositories expose <code>inTransaction</code>
+      helpers:</p>
+    <pre><code>return inTransaction(() -&gt; {
   int a = execute("UPDATE USER SET is_active = 0 WHERE id = ?", userId);
   int b = execute("UPDATE USER_SESSION SET is_active = 0 WHERE user_id = ?", userId);
   return a + b;
 });</code></pre>
-        <p>You can also manage transactions directly on <code>Mimir</code> (<code>beginTransaction()</code>, <code>commitTransaction()</code>, <code>rollbackTransaction()</code>).</p>
+    <p>You can also manage transactions directly on <code>Mimir</code>
+      (<code>beginTransaction()</code>, <code>commitTransaction()</code>, <code>rollbackTransaction()</code>).
+    </p>
 
-        <h4 id="multi-db">7) Multiple Databases</h4>
-        <p>The application uses a main DB and a dedicated logs DB. Access by alias:</p>
-        <pre><code>Mimir db = Odin.getDB();           // default "db"
+    <h4 id="multi-db">7) Multiple Databases</h4>
+    <p>The application uses a main DB and a dedicated logs DB. Access by alias:</p>
+    <pre><code>Mimir db = Odin.getDB();           // default "db"
 Mimir logsDb = Odin.getDB("logs"); // logs database</code></pre>
 
-        <h4 id="caching">8) Caching</h4>
-        <p>Repositories use <code>@Cacheable(tables = { ... })</code> to mark query methods as cacheable. See usages in <code>AuthRepo</code> and <code>BackofficeRepo</code> for examples.</p>
+    <h4 id="caching">8) Caching</h4>
+    <p>Repositories use <code>@Cacheable(tables = { ... })</code> to mark query methods as
+      cacheable. See usages in <code>AuthRepo</code> and <code>BackofficeRepo</code> for examples.
+    </p>
 
-        <h4>9) Basic Read/Write Examples</h4>
-        <pre><code>// Read rows as generic Row
+    <h4>9) Basic Read/Write Examples</h4>
+    <pre><code>// Read rows as generic Row
 List&lt;Row&gt; rows = db.getRows("SELECT * FROM USER WHERE is_active = 1");
 
 // Insert/Update/Delete
@@ -297,8 +335,9 @@ long newId = db.insert("INSERT INTO TODO (todo) VALUES (?)", todoText);
 typedef RowMapper&lt;User&gt; mapper = UserMapper.INSTANCE;
 Optional&lt;User&gt; user = repo.getOne("SELECT * FROM USER WHERE id = ?", mapper, id);
 List&lt;User&gt; all = repo.getAll("SELECT * FROM USER ORDER BY created_at DESC", mapper);</code></pre>
-        <aside>
-            Keep mappings explicit and simple. Prefer Optional-returning reads and projection records for lists.
-        </aside>
-    </article>
+    <aside>
+      Keep mappings explicit and simple. Prefer Optional-returning reads and projection records for
+      lists.
+    </aside>
+  </article>
 </div>

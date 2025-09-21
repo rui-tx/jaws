@@ -25,8 +25,8 @@ import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
 import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @DisplayName("Tyr JWT and session management")
@@ -60,7 +60,7 @@ public class TyrTest {
     if (!Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
       Path tmpLogs = Files.createTempFile("jaws-tyr-logs", ".sqlite");
       tmpLogs.toFile().deleteOnExit();
-      String logsSchema = Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath()
+      String logsSchema = Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath()
           .toString();
       DatabaseConfig logsCfg = new DatabaseConfig(
           tmpLogs.toAbsolutePath().toString(),

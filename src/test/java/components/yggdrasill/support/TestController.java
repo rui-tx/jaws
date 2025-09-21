@@ -1,10 +1,10 @@
 package components.yggdrasill.support;
 
 import java.util.Map;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.strings.RequestType;
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.enums.RequestType;
+import org.ruitx.jaws.enums.ResponseCode;
 
 public class TestController extends Bragi {
 

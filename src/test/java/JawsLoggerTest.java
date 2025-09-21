@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @Disabled("Replaced by logger.JawsLoggerIntegrationTest")

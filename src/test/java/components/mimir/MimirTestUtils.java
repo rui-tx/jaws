@@ -8,7 +8,7 @@ import java.sql.DriverManager;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 
 /**
  * Test utilities for Mimir-based database tests. - Creates unique temporary DB files under target/

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 import org.tinylog.Logger;
 
 /**

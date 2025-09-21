@@ -1,13 +1,13 @@
 package org.ruitx.jaws.components;
 
 import static org.ruitx.jaws.configs.ApplicationConfig.APPLICATION_NAME;
-import static org.ruitx.jaws.strings.HttpHeaders.CACHE_CONTROL;
-import static org.ruitx.jaws.strings.HttpHeaders.CONNECTION;
-import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_LENGTH;
-import static org.ruitx.jaws.strings.HttpHeaders.CONTENT_TYPE;
-import static org.ruitx.jaws.strings.HttpHeaders.DATE;
-import static org.ruitx.jaws.strings.HttpHeaders.SERVER;
-import static org.ruitx.jaws.strings.HttpHeaders.SET_COOKIE;
+import static org.ruitx.jaws.enums.HttpHeaders.CACHE_CONTROL;
+import static org.ruitx.jaws.enums.HttpHeaders.CONNECTION;
+import static org.ruitx.jaws.enums.HttpHeaders.CONTENT_LENGTH;
+import static org.ruitx.jaws.enums.HttpHeaders.CONTENT_TYPE;
+import static org.ruitx.jaws.enums.HttpHeaders.DATE;
+import static org.ruitx.jaws.enums.HttpHeaders.SERVER;
+import static org.ruitx.jaws.enums.HttpHeaders.SET_COOKIE;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

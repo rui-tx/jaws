@@ -21,7 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 
 /**
  * Deterministic, bounded randomized test that mirrors parts of the fuzz harness. Helps CI runs

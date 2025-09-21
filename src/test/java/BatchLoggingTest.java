@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @Disabled("Replaced by logger.JawsLoggerIntegrationTest")
@@ -209,7 +209,7 @@ public class BatchLoggingTest {
     try {
       // Query the logs database directly
       Mimir logsDb = new Mimir("src/main/resources/logs.mimir",
-          "src/main/resources/sql/logs_schema.sql");
+          "src/main/resources/sql/logs_schema_v1.sql");
       logsDb.initializeDatabase("src/main/resources/logs.mimir");
 
       List<Row> logEntries = logsDb.getRows(

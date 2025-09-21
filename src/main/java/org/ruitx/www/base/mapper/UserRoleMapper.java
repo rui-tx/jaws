@@ -1,8 +1,8 @@
 package org.ruitx.www.base.mapper;
 
 import java.util.Optional;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.components.mimir.RowMapper;
-import org.ruitx.jaws.types.Row;
 import org.ruitx.www.base.model.auth.UserRole;
 
 /**

@@ -1,0 +1,43 @@
+package org.ruitx.jaws.components.bifrost;
+
+import java.util.List;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill.RequestContext;
+
+/**
+ * Bifrost is a middleware chain implementation that processes a list of middlewares
+ */
+public class Bifrost implements MiddlewareChain {
+
+  private final List<Middleware> middlewares;
+  private final RequestContext context;
+  private int currentIndex = 0;
+
+  public Bifrost(List<Middleware> middlewares, RequestContext context) {
+    this.middlewares = middlewares;
+    this.context = context;
+  }
+
+  @Override
+  public boolean next() {
+    if (currentIndex < middlewares.size()) {
+      Middleware middleware = middlewares.get(currentIndex++);
+      return middleware.handle(context, this);
+    }
+    return true; // No more middleware, continue to route handling
+  }
+
+  @Override
+  public boolean hasNext() {
+    return currentIndex < middlewares.size();
+  }
+
+  /**
+   * Start the middleware chain execution.
+   *
+   * @return true if all middleware passed and request should continue to route handling
+   */
+  public boolean execute() {
+    currentIndex = 0;
+    return next();
+  }
+} 

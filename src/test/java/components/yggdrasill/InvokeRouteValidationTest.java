@@ -20,12 +20,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.enums.ResponseCode;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 public class InvokeRouteValidationTest {
@@ -37,7 +37,7 @@ public class InvokeRouteValidationTest {
       Path logsDbPath = Paths.get("target", "unit-logs-" + System.nanoTime() + ".db");
       Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
           logsDbPath.toAbsolutePath().toString(),
-          Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+          Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath().toString(),
           Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
           ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
           true,
@@ -55,6 +55,14 @@ public class InvokeRouteValidationTest {
     return Collections.enumeration(java.util.List.of(items));
   }
 
+  // Access private field on RequestContext
+  private static void setPrivateField(Object target, String fieldName, Object value)
+      throws Exception {
+    Field f = target.getClass().getDeclaredField(fieldName);
+    f.setAccessible(true);
+    f.set(target, value);
+  }
+
   // Build RequestContext via reflection (constructor is private)
   private Yggdrasill.RequestContext newContext(HttpServletRequest req, HttpServletResponse resp)
       throws Exception {
@@ -63,14 +71,6 @@ public class InvokeRouteValidationTest {
             HttpServletRequest.class, HttpServletResponse.class, String.class);
     ctor.setAccessible(true);
     return ctor.newInstance(req, resp, "/static");
-  }
-
-  // Access private field on RequestContext
-  private static void setPrivateField(Object target, String fieldName, Object value)
-      throws Exception {
-    Field f = target.getClass().getDeclaredField(fieldName);
-    f.setAccessible(true);
-    f.set(target, value);
   }
 
   // Create an instance of the private inner class Yggdrasill.JawsServlet
@@ -83,7 +83,9 @@ public class InvokeRouteValidationTest {
         break;
       }
     }
-    if (jawsServletClass == null) throw new IllegalStateException("JawsServlet not found");
+    if (jawsServletClass == null) {
+      throw new IllegalStateException("JawsServlet not found");
+    }
     Constructor<?> ctor = jawsServletClass.getDeclaredConstructor(Yggdrasill.class);
     ctor.setAccessible(true);
     return ctor.newInstance(ygg);
@@ -98,22 +100,6 @@ public class InvokeRouteValidationTest {
         Object.class);
     m.setAccessible(true);
     return m;
-  }
-
-  // A simple DTO with javax validation annotations
-  public static class CreateUserDTO {
-    @jakarta.validation.constraints.NotBlank
-    public String name;
-    public CreateUserDTO() {}
-    public CreateUserDTO(String name) { this.name = name; }
-  }
-
-  // Controller that consumes the DTO and writes a success JSON
-  public static class DtoController extends Bragi {
-    public void create(CreateUserDTO dto) {
-      // Echo back to verify we received the validated/parsed DTO
-      sendSuccess(java.util.Map.of("name", dto.name));
-    }
   }
 
   @Test
@@ -184,5 +170,28 @@ public class InvokeRouteValidationTest {
     org.mockito.Mockito.verify(resp).setStatus(ResponseCode.OK.getCode());
     assertTrue(sw.toString().contains("john"));
     assertEquals(true, (Boolean) result);
+  }
+
+  // A simple DTO with javax validation annotations
+  public static class CreateUserDTO {
+
+    @jakarta.validation.constraints.NotBlank
+    public String name;
+
+    public CreateUserDTO() {
+    }
+
+    public CreateUserDTO(String name) {
+      this.name = name;
+    }
+  }
+
+  // Controller that consumes the DTO and writes a success JSON
+  public static class DtoController extends Bragi {
+
+    public void create(CreateUserDTO dto) {
+      // Echo back to verify we received the validated/parsed DTO
+      sendSuccess(java.util.Map.of("name", dto.name));
+    }
   }
 }

@@ -1,6 +1,6 @@
 package org.ruitx.jaws.exceptions;
 
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.enums.ResponseCode;
 
 public enum AuthenticationError {
   INVALID_CREDENTIALS("Invalid username or password", ResponseCode.UNAUTHORIZED),

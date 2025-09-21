@@ -14,15 +14,15 @@ import java.util.List;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Njord;
+import org.ruitx.jaws.components.njord.Njord;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.AccessControl;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.interfaces.AccessControl;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.middleware.AuthMiddleware;
-import org.ruitx.jaws.strings.RequestType;
-import org.ruitx.jaws.strings.ResponseCode;
-import org.ruitx.jaws.strings.ResponseType;
+import org.ruitx.jaws.configs.bifrost.middleware.AuthMiddleware;
+import org.ruitx.jaws.enums.RequestType;
+import org.ruitx.jaws.enums.ResponseCode;
+import org.ruitx.jaws.enums.ResponseType;
 
 @DisplayName("AuthMiddleware Integration Tests")
 class AuthMiddlewareIntegrationTest extends MiddlewareTestBase {

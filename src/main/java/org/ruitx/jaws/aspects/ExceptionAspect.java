@@ -6,13 +6,13 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
+import org.ruitx.jaws.enums.ResponseCode;
 import org.ruitx.jaws.exceptions.AuthenticationException;
 import org.ruitx.jaws.exceptions.OperationException;
 import org.ruitx.jaws.exceptions.ValidationException;
-import org.ruitx.jaws.strings.ResponseCode;
-import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @Aspect
@@ -24,12 +24,12 @@ public class ExceptionAspect {
   }
 
   // Pointcut to match any method in Yggdrasill.RequestContext
-  @Pointcut("execution(* org.ruitx.jaws.components.Yggdrasill.RequestContext.*(..))")
+  @Pointcut("execution(* org.ruitx.jaws.components.yggdrasill.Yggdrasill.RequestContext.*(..))")
   public void requestContextMethods() {
   }
 
   // Pointcut to match any method in Bragi
-  @Pointcut("execution(* org.ruitx.jaws.components.Bragi.*(..))")
+  @Pointcut("execution(* org.ruitx.jaws.components.yggdrasill.Bragi.*(..))")
   public void apiHandlerMethods() {
   }
 

@@ -10,8 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.interfaces.Job;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 import org.tinylog.Logger;
 
 /**

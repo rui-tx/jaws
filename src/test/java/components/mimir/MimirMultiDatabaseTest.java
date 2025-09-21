@@ -17,11 +17,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 
 public class MimirMultiDatabaseTest {
 
-  private static final String LOGS_SCHEMA_CP = "sql/logs_schema.sql";
+  private static final String LOGS_SCHEMA_CP = "sql/logs_schema_v1.sql";
 
   @BeforeAll
   public static void setupDatabase() {

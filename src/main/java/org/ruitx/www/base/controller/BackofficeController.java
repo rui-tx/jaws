@@ -1,20 +1,20 @@
 package org.ruitx.www.base.controller;
 
-import static org.ruitx.jaws.strings.RequestType.GET;
-import static org.ruitx.jaws.strings.RequestType.POST;
-import static org.ruitx.jaws.strings.ResponseCode.BAD_REQUEST;
-import static org.ruitx.jaws.strings.ResponseCode.OK;
-import static org.ruitx.jaws.strings.ResponseType.HTML;
-import static org.ruitx.jaws.types.ParamType.PATH;
-import static org.ruitx.jaws.types.ParamType.QUERY;
+import static org.ruitx.jaws.enums.ParamType.PATH;
+import static org.ruitx.jaws.enums.ParamType.QUERY;
+import static org.ruitx.jaws.enums.RequestType.GET;
+import static org.ruitx.jaws.enums.RequestType.POST;
+import static org.ruitx.jaws.enums.ResponseCode.BAD_REQUEST;
+import static org.ruitx.jaws.enums.ResponseCode.OK;
+import static org.ruitx.jaws.enums.ResponseType.HTML;
 
 import java.util.Map;
 import java.util.function.Function;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.interfaces.AccessControl;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.types.Context;
-import org.ruitx.jaws.types.PageRequest;
+import org.ruitx.jaws.components.hermod.Context;
+import org.ruitx.jaws.components.mimir.PageRequest;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.AccessControl;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
 import org.ruitx.www.base.dto.auth.UserUpdateRequest;
 import org.ruitx.www.base.service.AuthService;
 import org.ruitx.www.base.service.BackofficeService;

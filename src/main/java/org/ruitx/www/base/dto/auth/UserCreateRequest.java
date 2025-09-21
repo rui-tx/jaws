@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Optional;
-import org.ruitx.jaws.interfaces.Validatable;
+import org.ruitx.jaws.components.yggdrasill.Validatable;
 
 public record UserCreateRequest(
     @JsonProperty("username")

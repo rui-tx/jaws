@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import org.ruitx.jaws.interfaces.Job;
 
 /**
  * Base implementation of Job interface providing common functionality. This class encapsulates job

@@ -1,16 +1,16 @@
 package org.ruitx.www.base.controller;
 
-import static org.ruitx.jaws.strings.RequestType.GET;
-import static org.ruitx.jaws.strings.ResponseCode.OK;
-import static org.ruitx.jaws.strings.ResponseType.JSON;
+import static org.ruitx.jaws.enums.RequestType.GET;
+import static org.ruitx.jaws.enums.ResponseCode.OK;
+import static org.ruitx.jaws.enums.ResponseType.JSON;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.ruitx.jaws.components.Bragi;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.interfaces.AccessControl;
-import org.ruitx.jaws.interfaces.Route;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.AccessControl;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
 
 /**
  * Debug controller to inspect the current Mimir query cache.  EXPOSE ONLY IN DEVELOPMENT!

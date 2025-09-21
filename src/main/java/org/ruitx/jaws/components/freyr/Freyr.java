@@ -19,12 +19,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.components.mimir.Page;
+import org.ruitx.jaws.components.mimir.PageRequest;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.interfaces.Job;
-import org.ruitx.jaws.types.Page;
-import org.ruitx.jaws.types.PageRequest;
-import org.ruitx.jaws.types.Row;
-import org.ruitx.jaws.types.SortDirection;
+import org.ruitx.jaws.enums.SortDirection;
+import org.ruitx.jaws.models.JobResults;
+import org.ruitx.jaws.models.JobResults.Columns;
+import org.ruitx.jaws.models.JobResultsMapper;
+import org.ruitx.jaws.models.Jobs;
 import org.ruitx.www.base.notify.ToastNotifier;
 import org.tinylog.Logger;
 
@@ -56,8 +59,10 @@ public class Freyr implements Runnable {
   private final ExecutorService jobLoaderExecutor = Executors.newSingleThreadExecutor(
       r -> new Thread(r, "job-loader"));
   private final AtomicBoolean jobLoadingComplete = new AtomicBoolean(false);
+  private final FreyrRepo repo;
 
-  private Freyr(Map<String, Object> config) {
+  private Freyr(Map<String, Object> config, FreyrRepo repo) {
+    this.repo = repo;
     // Get singleton JobRegistry instance
     this.jobRegistry = JobRegistry.getInstance();
 
@@ -90,7 +95,7 @@ public class Freyr implements Runnable {
     if (instance == null) {
       synchronized (instanceLock) {
         if (instance == null) {
-          instance = new Freyr(new HashMap<>());
+          instance = new Freyr(new HashMap<>(), );
         }
       }
     }
@@ -157,13 +162,10 @@ public class Freyr implements Runnable {
    */
   public JobStatus getJobStatus(String jobId) {
     try {
-      Optional<Row> row = mimir.getRow("SELECT status FROM JOBS WHERE id = ?", jobId);
-      if (row.isPresent()) {
-        return row.get().getString("status")
-            .map(JobStatus::valueOf)
-            .orElse(null);
-      }
-      return null;
+      Optional<Row> row = repo.getJobStatus(jobId);
+      return row
+          .flatMap(value -> value.getString(Jobs.Columns.STATUS).map(JobStatus::valueOf))
+          .orElse(null);
     } catch (Exception e) {
       Logger.error("Failed to get job status for {}: {}", jobId, e.getMessage());
       return null;
@@ -180,20 +182,19 @@ public class Freyr implements Runnable {
    */
   public JobResult getJobResult(String jobId) {
     try {
-      Optional<Row> row = mimir.getRow(
-          "SELECT * FROM JOB_RESULTS WHERE job_id = ? AND expires_at > ?",
-          jobId, Instant.now().toEpochMilli());
+
+      Optional<Row> row = repo.getJobResult(jobId);
 
       if (row.isPresent()) {
         Map<String, String> headers = parseHeaders(
-            row.get().getString("headers").orElse(null));
+            row.get().getString(Columns.HEADERS).orElse(null));
         return new JobResult(
-            row.get().getString("job_id").orElse(jobId),
-            row.get().getInt("status_code").orElse(500),
+            row.get().getString(Columns.JOBID).orElse(jobId),
+            row.get().getInt(Columns.STATUSCODE).orElse(500),
             headers,
-            row.get().getString("body").orElse(""),
-            row.get().getString("content_type").orElse("application/json"),
-            row.get().getLong("expires_at").orElse(0L)
+            row.get().getString(Columns.BODY).orElse(""),
+            row.get().getString(Columns.CONTENTTYPE).orElse("application/json"),
+            row.get().getLong(Columns.EXPIRESAT).orElse(0L)
         );
       }
       return null;
@@ -616,13 +617,6 @@ public class Freyr implements Runnable {
    */
   public boolean isJobLoadingComplete() {
     return jobLoadingComplete.get();
-  }
-
-  /**
-   * Job status enum
-   */
-  public enum JobStatus {
-    PENDING, PROCESSING, COMPLETED, FAILED, TIMEOUT, RETRY_SCHEDULED, DEAD_LETTER
   }
 
   /**

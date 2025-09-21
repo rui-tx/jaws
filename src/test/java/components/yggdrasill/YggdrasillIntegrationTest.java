@@ -26,13 +26,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.ruitx.jaws.components.Odin;
-import org.ruitx.jaws.components.Njord;
-import org.ruitx.jaws.components.Yggdrasill;
+import org.ruitx.jaws.components.bifrost.Middleware;
+import org.ruitx.jaws.components.bifrost.MiddlewareChain;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
+import org.ruitx.jaws.components.njord.Njord;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.interfaces.Middleware;
-import org.ruitx.jaws.interfaces.MiddlewareChain;
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.enums.ResponseCode;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @DisplayName("Yggdrasill Integration Tests")
@@ -71,7 +71,7 @@ public class YggdrasillIntegrationTest {
     if (!Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
       Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
           logsDbPath.toAbsolutePath().toString(),
-          Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+          Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath().toString(),
           Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
           ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
           true,
@@ -114,8 +114,12 @@ public class YggdrasillIntegrationTest {
     } catch (IOException ignored) {
     }
     try {
-      if (logsDbPath != null) Files.deleteIfExists(logsDbPath);
-      if (mainDbPath != null) Files.deleteIfExists(mainDbPath);
+      if (logsDbPath != null) {
+        Files.deleteIfExists(logsDbPath);
+      }
+      if (mainDbPath != null) {
+        Files.deleteIfExists(mainDbPath);
+      }
     } catch (IOException ignored) {
     }
   }

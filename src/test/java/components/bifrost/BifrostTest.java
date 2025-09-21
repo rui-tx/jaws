@@ -14,10 +14,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Bifrost;
-import org.ruitx.jaws.components.Yggdrasill;
-import org.ruitx.jaws.interfaces.Middleware;
-import org.ruitx.jaws.interfaces.MiddlewareChain;
+import org.ruitx.jaws.components.bifrost.Bifrost;
+import org.ruitx.jaws.components.bifrost.Middleware;
+import org.ruitx.jaws.components.bifrost.MiddlewareChain;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
 
 class BifrostTest {
 

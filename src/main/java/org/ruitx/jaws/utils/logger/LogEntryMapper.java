@@ -1,8 +1,8 @@
 package org.ruitx.jaws.utils.logger;
 
 import java.util.Optional;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.components.mimir.RowMapper;
-import org.ruitx.jaws.types.Row;
 
 /**
  * Authoritative Row -> LogEntry mapper.

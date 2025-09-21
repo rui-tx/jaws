@@ -10,8 +10,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.interfaces.IsolationLevel;
-import org.ruitx.jaws.interfaces.Transactional;
+import org.ruitx.jaws.components.mimir.IsolationLevel;
+import org.ruitx.jaws.components.mimir.Transactional;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
@@ -34,7 +34,7 @@ public class TransactionAspect {
    * @return The result of the method
    * @throws Throwable If the method throws an exception
    */
-  @Around("methods() && @annotation(org.ruitx.jaws.interfaces.Transactional)")
+  @Around("methods() && @annotation(org.ruitx.jaws.components.mimir.Transactional)")
   public Object manageTransaction(ProceedingJoinPoint joinPoint) throws Throwable {
     Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
     Transactional transactional = method.getAnnotation(Transactional.class);

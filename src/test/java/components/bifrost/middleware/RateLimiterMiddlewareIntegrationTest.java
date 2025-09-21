@@ -8,13 +8,13 @@ import components.bifrost.middleware.support.MiddlewareTestBase;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Njord;
+import org.ruitx.jaws.components.njord.Njord;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.middleware.RateLimiterMiddleware;
-import org.ruitx.jaws.strings.RequestType;
-import org.ruitx.jaws.strings.ResponseType;
+import org.ruitx.jaws.configs.bifrost.middleware.RateLimiterMiddleware;
+import org.ruitx.jaws.enums.RequestType;
+import org.ruitx.jaws.enums.ResponseType;
 
 @DisplayName("RateLimiterMiddleware Integration Tests")
 class RateLimiterMiddlewareIntegrationTest extends MiddlewareTestBase {

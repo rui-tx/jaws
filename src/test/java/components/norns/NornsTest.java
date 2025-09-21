@@ -52,7 +52,7 @@ public class NornsTest {
     if (!Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
       Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
           logsDbPath.toAbsolutePath().toString(),
-          Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+          Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath().toString(),
           Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
           ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
           true,
@@ -72,8 +72,18 @@ public class NornsTest {
 
   @AfterAll
   static void afterAll() {
-    try { if (logsDbPath != null) Files.deleteIfExists(logsDbPath); } catch (IOException ignored) {}
-    try { if (mainDbPath != null) Files.deleteIfExists(mainDbPath); } catch (IOException ignored) {}
+    try {
+      if (logsDbPath != null) {
+        Files.deleteIfExists(logsDbPath);
+      }
+    } catch (IOException ignored) {
+    }
+    try {
+      if (mainDbPath != null) {
+        Files.deleteIfExists(mainDbPath);
+      }
+    } catch (IOException ignored) {
+    }
   }
 
   @AfterEach
@@ -83,7 +93,8 @@ public class NornsTest {
       Norns.getInstance().stop();
       // Give some time for any running loop to observe stop
       Thread.sleep(50);
-    } catch (Throwable ignored) {}
+    } catch (Throwable ignored) {
+    }
 
     // Reset singleton via reflection so next test gets a fresh running=true instance
     try {
@@ -176,7 +187,9 @@ public class NornsTest {
     Norns norns = Norns.getInstance();
     AtomicInteger okCounter = new AtomicInteger();
 
-    norns.registerTask("bad", () -> { throw new RuntimeException("boom"); }, 100, TimeUnit.MILLISECONDS);
+    norns.registerTask("bad", () -> {
+      throw new RuntimeException("boom");
+    }, 100, TimeUnit.MILLISECONDS);
     norns.registerTask("good", okCounter::incrementAndGet, 100, TimeUnit.MILLISECONDS);
 
     Thread t = new Thread(norns, "norns-test-runner-4");
@@ -187,6 +200,7 @@ public class NornsTest {
     norns.stop();
     t.join(1000);
 
-    assertTrue(okCounter.get() >= 1, "Good task should continue executing even if another task throws");
+    assertTrue(okCounter.get() >= 1,
+        "Good task should continue executing even if another task throws");
   }
 }

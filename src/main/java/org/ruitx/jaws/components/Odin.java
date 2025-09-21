@@ -1,6 +1,6 @@
 package org.ruitx.jaws.components;
 
-import static org.ruitx.jaws.configs.RoutesConfig.ROUTES;
+import static org.ruitx.jaws.configs.njord.NjordConfig.ROUTES;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Paths;
@@ -19,9 +19,11 @@ import org.ruitx.jaws.components.mimir.DatabaseConfig;
 import org.ruitx.jaws.components.mimir.DatabaseSeeder;
 import org.ruitx.jaws.components.mimir.Mimir;
 import org.ruitx.jaws.components.mimir.Verdandi;
-import org.ruitx.jaws.components.mimir.seeders.AdminBootstrapSeeder;
+import org.ruitx.jaws.components.mimir.defaultSeeders.AdminBootstrapSeeder;
+import org.ruitx.jaws.components.njord.Njord;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.configs.MiddlewareConfig;
+import org.ruitx.jaws.configs.bifrost.BifrostConfig;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.www.base.service.AuthService;
 import org.tinylog.Logger;
@@ -172,7 +174,7 @@ public final class Odin {
 
   // Bifrost is the middleware that processes the requests
   private static void createBifrost(Yggdrasill yggdrasill) {
-    MiddlewareConfig.MIDDLEWARE.forEach(m -> {
+    BifrostConfig.MIDDLEWARE.forEach(m -> {
       yggdrasill.addMiddleware(m);
       JawsLogger.info("Configured {} middleware", m.getClass().getSimpleName());
     });
@@ -222,7 +224,7 @@ public final class Odin {
     Logger.info("Odin: Registering database alias {}", LOGS_DB_NAME);
     registerDatabase(LOGS_DB_NAME, new DatabaseConfig(
         Paths.get("src/main/resources/logs.db").toAbsolutePath().toString(),
-        Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+        Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath().toString(),
         Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
         ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
         true,
@@ -254,7 +256,7 @@ public final class Odin {
       // Create Mimir instance backed by this connector
       Mimir mimir = new Mimir(v);
 
-      // Execute optional seeders synchronously (fail-fast)
+      // Execute optional defaultSeeders synchronously (fail-fast)
       if (cfg.seeders() != null) {
         for (DatabaseSeeder seeder : cfg.seeders()) {
           long st = System.currentTimeMillis();

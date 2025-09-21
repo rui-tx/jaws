@@ -17,8 +17,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.ruitx.jaws.components.Odin;
-import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
 import org.ruitx.jaws.configs.ApplicationConfig;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
@@ -89,7 +89,7 @@ public abstract class MiddlewareTestBase {
     if (!Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
       Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
           logsDbPath.toAbsolutePath().toString(),
-          Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+          Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath().toString(),
           Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
           ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
           true,

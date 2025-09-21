@@ -1,6 +1,6 @@
 package org.ruitx.jaws.exceptions;
 
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.enums.ResponseCode;
 
 public enum ValidationError {
   INVALID_EMAIL_FORMAT("Invalid email format", ResponseCode.BAD_REQUEST),

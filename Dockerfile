@@ -26,7 +26,7 @@ LABEL maintainer="Rui Teixeira <ruiteixeira@mailbox.org>" \
 ENV PORT=15000 \
     WWWPATH=/app/www/ \
     DBPATH=/app/src/main/resources/db.db \
-    DBSCHEMAPATH=/app/src/main/resources/sql/create_schema_v1.sql
+    DBSCHEMAPATH=/app/src/main/resources/sql/db_schema_v1.sql
 
 # Run the application
 CMD ["java", "-jar", "/app/jaws.jar"]

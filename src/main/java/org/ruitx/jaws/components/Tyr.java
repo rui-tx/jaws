@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.ruitx.jaws.components.mimir.Mimir;
-import org.ruitx.jaws.types.Row;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.www.base.mapper.UserSessionMapper;
 import org.ruitx.www.base.model.auth.UserSession;

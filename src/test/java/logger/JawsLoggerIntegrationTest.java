@@ -18,8 +18,8 @@ import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
 import org.ruitx.jaws.components.mimir.Mimir;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.types.Row;
 import org.ruitx.jaws.utils.logger.JawsLogger;
 
 @DisplayName("JawsLogger Integration Tests")
@@ -57,7 +57,7 @@ public class JawsLoggerIntegrationTest {
     if (!Odin.hasDatabase(Odin.LOGS_DB_NAME)) {
       Odin.registerDatabase(Odin.LOGS_DB_NAME, new DatabaseConfig(
           logsDbPath.toAbsolutePath().toString(),
-          Paths.get("src/main/resources/sql/logs_schema.sql").toAbsolutePath().toString(),
+          Paths.get("src/main/resources/sql/logs_schema_v1.sql").toAbsolutePath().toString(),
           Math.max(2, ApplicationConfig.MIMIR_READER_POOL_SIZE / 2),
           ApplicationConfig.MIMIR_BUSY_TIMEOUT_MS,
           true,

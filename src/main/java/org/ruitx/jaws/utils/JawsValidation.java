@@ -6,8 +6,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.ruitx.jaws.strings.ResponseCode;
-import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.enums.ResponseCode;
 
 /**
  * Utility class for Jakarta Bean Validation. Provides methods to validate DTOs and convert

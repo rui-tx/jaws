@@ -1,15 +1,15 @@
 package org.ruitx.www.base.controller;
 
-import static org.ruitx.jaws.strings.RequestType.GET;
-import static org.ruitx.jaws.strings.ResponseType.HTML;
+import static org.ruitx.jaws.enums.RequestType.GET;
+import static org.ruitx.jaws.enums.ResponseType.HTML;
 
 import java.util.Optional;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Yggdrasill;
-import org.ruitx.jaws.components.sse.Huginn;
-import org.ruitx.jaws.interfaces.AccessControl;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.components.Huginn;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.AccessControl;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.components.yggdrasill.Yggdrasill;
+import org.ruitx.jaws.enums.ResponseCode;
 
 public class EventsController extends Bragi {
 

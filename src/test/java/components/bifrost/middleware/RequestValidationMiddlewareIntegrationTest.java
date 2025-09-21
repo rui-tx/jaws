@@ -10,13 +10,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.components.Njord;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.interfaces.Validatable;
-import org.ruitx.jaws.middleware.RequestValidationMiddleware;
-import org.ruitx.jaws.strings.RequestType;
-import org.ruitx.jaws.strings.ResponseType;
+import org.ruitx.jaws.components.njord.Njord;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.components.yggdrasill.Validatable;
+import org.ruitx.jaws.configs.bifrost.middleware.RequestValidationMiddleware;
+import org.ruitx.jaws.enums.RequestType;
+import org.ruitx.jaws.enums.ResponseType;
 
 @DisplayName("RequestValidationMiddleware Integration Tests")
 class RequestValidationMiddlewareIntegrationTest extends MiddlewareTestBase {

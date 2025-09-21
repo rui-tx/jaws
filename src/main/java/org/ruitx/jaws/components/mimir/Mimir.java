@@ -35,10 +35,6 @@ import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.update.Update;
 import org.ruitx.jaws.configs.ApplicationConfig;
-import org.ruitx.jaws.interfaces.SqlFunction;
-import org.ruitx.jaws.types.Page;
-import org.ruitx.jaws.types.PageRequest;
-import org.ruitx.jaws.types.Row;
 import org.tinylog.Logger;
 
 /**

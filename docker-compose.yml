@@ -13,7 +13,7 @@ services:
       - URL=http://localhost:15000
       - WWWPATH=/app/www/
       - DBPATH=/data/db.db
-      - DBSCHEMAPATH=/app/src/main/resources/sql/create_schema_v1.sql
+      - DBSCHEMAPATH=/app/src/main/resources/sql/db_schema_v1.sql
       - DB_LEVEL=INFO
       - RATE_LIMIT_MAX_REQUESTS=100000
 

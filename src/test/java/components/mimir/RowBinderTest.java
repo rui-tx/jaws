@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.ruitx.jaws.components.mimir.Row;
 import org.ruitx.jaws.components.mimir.RowBinder;
-import org.ruitx.jaws.types.Row;
 
 public class RowBinderTest {
 
@@ -144,7 +144,7 @@ public class RowBinderTest {
   }
 
   @Test
-  @DisplayName("Primitive targets: from strings and other numerics, boolean from int, char from 1-char string")
+  @DisplayName("Primitive targets: from enums and other numerics, boolean from int, char from 1-char string")
   void primitivesConversions() {
     Row row = rowOf(
         "i", "7",      // String -> int

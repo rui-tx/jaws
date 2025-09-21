@@ -3,8 +3,8 @@ package org.ruitx.www.base.notify;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import org.ruitx.jaws.components.Hermod;
-import org.ruitx.jaws.components.sse.Huginn;
+import org.ruitx.jaws.components.Huginn;
+import org.ruitx.jaws.components.hermod.Hermod;
 import org.tinylog.Logger;
 
 /**

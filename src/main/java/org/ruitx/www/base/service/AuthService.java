@@ -1,14 +1,14 @@
 package org.ruitx.www.base.service;
 
+import static org.ruitx.jaws.enums.OperationSuccess.USER_CREATED;
+import static org.ruitx.jaws.enums.OperationSuccess.USER_UPDATED;
+import static org.ruitx.jaws.enums.ResponseCode.CREATED;
+import static org.ruitx.jaws.enums.ResponseCode.OK;
 import static org.ruitx.jaws.exceptions.AuthenticationError.INVALID_CREDENTIALS;
 import static org.ruitx.jaws.exceptions.AuthenticationError.TOKEN_INVALID;
 import static org.ruitx.jaws.exceptions.OperationError.DUPLICATE_USER;
 import static org.ruitx.jaws.exceptions.OperationError.OPERATION_FAILED;
 import static org.ruitx.jaws.exceptions.OperationError.USER_NOT_FOUND;
-import static org.ruitx.jaws.strings.OperationSuccess.USER_CREATED;
-import static org.ruitx.jaws.strings.OperationSuccess.USER_UPDATED;
-import static org.ruitx.jaws.strings.ResponseCode.CREATED;
-import static org.ruitx.jaws.strings.ResponseCode.OK;
 import static org.ruitx.jaws.utils.JawsUtils.getOrDefault;
 import static org.ruitx.jaws.utils.JawsUtils.hashPassword;
 import static org.ruitx.jaws.utils.JawsUtils.isValidPassword;
@@ -20,7 +20,7 @@ import java.util.Optional;
 import org.ruitx.jaws.components.Tyr;
 import org.ruitx.jaws.exceptions.AuthenticationException;
 import org.ruitx.jaws.exceptions.OperationException;
-import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.www.base.dto.auth.LoginResponse;
 import org.ruitx.www.base.dto.auth.UserCreateRequest;
 import org.ruitx.www.base.dto.auth.UserUpdateRequest;

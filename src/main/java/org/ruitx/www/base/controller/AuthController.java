@@ -1,12 +1,12 @@
 package org.ruitx.www.base.controller;
 
-import static org.ruitx.jaws.strings.RequestType.POST;
-import static org.ruitx.jaws.strings.ResponseType.JSON;
+import static org.ruitx.jaws.enums.RequestType.POST;
+import static org.ruitx.jaws.enums.ResponseType.JSON;
 
-import org.ruitx.jaws.components.Bragi;
-import org.ruitx.jaws.interfaces.AccessControl;
-import org.ruitx.jaws.interfaces.Route;
-import org.ruitx.jaws.types.APIResponse;
+import org.ruitx.jaws.components.njord.Route;
+import org.ruitx.jaws.components.yggdrasill.AccessControl;
+import org.ruitx.jaws.components.yggdrasill.Bragi;
+import org.ruitx.jaws.utils.APIResponse;
 import org.ruitx.www.base.dto.auth.LoginRequest;
 import org.ruitx.www.base.dto.auth.LoginResponse;
 import org.ruitx.www.base.dto.auth.LogoutRequest;

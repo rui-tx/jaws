@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.Optional;
-import org.ruitx.jaws.interfaces.Validatable;
+import org.ruitx.jaws.components.yggdrasill.Validatable;
 
 public record UserUpdateRequest(
     @JsonProperty("password")

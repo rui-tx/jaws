@@ -1,26 +1,31 @@
 <div id="njord">
-    <article>
-        <h3>Njord (Dynamic Routes)</h3>
-        <nav>
-            <strong>On this section</strong>
-            <ul>
-                <li><a href="#dynamic-routes">Dynamic Routes</a></li>
-                <li><a href="#path-query">Path &amp; Query Parameters</a></li>
-                <li><a href="#htmx">HTMX Routes</a></li>
-                <li><a href="#other-methods">Other HTTP Methods</a></li>
-            </ul>
-        </nav>
-        <p>You can create <strong>dynamic routes</strong> by creating a controller class that extends <strong><code>Bragi</code></strong>
-            and annotating its methods with the <strong><code>@Route</code></strong> annotation. Common attributes are
-            <strong><code>endpoint</code></strong>, <strong><code>method</code></strong>, <strong><code>responseType</code></strong>, and optional <strong><code>htmx</code></strong>.</p>
+  <article>
+    <h3>Njord (Dynamic Routes)</h3>
+    <nav>
+      <strong>On this section</strong>
+      <ul>
+        <li><a href="#dynamic-routes">Dynamic Routes</a></li>
+        <li><a href="#path-query">Path &amp; Query Parameters</a></li>
+        <li><a href="#htmx">HTMX Routes</a></li>
+        <li><a href="#other-methods">Other HTTP Methods</a></li>
+      </ul>
+    </nav>
+    <p>You can create <strong>dynamic routes</strong> by creating a controller class that extends
+      <strong><code>Bragi</code></strong>
+      and annotating its methods with the <strong><code>@Route</code></strong> annotation. Common
+      attributes are
+      <strong><code>endpoint</code></strong>, <strong><code>method</code></strong>, <strong><code>responseType</code></strong>,
+      and optional <strong><code>htmx</code></strong>.</p>
 
-        <h4 id="dynamic-routes">Dynamic Routes</h4>
-        <p>The <strong>endpoint</strong> represents the path that the method will respond to. Dynamic segments are prefixed with <code>:</code>.
-           Example: <code>/todos/:id</code>. Below is an example aligned with the current codebase patterns:</p>
-        <pre><code class="language-java">import static org.ruitx.jaws.strings.RequestType.GET;
-import static org.ruitx.jaws.strings.ResponseCode.OK;
-import static org.ruitx.jaws.strings.ResponseType.HTML;
-import static org.ruitx.jaws.types.ParamType.PATH;
+    <h4 id="dynamic-routes">Dynamic Routes</h4>
+    <p>The <strong>endpoint</strong> represents the path that the method will respond to. Dynamic
+      segments are prefixed with <code>:</code>.
+      Example: <code>/todos/:id</code>. Below is an example aligned with the current codebase
+      patterns:</p>
+    <pre><code class="language-java">import static org.ruitx.jaws.enums.RequestType.GET;
+import static org.ruitx.jaws.enums.ResponseCode.OK;
+import static org.ruitx.jaws.enums.ResponseType.HTML;
+import static org.ruitx.jaws.enums.ParamType.PATH;
 
 import org.ruitx.jaws.interfaces.Route;
 import org.ruitx.jaws.interfaces.AccessControl;
@@ -37,12 +42,15 @@ public void renderLogDetail() {
     sendHTML(OK, render("backoffice/log-detail.html", backofficeService.getLogDetailContext(logId)));
 }</code></pre>
 
-        <h4 id="path-query">Path &amp; Query Parameters</h4>
-        <p>In dynamic routes, a segment like <code>:id</code> is extracted with <code>get("id", PATH)</code>.
-           For example, for <code>/backoffice/logs/25</code>, <code>get("id", PATH)</code> returns <code>"25"</code>.</p>
+    <h4 id="path-query">Path &amp; Query Parameters</h4>
+    <p>In dynamic routes, a segment like <code>:id</code> is extracted with <code>get("id",
+      PATH)</code>.
+      For example, for <code>/backoffice/logs/25</code>, <code>get("id", PATH)</code> returns <code>"25"</code>.
+    </p>
 
-        <p><strong>Query parameters</strong> are read with <code>get(name, QUERY)</code> and should be parsed/validated as needed:</p>
-        <pre><code class="language-java">import static org.ruitx.jaws.types.ParamType.QUERY;
+    <p><strong>Query parameters</strong> are read with <code>get(name, QUERY)</code> and should be
+      parsed/validated as needed:</p>
+    <pre><code class="language-java">import static org.ruitx.jaws.enums.ParamType.QUERY;
 
 @Route(endpoint = "/backoffice/htmx/logs", method = GET, responseType = HTML, htmx = true)
 public void getPaginatedLogTable() {
@@ -62,9 +70,10 @@ public void getPaginatedLogTable() {
     // ... build PageRequest and render fragment
 }</code></pre>
 
-        <h4 id="htmx">HTMX Routes</h4>
-        <p><strong>HTMX routes</strong> set <code>htmx = true</code> and can still use path params and query params:</p>
-        <pre><code class="language-java">@AccessControl(login = true)
+    <h4 id="htmx">HTMX Routes</h4>
+    <p><strong>HTMX routes</strong> set <code>htmx = true</code> and can still use path params and
+      query params:</p>
+    <pre><code class="language-java">@AccessControl(login = true)
 @Route(endpoint = "/backoffice/htmx/toast/:title/:description", method = GET, responseType = HTML, htmx = true)
 public void getToast() {
     String title = get("title") != null ? get("title") : "title";
@@ -74,10 +83,11 @@ public void getToast() {
     sendHTML(OK, renderFragment("backoffice/components/toast/toast.html", "toast", ctx));
 }</code></pre>
 
-        <h4 id="other-methods">Other HTTP Methods</h4>
-        <p><strong>Other HTTP methods</strong> use the proper enum (e.g., <code>DELETE</code>, <code>POST</code>) and you can return JSON or HTML as needed:</p>
-        <pre><code class="language-java">import static org.ruitx.jaws.strings.RequestType.DELETE;
-import static org.ruitx.jaws.strings.ResponseType.JSON;
+    <h4 id="other-methods">Other HTTP Methods</h4>
+    <p><strong>Other HTTP methods</strong> use the proper enum (e.g., <code>DELETE</code>, <code>POST</code>)
+      and you can return JSON or HTML as needed:</p>
+    <pre><code class="language-java">import static org.ruitx.jaws.enums.RequestType.DELETE;
+import static org.ruitx.jaws.enums.ResponseType.JSON;
 
 @Route(endpoint = "/todos/:id", method = DELETE, responseType = JSON)
 public void deleteTodo() {
@@ -86,8 +96,9 @@ public void deleteTodo() {
     sendSuccess(OK, Map.of("status", "deleted", "id", id));
 }</code></pre>
 
-        <aside>All controllers should extend <strong><code>Bragi</code></strong> to leverage its helpers like <code>get(name, PATH|QUERY)</code>,
-            <code>sendHTML</code>, <code>sendSuccess</code>, and template rendering utilities.
-        </aside>
-    </article>
+    <aside>All controllers should extend <strong><code>Bragi</code></strong> to leverage its helpers
+      like <code>get(name, PATH|QUERY)</code>,
+      <code>sendHTML</code>, <code>sendSuccess</code>, and template rendering utilities.
+    </aside>
+  </article>
 </div>

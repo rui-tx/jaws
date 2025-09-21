@@ -26,7 +26,7 @@ public class ApplicationConfig {
   public static final String DEFAULT_CUSTOM_PAGE_PATH_404 = "";
   public static final String DEFAULT_DATABASE_PATH = "src/main/resources/db.db";
   public static final String DEFAULT_DATABASE_SCHEMA_PATH =
-      "src/main/resources/sql/create_schema_v1.sql";
+      "src/main/resources/sql/db_schema_v1.sql";
 
   // Freyr
   public static final int DEFAULT_WORKER_THREADS = Runtime.getRuntime().availableProcessors();
@@ -100,11 +100,11 @@ public class ApplicationConfig {
   static {
     // Load properties file
     try (FileInputStream fis =
-        new FileInputStream("src/main/resources/application.properties")) {
+        new FileInputStream("src/main/resources/jaws.config")) {
       properties.load(fis);
     } catch (IOException e) {
       Logger.warn(
-          "Could not load application.properties, will use environment variables or defaults");
+          "Could not load jaws.config, will use environment variables or defaults");
     }
 
     // Initialize all static fields

@@ -3,9 +3,6 @@ package org.ruitx.jaws.components.mimir;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.ruitx.jaws.types.Page;
-import org.ruitx.jaws.types.PageRequest;
-import org.ruitx.jaws.types.Row;
 
 /**
  * BaseRepo provides small, explicit helpers around Mimir for typed mapping and common ops.

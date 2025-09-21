@@ -4,22 +4,21 @@ import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.ruitx.jaws.configs.JobRegistryConfig;
-import org.ruitx.jaws.interfaces.Job;
+import org.ruitx.jaws.configs.freyr.FreyrConfig;
 import org.tinylog.Logger;
 
 /**
  * JobRegistry manages the mapping between job types and their corresponding job classes.
  */
 public class JobRegistry {
-    
+
   private static final Object lock = new Object();
   private static volatile JobRegistry instance;
   private final Map<String, Class<? extends Job>> jobTypes = new ConcurrentHashMap<>();
   private final Map<Class<? extends Job>, Constructor<? extends Job>> constructorCache = new ConcurrentHashMap<>();
 
   private JobRegistry() {
-    for (Map.Entry<String, Class<? extends Job>> entry : JobRegistryConfig.JOBS.entrySet()) {
+    for (Map.Entry<String, Class<? extends Job>> entry : FreyrConfig.JOBS.entrySet()) {
       String jobType = entry.getKey();
       Class<? extends Job> jobClass = entry.getValue();
       register(jobType, jobClass);

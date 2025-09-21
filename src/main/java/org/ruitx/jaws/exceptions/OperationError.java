@@ -1,6 +1,6 @@
 package org.ruitx.jaws.exceptions;
 
-import org.ruitx.jaws.strings.ResponseCode;
+import org.ruitx.jaws.enums.ResponseCode;
 
 public enum OperationError {
   DUPLICATE_USER("User already exists", ResponseCode.CONFLICT),
