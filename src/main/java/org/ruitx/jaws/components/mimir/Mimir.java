@@ -395,6 +395,12 @@ public class Mimir {
    */
   private void loadSchema() {
     try {
+      if (schemaPath == null) {
+        String error = "schemaPath is null";
+        Logger.error("Error initializing database: " + error);
+        throw new RuntimeException("Failed to initialize database: " + error);
+      }
+
       String sql = Files.readString(Path.of(schemaPath));
       beginTransaction();
       try {
@@ -564,10 +570,13 @@ public class Mimir {
           }
           conn = readerDs.getConnection();
         }
-        isTxConn = false;
+
+        // isTxConn = false;
       }
 
-      try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      try (
+          @SuppressWarnings("SqlSourceToSinkFlow") // parameters are properly escaped
+          PreparedStatement stmt = conn.prepareStatement(sql)) {
         for (int i = 0; i < params.length; i++) {
           stmt.setObject(i + 1, params[i]);
         }
@@ -614,7 +623,9 @@ public class Mimir {
       conn = getConnection();
       isTxConn = (transactionConnection.get() == conn);
 
-      try (PreparedStatement stmt = conn.prepareStatement(sql)) { // Simple param count heuristic
+      try (
+          @SuppressWarnings("SqlSourceToSinkFlow") // parameters are properly escaped
+          PreparedStatement stmt = conn.prepareStatement(sql)) { // Simple param count heuristic
         int expectedParams = sql.length() - sql.replace("?", "").length();
         if (expectedParams != params.length) {
           Logger.warn("Parameter count mismatch! SQL: {} expects {} but got {}", sql,
@@ -694,7 +705,9 @@ public class Mimir {
       conn = getConnection();
       isTxConn = (transactionConnection.get() == conn);
 
-      try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+      try (
+          @SuppressWarnings("SqlSourceToSinkFlow") // parameters are properly escaped
+          PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
         for (int i = 0; i < params.length; i++) {
           stmt.setObject(i + 1, params[i]);
         }
@@ -827,7 +840,7 @@ public class Mimir {
     StringBuilder sql = new StringBuilder(baseSql.trim());
 
     // Add ORDER BY if specified and not already present
-    if (pageRequest.hasSorting() && !containsOrderBy(baseSql)) {
+    if (pageRequest.hasSorting() && !containsOrderBy(baseSql) && pageRequest.sortBy().isPresent()) {
       sql.append(" ORDER BY ")
           .append(sanitizeColumnName(pageRequest.sortBy().get()))
           .append(" ")

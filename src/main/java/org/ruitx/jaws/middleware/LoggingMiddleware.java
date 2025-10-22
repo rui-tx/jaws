@@ -11,7 +11,7 @@ import org.ruitx.jaws.utils.logger.JawsLogger;
  */
 public class LoggingMiddleware implements Middleware {
 
-  private int order = 10;
+  private final int order;
 
   public LoggingMiddleware(int order) {
     this.order = order;

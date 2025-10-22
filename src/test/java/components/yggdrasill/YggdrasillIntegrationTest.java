@@ -25,8 +25,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.Njord;
+import org.ruitx.jaws.components.Odin;
 import org.ruitx.jaws.components.Yggdrasill;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
 import org.ruitx.jaws.configs.ApplicationConfig;
@@ -114,8 +114,12 @@ public class YggdrasillIntegrationTest {
     } catch (IOException ignored) {
     }
     try {
-      if (logsDbPath != null) Files.deleteIfExists(logsDbPath);
-      if (mainDbPath != null) Files.deleteIfExists(mainDbPath);
+      if (logsDbPath != null) {
+        Files.deleteIfExists(logsDbPath);
+      }
+      if (mainDbPath != null) {
+        Files.deleteIfExists(mainDbPath);
+      }
     } catch (IOException ignored) {
     }
   }

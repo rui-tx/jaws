@@ -106,13 +106,17 @@ public class Tyr {
 
       // Get session from database
       Mimir db = Odin.getDB();
-      Row sessionRow = db.getRow(
+      Optional<Row> sessionRow = db.getRow(
           "SELECT * FROM USER_SESSION WHERE refresh_token = ? AND is_active = 1",
           refreshToken
-      ).get();
+      );
+
+      if (sessionRow.isEmpty()) {
+        return Optional.empty();
+      }
 
       Optional<UserSession> session = Optional.ofNullable(
-          UserSessionMapper.INSTANCE.map(sessionRow));
+          UserSessionMapper.INSTANCE.map(sessionRow.get()));
       if (session.isEmpty()) {
         return Optional.empty();
       }
@@ -225,7 +229,7 @@ public class Tyr {
       if (rolesObj instanceof List<?>) {
         @SuppressWarnings("unchecked")
         List<String> roles = (List<String>) rolesObj;
-        return roles != null ? roles : new ArrayList<>();
+        return !roles.isEmpty() ? roles : new ArrayList<>();
       }
 
       // Handle legacy single role claim or null

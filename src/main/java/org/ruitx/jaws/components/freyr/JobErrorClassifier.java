@@ -153,7 +153,6 @@ public class JobErrorClassifier {
     // === VALIDATION & INPUT ERRORS ===
     if (exception instanceof IllegalArgumentException ||
         exception instanceof IllegalStateException ||
-        exception instanceof NumberFormatException ||
         exceptionName.contains("Validation") ||
         exceptionName.contains("Parse") ||
         message.contains("invalid") ||

@@ -13,7 +13,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.ruitx.jaws.components.freyr.Freyr;
 import org.ruitx.jaws.components.mimir.DatabaseConfig;
 import org.ruitx.jaws.components.mimir.DatabaseSeeder;
@@ -101,20 +103,21 @@ public final class Odin {
       Logger.info("Odin: Initializing databases (timeout: {} ms)", timeoutMs);
       long startTs = System.currentTimeMillis();
 
-      ExecutorService initExec = Executors.newSingleThreadExecutor(
-          r -> new Thread(r, "jaws-mimir-init"));
-      try {
-        java.util.concurrent.Future<?> f = initExec.submit(() -> {
-          Logger.info("Odin: Registering default databases ...");
-          registerDefaultDatabases();
-        });
-        f.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-        long took = System.currentTimeMillis() - startTs;
-        Logger.info("Odin: Databases initialized successfully in {} ms", took);
-      } finally {
-        initExec.shutdownNow();
+      try (ExecutorService initExec = Executors.newSingleThreadExecutor(
+          r -> new Thread(r, "jaws-mimir-init"))) {
+        try {
+          Future<?> f = initExec.submit(() -> {
+            Logger.info("Odin: Registering default databases ...");
+            registerDefaultDatabases();
+          });
+          f.get(timeoutMs, TimeUnit.MILLISECONDS);
+          long took = System.currentTimeMillis() - startTs;
+          Logger.info("Odin: Databases initialized successfully in {} ms", took);
+        } finally {
+          initExec.shutdownNow();
+        }
       }
-    } catch (java.util.concurrent.TimeoutException te) {
+    } catch (TimeoutException te) {
       Logger.error("Odin: Database initialization timed out. Shutting down.");
       // Hard exit as per policy
       System.exit(1);

@@ -21,7 +21,7 @@ public class RateLimiterMiddleware implements Middleware {
   private final int maxRequestsPerWindow = ApplicationConfig.RATE_LIMIT_MAX_REQUESTS;
   private final int windowSizeMs = ApplicationConfig.RATE_LIMIT_WINDOW_MS;
 
-  private int order = 10;
+  private final int order;
 
   public RateLimiterMiddleware(int order) {
     this.order = order;

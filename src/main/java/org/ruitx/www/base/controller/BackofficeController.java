@@ -468,7 +468,7 @@ public class BackofficeController extends Bragi {
       return;
     }
 
-    Integer userId;
+    int userId;
     try {
       userId = Integer.parseInt(userIdStr);
     } catch (NumberFormatException e) {

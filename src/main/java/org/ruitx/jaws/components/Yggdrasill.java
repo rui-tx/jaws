@@ -46,8 +46,8 @@ import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.strings.ResponseType;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.jaws.utils.JawsValidation;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * Yggdrasill is the main HTTP server component It integrates Jetty with JAWS' route system,

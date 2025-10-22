@@ -26,7 +26,7 @@ import org.ruitx.jaws.utils.logger.JawsLogger;
  */
 public class AuthMiddleware implements Middleware {
 
-  private int order = 10;
+  private final int order;
 
   public AuthMiddleware(int order) {
     this.order = order;

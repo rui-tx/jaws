@@ -522,7 +522,7 @@ public abstract class Bragi {
   protected String render(String templatePath, Context context) {
     try {
       Yggdrasill.RequestContext rqContext = requestContext.get();
-      if (requestContext != null) {
+      if (rqContext != null) {
         return Hermod.render(
             templatePath,
             rqContext.getQueryParams(),
@@ -742,52 +742,54 @@ public abstract class Bragi {
    */
   private <T> APIResponse<T> callInternal(String endpoint, RequestType method,
       Map<String, String> headers, String body, Class<T> responseClass) {
-    HttpClient httpClient = HttpClient.newHttpClient();
-    HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint))
-        .header("accept", "*/*");
+    try (HttpClient httpClient = HttpClient.newHttpClient()) {
+      HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint))
+          .header("accept", "*/*");
 
-    Map<String, String> allHeaders = headers != null ? new HashMap<>(headers) : new HashMap<>();
-    for (Map.Entry<String, String> header : allHeaders.entrySet()) {
-      requestBuilder.header(header.getKey(), header.getValue());
-    }
-
-    switch (method) {
-      case POST, PUT, PATCH -> requestBuilder
-          .method(method.toString(), HttpRequest.BodyPublishers.ofString(body != null ? body : ""))
-          .header(CONTENT_TYPE.getHeaderName(), "application/json");
-      case DELETE -> requestBuilder.DELETE();
-      default -> requestBuilder.GET();
-    }
-
-    HttpRequest request = requestBuilder.build();
-    try {
-      HttpResponse<String> response = httpClient.send(request,
-          HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200 && response.statusCode() != 201) {
-        JawsLogger.error("API request failed with status code: {}", response.statusCode());
-        return APIResponse.error(
-            response.statusCode() + "",
-            "Server returned error status: " + response.statusCode()
-        );
+      Map<String, String> allHeaders = headers != null ? new HashMap<>(headers) : new HashMap<>();
+      for (Map.Entry<String, String> header : allHeaders.entrySet()) {
+        requestBuilder.header(header.getKey(), header.getValue());
       }
 
-      String contentType = response.headers().firstValue(CONTENT_TYPE.getHeaderName()).orElse("");
-      if (!contentType.contains("application/json")) {
-        JawsLogger.error("Unexpected content type: {}", contentType);
-        JawsLogger.error("Response body: {}", response.body());
+      switch (method) {
+        case POST, PUT, PATCH -> requestBuilder
+            .method(method.toString(),
+                HttpRequest.BodyPublishers.ofString(body != null ? body : ""))
+            .header(CONTENT_TYPE.getHeaderName(), "application/json");
+        case DELETE -> requestBuilder.DELETE();
+        default -> requestBuilder.GET();
+      }
+
+      HttpRequest request = requestBuilder.build();
+      try {
+        HttpResponse<String> response = httpClient.send(request,
+            HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200 && response.statusCode() != 201) {
+          JawsLogger.error("API request failed with status code: {}", response.statusCode());
+          return APIResponse.error(
+              response.statusCode() + "",
+              "Server returned error status: " + response.statusCode()
+          );
+        }
+
+        String contentType = response.headers().firstValue(CONTENT_TYPE.getHeaderName()).orElse("");
+        if (!contentType.contains("application/json")) {
+          JawsLogger.error("Unexpected content type: {}", contentType);
+          JawsLogger.error("Response body: {}", response.body());
+          return APIResponse.error(
+              response.statusCode() + "",
+              "Server returned non-JSON response"
+          );
+        }
+        return parseResponse(response.body(), responseClass);
+
+      } catch (IOException | InterruptedException e) {
+        JawsLogger.error("HTTP request failed: {}", e.getMessage());
         return APIResponse.error(
-            response.statusCode() + "",
-            "Server returned non-JSON response"
+            ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+            "Failed to fetch data from API"
         );
       }
-      return parseResponse(response.body(), responseClass);
-
-    } catch (IOException | InterruptedException e) {
-      JawsLogger.error("HTTP request failed: {}", e.getMessage());
-      return APIResponse.error(
-          ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-          "Failed to fetch data from API"
-      );
     }
   }
 
@@ -804,52 +806,54 @@ public abstract class Bragi {
    */
   private <T> APIResponse<T> callInternal(String endpoint, RequestType method,
       Map<String, String> headers, String body, JavaType responseType) {
-    HttpClient httpClient = HttpClient.newHttpClient();
-    HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint))
-        .header("accept", "*/*");
+    try (HttpClient httpClient = HttpClient.newHttpClient()) {
+      HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint))
+          .header("accept", "*/*");
 
-    Map<String, String> allHeaders = headers != null ? new HashMap<>(headers) : new HashMap<>();
-    for (Map.Entry<String, String> header : allHeaders.entrySet()) {
-      requestBuilder.header(header.getKey(), header.getValue());
-    }
-
-    switch (method) {
-      case POST, PUT, PATCH -> requestBuilder
-          .method(method.toString(), HttpRequest.BodyPublishers.ofString(body != null ? body : ""))
-          .header(CONTENT_TYPE.getHeaderName(), "application/json");
-      case DELETE -> requestBuilder.DELETE();
-      default -> requestBuilder.GET();
-    }
-
-    HttpRequest request = requestBuilder.build();
-    try {
-      HttpResponse<String> response = httpClient.send(request,
-          HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200 && response.statusCode() != 201) {
-        JawsLogger.error("API request failed with status code: {}", response.statusCode());
-        return APIResponse.error(
-            response.statusCode() + "",
-            "Server returned error status: " + response.statusCode()
-        );
+      Map<String, String> allHeaders = headers != null ? new HashMap<>(headers) : new HashMap<>();
+      for (Map.Entry<String, String> header : allHeaders.entrySet()) {
+        requestBuilder.header(header.getKey(), header.getValue());
       }
 
-      String contentType = response.headers().firstValue(CONTENT_TYPE.getHeaderName()).orElse("");
-      if (!contentType.contains("application/json")) {
-        JawsLogger.error("Unexpected content type: {}", contentType);
-        JawsLogger.error("Response body: {}", response.body());
+      switch (method) {
+        case POST, PUT, PATCH -> requestBuilder
+            .method(method.toString(),
+                HttpRequest.BodyPublishers.ofString(body != null ? body : ""))
+            .header(CONTENT_TYPE.getHeaderName(), "application/json");
+        case DELETE -> requestBuilder.DELETE();
+        default -> requestBuilder.GET();
+      }
+
+      HttpRequest request = requestBuilder.build();
+      try {
+        HttpResponse<String> response = httpClient.send(request,
+            HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200 && response.statusCode() != 201) {
+          JawsLogger.error("API request failed with status code: {}", response.statusCode());
+          return APIResponse.error(
+              response.statusCode() + "",
+              "Server returned error status: " + response.statusCode()
+          );
+        }
+
+        String contentType = response.headers().firstValue(CONTENT_TYPE.getHeaderName()).orElse("");
+        if (!contentType.contains("application/json")) {
+          JawsLogger.error("Unexpected content type: {}", contentType);
+          JawsLogger.error("Response body: {}", response.body());
+          return APIResponse.error(
+              response.statusCode() + "",
+              "Server returned non-JSON response"
+          );
+        }
+        return parseResponse(response.body(), responseType);
+
+      } catch (IOException | InterruptedException e) {
+        JawsLogger.error("HTTP request failed: {}", e.getMessage());
         return APIResponse.error(
-            response.statusCode() + "",
-            "Server returned non-JSON response"
+            ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
+            "Failed to fetch data from API"
         );
       }
-      return parseResponse(response.body(), responseType);
-
-    } catch (IOException | InterruptedException e) {
-      JawsLogger.error("HTTP request failed: {}", e.getMessage());
-      return APIResponse.error(
-          ResponseCode.INTERNAL_SERVER_ERROR.getCodeAndMessage(),
-          "Failed to fetch data from API"
-      );
     }
   }
 

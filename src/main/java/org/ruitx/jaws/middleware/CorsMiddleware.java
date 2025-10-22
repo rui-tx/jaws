@@ -12,7 +12,7 @@ import org.ruitx.jaws.utils.logger.JawsLogger;
  */
 public class CorsMiddleware implements Middleware {
 
-  private int order = 10;
+  private final int order;
 
   public CorsMiddleware(int order) {
     this.order = order;

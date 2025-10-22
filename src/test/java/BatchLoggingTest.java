@@ -108,8 +108,8 @@ public class BatchLoggingTest {
     }
 
     long loggingTime = System.currentTimeMillis() - startTime;
-    System.out.println(String.format("Generated %d log entries in %dms (%.3fms per log)",
-        numLogs, loggingTime, (double) loggingTime / numLogs));
+    System.out.printf("Generated %d log entries in %dms (%.3fms per log)%n",
+        numLogs, loggingTime, (double) loggingTime / numLogs);
 
     // Get buffer statistics after logging
     Map<String, Object> statsAfter = JawsLogger.getBufferStatistics();
@@ -217,13 +217,13 @@ public class BatchLoggingTest {
 
       if (!logEntries.isEmpty()) {
         int count = logEntries.get(0).getInt("count").orElse(0);
-        System.out.println(String.format("Found %d test log entries in database", count));
+        System.out.printf("Found %d test log entries in database%n", count);
 
         if (count >= expectedMinimum * 0.8) { // Allow some tolerance
           System.out.println("✅ Database verification passed");
         } else {
-          System.out.println(String.format("⚠️ Expected at least %d entries, found %d",
-              (int) (expectedMinimum * 0.8), count));
+          System.out.printf("⚠\uFE0F Expected at least %d entries, found %d%n",
+              (int) (expectedMinimum * 0.8), count);
         }
 
         // Show some sample entries

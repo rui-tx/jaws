@@ -18,8 +18,8 @@ import org.ruitx.jaws.interfaces.Validatable;
 import org.ruitx.jaws.strings.RequestType;
 import org.ruitx.jaws.strings.ResponseCode;
 import org.ruitx.jaws.types.APIResponse;
-import org.ruitx.jaws.utils.logger.JawsLogger;
 import org.ruitx.jaws.utils.JawsValidation;
+import org.ruitx.jaws.utils.logger.JawsLogger;
 
 /**
  * RequestValidationMiddleware handles request body validation for all routes. This middleware
@@ -242,18 +242,16 @@ public class RequestValidationMiddleware implements Middleware {
         sendErrorResponse(context, response);
         return ValidationResult.failure();
       }
-    } else if (expectsRequestBody) {
-      // If we reach here, it means we have parameters expected but no body was provided
-      APIResponse<String> response = APIResponse.error(
-          ResponseCode.BAD_REQUEST.getCodeAndMessage(),
-          "Request body is required but was not provided"
-      );
-      sendErrorResponse(context, response);
-      return ValidationResult.failure();
     }
 
-    // No request body needed or provided
-    return ValidationResult.success(null);
+    // If we reach here, it means we have parameters expected but no body was provided
+    APIResponse<String> response = APIResponse.error(
+        ResponseCode.BAD_REQUEST.getCodeAndMessage(),
+        "Request body is required but was not provided"
+    );
+
+    sendErrorResponse(context, response);
+    return ValidationResult.failure();
   }
 
   /**
